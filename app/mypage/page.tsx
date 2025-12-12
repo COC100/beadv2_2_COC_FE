@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { User, Wallet, Package, Settings, LogOut } from "lucide-react"
+import { User, Wallet, Settings, LogOut, MapPin } from "lucide-react"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { Button } from "@/components/ui/button"
@@ -70,7 +70,7 @@ export default function MyPage() {
       <div className="container mx-auto px-4 py-12">
         <div className="mb-8">
           <h1 className="text-4xl font-bold mb-2">마이페이지</h1>
-          <p className="text-muted-foreground text-lg">렌탈 내역과 예치금을 관리하세요</p>
+          <p className="text-muted-foreground text-lg">회원 정보를 관리하세요</p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
@@ -87,14 +87,12 @@ export default function MyPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Button variant="ghost" className="w-full justify-start rounded-xl">
-                    <Package className="h-4 w-4 mr-2" />
-                    렌탈 내역
-                  </Button>
-                  <Button variant="ghost" className="w-full justify-start rounded-xl">
-                    <Wallet className="h-4 w-4 mr-2" />
-                    예치금 관리
-                  </Button>
+                  <Link href="/mypage/addresses">
+                    <Button variant="ghost" className="w-full justify-start rounded-xl">
+                      <MapPin className="h-4 w-4 mr-2" />
+                      주소지 관리
+                    </Button>
+                  </Link>
                   <Link href="/mypage/settings">
                     <Button variant="ghost" className="w-full justify-start rounded-xl">
                       <Settings className="h-4 w-4 mr-2" />

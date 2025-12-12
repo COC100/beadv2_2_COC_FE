@@ -156,16 +156,6 @@ export default function SettingsPage() {
                     />
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="address">주소</Label>
-                    <Input
-                      id="address"
-                      value={profile.address}
-                      onChange={(e) => setProfile({ ...profile, address: e.target.value })}
-                      className="rounded-xl"
-                    />
-                  </div>
-
                   <div className="flex gap-3 pt-4">
                     <Button type="submit" disabled={loading} className="flex-1 rounded-xl h-12">
                       {loading ? "저장 중..." : "변경사항 저장"}
