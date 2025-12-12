@@ -1,6 +1,8 @@
 import Link from "next/link"
 
 export function Footer() {
+  const isSeller = false // This should be replaced with actual auth check
+
   return (
     <footer className="bg-secondary/30 py-12 border-t">
       <div className="container mx-auto px-4">
@@ -20,7 +22,10 @@ export function Footer() {
                 </Link>
               </li>
               <li>
-                <Link href="/become-seller" className="hover:text-foreground transition-colors">
+                <Link
+                  href={isSeller ? "/seller" : "/become-seller"}
+                  className="hover:text-foreground transition-colors"
+                >
                   판매자 등록
                 </Link>
               </li>

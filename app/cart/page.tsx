@@ -2,12 +2,14 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { Trash2, ShoppingBag } from "lucide-react"
+import { Trash2, ShoppingBag, Settings } from "lucide-react"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 
 interface CartItem {
   id: number
@@ -44,6 +46,8 @@ export default function CartPage() {
     },
   ])
 
+  const [editingItemId, setEditingItemId] = useState<number | null>(null)
+
   const calculateDays = (start: string, end: string) => {
     const startDate = new Date(start)
     const endDate = new Date(end)
@@ -61,6 +65,11 @@ export default function CartPage() {
 
   const removeItem = (id: number) => {
     setCartItems(cartItems.filter((item) => item.id !== id))
+  }
+
+  const updateRentalPeriod = (id: number, startDate: string, endDate: string) => {
+    setCartItems(cartItems.map((item) => (item.id === id ? { ...item, startDate, endDate } : item)))
+    setEditingItemId(null)
   }
 
   return (
@@ -101,16 +110,85 @@ export default function CartPage() {
                       </div>
                       <div className="flex-1">
                         <div className="flex items-start justify-between mb-2">
-                          <div>
+                          <div className="flex-1">
                             <Link
                               href={`/products/${item.productId}`}
                               className="font-semibold hover:text-primary transition-colors"
                             >
                               {item.productName}
                             </Link>
-                            <p className="text-xs text-muted-foreground mt-1">
-                              {item.startDate} ~ {item.endDate} ({calculateDays(item.startDate, item.endDate)}일)
-                            </p>
+
+                            {editingItemId === item.id ? (
+                              <div className="mt-3 space-y-2">
+                                <div className="grid grid-cols-2 gap-2">
+                                  <div>
+                                    <Label className="text-xs">시작일</Label>
+                                    <Input
+                                      type="date"
+                                      defaultValue={item.startDate}
+                                      onChange={(e) => {
+                                        const newItem = cartItems.find((i) => i.id === item.id)
+                                        if (newItem) {
+                                          newItem.startDate = e.target.value
+                                        }
+                                      }}
+                                      className="h-8 text-xs"
+                                    />
+                                  </div>
+                                  <div>
+                                    <Label className="text-xs">종료일</Label>
+                                    <Input
+                                      type="date"
+                                      defaultValue={item.endDate}
+                                      onChange={(e) => {
+                                        const newItem = cartItems.find((i) => i.id === item.id)
+                                        if (newItem) {
+                                          newItem.endDate = e.target.value
+                                        }
+                                      }}
+                                      className="h-8 text-xs"
+                                    />
+                                  </div>
+                                </div>
+                                <div className="flex gap-2">
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="h-7 text-xs bg-transparent"
+                                    onClick={() => setEditingItemId(null)}
+                                  >
+                                    취소
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    className="h-7 text-xs"
+                                    onClick={() => {
+                                      const newItem = cartItems.find((i) => i.id === item.id)
+                                      if (newItem) {
+                                        updateRentalPeriod(item.id, newItem.startDate, newItem.endDate)
+                                      }
+                                    }}
+                                  >
+                                    저장
+                                  </Button>
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-2 mt-1">
+                                <p className="text-xs text-muted-foreground">
+                                  {item.startDate} ~ {item.endDate} ({calculateDays(item.startDate, item.endDate)}일)
+                                </p>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-6 px-2 text-xs hover:text-primary"
+                                  onClick={() => setEditingItemId(item.id)}
+                                >
+                                  <Settings className="h-3 w-3 mr-1" />
+                                  옵션 변경
+                                </Button>
+                              </div>
+                            )}
                           </div>
                           <Button variant="ghost" size="icon" onClick={() => removeItem(item.id)} className="h-8 w-8">
                             <Trash2 className="h-4 w-4 text-muted-foreground" />
@@ -146,9 +224,11 @@ export default function CartPage() {
                     <span>총 금액</span>
                     <span className="text-primary text-xl">₩{calculateTotal().toLocaleString()}</span>
                   </div>
-                  <Button className="w-full h-11 rounded-lg" size="lg">
-                    렌탈 신청하기
-                  </Button>
+                  <Link href="/reservation">
+                    <Button className="w-full h-11 rounded-lg" size="lg">
+                      렌탈 신청하기
+                    </Button>
+                  </Link>
                   <Link href="/products">
                     <Button variant="outline" className="w-full mt-2 rounded-lg bg-transparent">
                       쇼핑 계속하기

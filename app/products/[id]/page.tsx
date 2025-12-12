@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { ArrowLeft, ShoppingCart, Calendar, Star, MapPin } from "lucide-react"
+import { ArrowLeft, ShoppingCart, Calendar, Star, MapPin, Edit } from "lucide-react"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { Button } from "@/components/ui/button"
@@ -10,18 +10,18 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 export default async function ProductDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-
   return <ProductDetailContent id={id} />
 }
 
 function ProductDetailContent({ id }: { id: string }) {
   const [startDate, setStartDate] = useState("")
   const [endDate, setEndDate] = useState("")
+  const isOwner = false // Mock seller check - replace with actual logic
 
-  // Mock product data
   const product = {
     id: Number.parseInt(id),
     name: 'MacBook Pro 16" M3',
@@ -60,9 +60,17 @@ function ProductDetailContent({ id }: { id: string }) {
       ? Math.ceil((new Date(endDate).getTime() - new Date(startDate).getTime()) / (1000 * 60 * 60 * 24))
       : 0
 
+  const getStatusText = (status: string) => {
+    const statusMap: { [key: string]: { text: string; color: string } } = {
+      ACTIVE: { text: "활성화", color: "bg-green-100 text-green-800" },
+      INACTIVE: { text: "비활성화", color: "bg-gray-100 text-gray-800" },
+      DELETED: { text: "삭제됨", color: "bg-red-100 text-red-800" },
+    }
+    return statusMap[status] || { text: status, color: "" }
+  }
+
   return (
     <div className="min-h-screen bg-white">
-      {/* Header */}
       <Header />
 
       <div className="container mx-auto px-4 py-8">
@@ -73,6 +81,27 @@ function ProductDetailContent({ id }: { id: string }) {
           <ArrowLeft className="h-4 w-4" />
           목록으로
         </Link>
+
+        {isOwner && (
+          <div className="flex gap-2 mb-6">
+            <Link href={`/seller/product/${id}/edit`}>
+              <Button variant="outline" className="rounded-lg bg-transparent">
+                <Edit className="h-4 w-4 mr-2" />
+                상품 수정
+              </Button>
+            </Link>
+            <Select defaultValue={product.status}>
+              <SelectTrigger className="w-40 rounded-lg">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ACTIVE">활성화</SelectItem>
+                <SelectItem value="INACTIVE">비활성화</SelectItem>
+                <SelectItem value="DELETED">삭제</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 md:gap-12">
           <div className="space-y-4">
@@ -229,7 +258,6 @@ function ProductDetailContent({ id }: { id: string }) {
         </div>
       </div>
 
-      {/* Footer */}
       <Footer />
     </div>
   )
