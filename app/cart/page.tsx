@@ -26,22 +26,35 @@ export default function CartPage() {
     const token = localStorage.getItem("accessToken")
 
     if (!token) {
-      toast({
-        variant: "destructive",
-        title: "로그인 필요",
-        description: "로그인이 필요합니다.",
-      })
-      router.push("/login")
+      if (process.env.NEXT_PUBLIC_API_BASE_URL) {
+        toast({
+          variant: "destructive",
+          title: "로그인 필요",
+          description: "로그인이 필요합니다.",
+        })
+        router.push("/login")
+      } else {
+        console.log("[v0] API not configured, showing empty cart")
+        setCartItems([])
+        setLoading(false)
+      }
       return
     }
 
     try {
+      if (!process.env.NEXT_PUBLIC_API_BASE_URL) {
+        setCartItems([])
+        setLoading(false)
+        return
+      }
+
       const response = await cartAPI.list()
       if (response.success && response.data) {
         setCartItems(response.data.items || [])
       }
     } catch (error) {
       console.error("[v0] Failed to fetch cart:", error)
+      setCartItems([])
     } finally {
       setLoading(false)
     }

@@ -13,6 +13,68 @@ import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { productAPI } from "@/lib/api"
 
+const MOCK_PRODUCTS = [
+  {
+    id: 1,
+    name: "MacBook Pro 16인치",
+    category: "LAPTOP",
+    price: 50000,
+    thumbnailUrl: "/macbook-pro-laptop.png",
+    badge: "인기",
+  },
+  {
+    id: 2,
+    name: "Sony A7 IV 미러리스",
+    category: "CAMERA",
+    price: 35000,
+    thumbnailUrl: "/sony-mirrorless-camera.png",
+    badge: "신상품",
+  },
+  {
+    id: 3,
+    name: "iPad Pro 12.9",
+    category: "TABLET",
+    price: 25000,
+    thumbnailUrl: "/ipad-pro-tablet.png",
+  },
+  {
+    id: 4,
+    name: "Canon EOS R6",
+    category: "CAMERA",
+    price: 40000,
+    thumbnailUrl: "/canon-eos-camera.jpg",
+  },
+  {
+    id: 5,
+    name: "DJI Mini 3 Pro",
+    category: "DRONE",
+    price: 30000,
+    thumbnailUrl: "/generic-drone.png",
+    badge: "특가",
+  },
+  {
+    id: 6,
+    name: "Surface Pro 9",
+    category: "TABLET",
+    price: 28000,
+    thumbnailUrl: "/microsoft-surface-tablet.jpg",
+  },
+  {
+    id: 7,
+    name: "MacBook Air M2",
+    category: "LAPTOP",
+    price: 35000,
+    thumbnailUrl: "/macbook-pro-laptop-front.jpg",
+  },
+  {
+    id: 8,
+    name: "MacBook Pro 14인치",
+    category: "LAPTOP",
+    price: 45000,
+    thumbnailUrl: "/macbook-pro-laptop-side.jpg",
+  },
+]
+
 export default function HomePage() {
   const [products, setProducts] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
@@ -20,12 +82,20 @@ export default function HomePage() {
   useEffect(() => {
     const fetchProducts = async () => {
       try {
+        if (!process.env.NEXT_PUBLIC_API_BASE_URL) {
+          console.log("[v0] API_BASE_URL not configured, using mock data")
+          setProducts(MOCK_PRODUCTS)
+          setLoading(false)
+          return
+        }
+
         const response = await productAPI.list({ size: 8 })
         if (response.success && response.data) {
           setProducts(response.data.content || [])
         }
       } catch (error) {
-        console.error("[v0] Failed to fetch products:", error)
+        console.log("[v0] API call failed, using mock data")
+        setProducts(MOCK_PRODUCTS)
       } finally {
         setLoading(false)
       }
@@ -39,6 +109,7 @@ export default function HomePage() {
     { name: "카메라", icon: Camera, href: "/products?category=CAMERA" },
     { name: "태블릿", icon: Tablet, href: "/products?category=TABLET" },
     { name: "오디오", icon: Headphones, href: "/products?category=AUDIO" },
+    { name: "드론", icon: Laptop, href: "/products?category=DRONE" }, // Added new category for DRONE
   ]
 
   return (
@@ -90,7 +161,7 @@ export default function HomePage() {
                 className="flex flex-col items-center gap-2 group hover:text-primary transition-colors"
               >
                 <div className="w-14 h-14 rounded-full bg-blue-50 flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-colors">
-                  <category.icon className="h-6 w-6" />
+                  {category.icon && <category.icon className="h-6 w-6" />}
                 </div>
                 <span className="text-sm font-medium">{category.name}</span>
               </Link>

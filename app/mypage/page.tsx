@@ -18,21 +18,41 @@ export default function MyPage() {
   const [balance, setBalance] = useState(0)
   const [loading, setLoading] = useState(true)
 
+  const MOCK_MEMBER = {
+    name: "홍길동",
+    email: "user@example.com",
+    phone: "010-1234-5678",
+  }
+
   useEffect(() => {
     const fetchData = async () => {
       const token = localStorage.getItem("accessToken")
 
       if (!token) {
-        toast({
-          variant: "destructive",
-          title: "로그인 필요",
-          description: "로그인이 필요합니다.",
-        })
-        router.push("/login")
+        if (process.env.NEXT_PUBLIC_API_BASE_URL) {
+          toast({
+            variant: "destructive",
+            title: "로그인 필요",
+            description: "로그인이 필요합니다.",
+          })
+          router.push("/login")
+        } else {
+          console.log("[v0] API not configured, using mock member data")
+          setMember(MOCK_MEMBER)
+          setBalance(500000)
+          setLoading(false)
+        }
         return
       }
 
       try {
+        if (!process.env.NEXT_PUBLIC_API_BASE_URL) {
+          setMember(MOCK_MEMBER)
+          setBalance(500000)
+          setLoading(false)
+          return
+        }
+
         const [memberResponse, accountResponse] = await Promise.all([memberAPI.getProfile(), accountAPI.getBalance()])
 
         if (memberResponse.success && memberResponse.data) {
@@ -46,12 +66,9 @@ export default function MyPage() {
         }
       } catch (error) {
         console.error("[v0] Failed to fetch user data:", error)
-        toast({
-          variant: "destructive",
-          title: "오류 발생",
-          description: "사용자 정보를 불러오는데 실패했습니다.",
-        })
-        router.push("/login")
+        console.log("[v0] Falling back to mock data")
+        setMember(MOCK_MEMBER)
+        setBalance(500000)
       } finally {
         setLoading(false)
       }

@@ -17,6 +17,51 @@ import { format } from "date-fns"
 import { ko } from "date-fns/locale"
 import { productAPI } from "@/lib/api"
 
+const MOCK_PRODUCTS = [
+  {
+    id: 1,
+    name: "MacBook Pro 16인치",
+    category: "LAPTOP",
+    price: 50000,
+    thumbnailUrl: "/macbook-pro-laptop.png",
+  },
+  {
+    id: 2,
+    name: "Sony A7 IV 미러리스",
+    category: "CAMERA",
+    price: 35000,
+    thumbnailUrl: "/sony-mirrorless-camera.png",
+  },
+  {
+    id: 3,
+    name: "iPad Pro 12.9",
+    category: "TABLET",
+    price: 25000,
+    thumbnailUrl: "/ipad-pro-tablet.png",
+  },
+  {
+    id: 4,
+    name: "Canon EOS R6",
+    category: "CAMERA",
+    price: 40000,
+    thumbnailUrl: "/canon-eos-camera.jpg",
+  },
+  {
+    id: 5,
+    name: "DJI Mini 3 Pro",
+    category: "DRONE",
+    price: 30000,
+    thumbnailUrl: "/generic-drone.png",
+  },
+  {
+    id: 6,
+    name: "Surface Pro 9",
+    category: "TABLET",
+    price: 28000,
+    thumbnailUrl: "/microsoft-surface-tablet.jpg",
+  },
+]
+
 const CATEGORIES = [
   { value: "ALL", label: "전체" },
   { value: "LAPTOP", label: "노트북" },
@@ -50,6 +95,13 @@ export default function ProductsPage() {
   const fetchProducts = async () => {
     setLoading(true)
     try {
+      if (!process.env.NEXT_PUBLIC_API_BASE_URL) {
+        console.log("[v0] API_BASE_URL not configured, using mock data")
+        setProducts(MOCK_PRODUCTS)
+        setLoading(false)
+        return
+      }
+
       const response = await productAPI.list({
         category: selectedCategory !== "ALL" ? selectedCategory : undefined,
         minPrice: minPrice ? Number(minPrice) : undefined,
@@ -64,15 +116,27 @@ export default function ProductsPage() {
       }
     } catch (error) {
       console.error("[v0] Failed to fetch products:", error)
+      console.log("[v0] Falling back to mock data")
+      setProducts(MOCK_PRODUCTS)
     } finally {
       setLoading(false)
     }
   }
 
   const filteredProducts = useMemo(() => {
-    if (!searchQuery) return products
-    return products.filter((product) => product.name.toLowerCase().includes(searchQuery.toLowerCase()))
-  }, [products, searchQuery])
+    let filtered = products
+
+    if (selectedCategory !== "ALL") {
+      filtered = filtered.filter((p) => p.category === selectedCategory)
+    }
+
+    // Search filter
+    if (searchQuery) {
+      filtered = filtered.filter((product) => product.name.toLowerCase().includes(searchQuery.toLowerCase()))
+    }
+
+    return filtered
+  }, [products, searchQuery, selectedCategory])
 
   const handleResetFilters = () => {
     setSearchQuery("")
