@@ -1,5 +1,7 @@
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || ""
 
+console.log("[v0] API_BASE_URL:", API_BASE_URL)
+
 // API Response wrapper type
 export interface ApiResponse<T> {
   success: boolean
@@ -11,6 +13,13 @@ export interface ApiResponse<T> {
 // Helper function to make API calls
 async function fetchAPI<T>(endpoint: string, options: RequestInit = {}, requiresAuth = false): Promise<ApiResponse<T>> {
   const fullUrl = `${API_BASE_URL}${endpoint}`
+
+  console.log("[v0] API Request:", {
+    url: fullUrl,
+    method: options.method || "GET",
+    requiresAuth,
+    hasToken: requiresAuth && typeof window !== "undefined" ? !!localStorage.getItem("accessToken") : "N/A",
+  })
 
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
@@ -26,17 +35,33 @@ async function fetchAPI<T>(endpoint: string, options: RequestInit = {}, requires
     headers.Authorization = `Bearer ${token}`
   }
 
-  const response = await fetch(fullUrl, {
-    ...options,
-    headers,
-  })
+  try {
+    const response = await fetch(fullUrl, {
+      ...options,
+      headers,
+    })
 
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({ message: response.statusText }))
-    throw new Error(errorData.message || `API Error: ${response.statusText}`)
+    console.log("[v0] API Response:", {
+      url: fullUrl,
+      status: response.status,
+      ok: response.ok,
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ message: response.statusText }))
+      console.error("[v0] API Error Response:", errorData)
+      throw new Error(errorData.message || `API Error: ${response.statusText}`)
+    }
+
+    return response.json()
+  } catch (error) {
+    if (error instanceof TypeError && error.message.includes("fetch")) {
+      console.error("[v0] Network Error - Failed to connect to:", fullUrl)
+      throw new Error("서버에 연결할 수 없습니다. 네트워크 연결을 확인해주세요.")
+    }
+    console.error("[v0] API Call Error:", error)
+    throw error
   }
-
-  return response.json()
 }
 
 // Member API (member-service)

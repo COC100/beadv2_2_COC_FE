@@ -23,8 +23,16 @@ export default function LoginPage() {
     e.preventDefault()
     setLoading(true)
 
+    console.log("[v0] Login attempt with email:", email)
+
     try {
       const response = await authAPI.login({ email, password })
+
+      console.log("[v0] Login response:", {
+        hasAccessToken: !!response.data.accessToken,
+        hasRefreshToken: !!response.data.refreshToken,
+        memberInfo: response.data.member,
+      })
 
       // 토큰 저장
       localStorage.setItem("accessToken", response.data.accessToken)
@@ -36,13 +44,16 @@ export default function LoginPage() {
         description: `${response.data.member.name}님, 환영합니다!`,
       })
 
-      router.push("/")
+      setTimeout(() => {
+        router.push("/")
+      }, 500)
     } catch (error: any) {
       console.error("[v0] Login failed:", error)
+      const errorMessage = error.message || "이메일 또는 비밀번호를 확인해주세요."
       toast({
         variant: "destructive",
         title: "로그인 실패",
-        description: error.message || "이메일 또는 비밀번호를 확인해주세요.",
+        description: errorMessage,
       })
     } finally {
       setLoading(false)
