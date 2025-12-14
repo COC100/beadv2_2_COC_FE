@@ -23,8 +23,38 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
   const [loading, setLoading] = useState(true)
   const [isOwner, setIsOwner] = useState(false)
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
+  const [productId, setProductId] = useState<number | null>(null)
 
   useEffect(() => {
+    const resolveParams = async () => {
+      try {
+        const resolvedParams = await Promise.resolve(params)
+        const id = Number(resolvedParams.id)
+
+        console.log("[v0 DEBUG] Resolved product ID:", id)
+
+        if (isNaN(id)) {
+          throw new Error("잘못된 상품 ID입니다")
+        }
+
+        setProductId(id)
+      } catch (error) {
+        console.error("[v0 DEBUG] Failed to resolve params:", error)
+        toast({
+          title: "페이지 로딩 실패",
+          description: "상품 정보를 불러올 수 없습니다",
+          variant: "destructive",
+        })
+        setLoading(false)
+      }
+    }
+
+    resolveParams()
+  }, [params, toast])
+
+  useEffect(() => {
+    if (productId === null) return
+
     const loadProduct = async () => {
       if (typeof window !== "undefined") {
         const token = localStorage.getItem("accessToken")
@@ -35,12 +65,7 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
       }
 
       try {
-        const productId = Number(params.id)
         console.log("[v0 DEBUG] Loading product ID:", productId)
-
-        if (isNaN(productId)) {
-          throw new Error("잘못된 상품 ID입니다")
-        }
 
         const productData = await productAPI.getDetail(productId)
         console.log("[v0 DEBUG] Raw product data:", JSON.stringify(productData, null, 2))
@@ -83,7 +108,7 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
     }
 
     loadProduct()
-  }, [params.id, router, toast])
+  }, [productId, router, toast])
 
   const calculateTotal = () => {
     if (!startDate || !endDate || !product) return 0
@@ -100,7 +125,7 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
       : 0
 
   const handleAddToCart = async () => {
-    if (!startDate || !endDate) {
+    if (!productId || !startDate || !endDate) {
       toast({
         title: "날짜를 선택해주세요",
         description: "대여 시작일과 종료일을 선택해주세요",
@@ -110,7 +135,7 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
     }
 
     const requestData = {
-      productId: Number(params.id),
+      productId: productId,
       startDate,
       endDate,
     }
@@ -138,7 +163,7 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
   }
 
   const handleRentalApplication = () => {
-    if (!startDate || !endDate) {
+    if (!productId || !startDate || !endDate) {
       toast({
         title: "날짜를 선택해주세요",
         description: "대여 시작일과 종료일을 선택해주세요",
@@ -147,21 +172,23 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
       return
     }
 
-    router.push(`/rental-application?productId=${params.id}&startDate=${startDate}&endDate=${endDate}`)
+    router.push(`/rental-application?productId=${productId}&startDate=${startDate}&endDate=${endDate}`)
   }
 
   const handleStatusChange = async (status: "ACTIVE" | "INACTIVE") => {
+    if (!productId) return
+
     try {
       if (status === "ACTIVE") {
-        await productAPI.activate(Number(params.id))
+        await productAPI.activate(productId)
       } else {
-        await productAPI.deactivate(Number(params.id))
+        await productAPI.deactivate(productId)
       }
       toast({
         title: "상태 변경 완료",
         description: `상품이 ${status === "ACTIVE" ? "활성화" : "비활성화"}되었습니다`,
       })
-      const updated = await productAPI.getDetail(Number(params.id))
+      const updated = await productAPI.getDetail(productId)
       setProduct(updated)
     } catch (error: any) {
       toast({
@@ -173,10 +200,12 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
   }
 
   const handleDelete = async () => {
+    if (!productId) return
+
     if (!confirm("정말 이 상품을 삭제하시겠습니까?")) return
 
     try {
-      await productAPI.delete(Number(params.id))
+      await productAPI.delete(productId)
       toast({
         title: "상품 삭제 완료",
         description: "상품이 삭제되었습니다",
@@ -209,7 +238,6 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
         <Header />
         <div className="container mx-auto px-4 py-12 text-center">
           <p>상품을 찾을 수 없습니다</p>
-          <p className="text-sm text-muted-foreground mt-2">브라우저 콘솔(F12)에서 자세한 오류를 확인하세요</p>
         </div>
         <Footer />
       </div>
@@ -236,7 +264,7 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
 
         {isOwner && (
           <div className="flex gap-2 mb-6">
-            <Link href={`/seller/product/${params.id}/edit`}>
+            <Link href={`/seller/product/${productId}/edit`}>
               <Button variant="outline" className="rounded-lg bg-transparent">
                 <Edit className="h-4 w-4 mr-2" />
                 상품 수정
