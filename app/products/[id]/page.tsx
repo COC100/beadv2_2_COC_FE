@@ -1,8 +1,10 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { use } from "react"
 import Link from "next/link"
-import { ArrowLeft, ShoppingCart, Calendar, Star, MapPin, Edit } from "lucide-react"
+import { useRouter } from "next/navigation"
+import { ArrowLeft, ShoppingCart, Calendar } from "lucide-react"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { Button } from "@/components/ui/button"
@@ -10,21 +12,21 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { productAPI } from "@/lib/api"
+import { productAPI, cartAPI } from "@/lib/api"
 import { useToast } from "@/hooks/use-toast"
 
-export default function ProductDetailPage({ params }: { params: { id: string } }) {
-  return <ProductDetailContent id={params.id} />
+export default function ProductDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const resolvedParams = use(params)
+  return <ProductDetailContent id={resolvedParams.id} />
 }
 
 function ProductDetailContent({ id }: { id: string }) {
+  const router = useRouter()
   const { toast } = useToast()
   const [startDate, setStartDate] = useState("")
   const [endDate, setEndDate] = useState("")
   const [product, setProduct] = useState<any>(null)
   const [loading, setLoading] = useState(true)
-  const isOwner = false
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -45,6 +47,44 @@ function ProductDetailContent({ id }: { id: string }) {
     }
     fetchProduct()
   }, [id])
+
+  const handleAddToCart = async () => {
+    if (!startDate || !endDate) {
+      toast({
+        variant: "destructive",
+        title: "날짜를 선택해주세요",
+      })
+      return
+    }
+
+    const token = localStorage.getItem("accessToken")
+    if (!token) {
+      toast({
+        variant: "destructive",
+        title: "로그인이 필요합니다",
+      })
+      router.push("/login")
+      return
+    }
+
+    try {
+      await cartAPI.addItem({
+        productId: Number(id),
+        startDate,
+        endDate,
+      })
+      toast({
+        title: "장바구니에 추가되었습니다",
+      })
+    } catch (error: any) {
+      console.error("[v0] Failed to add to cart:", error)
+      toast({
+        variant: "destructive",
+        title: "장바구니 추가 실패",
+        description: error.message,
+      })
+    }
+  }
 
   if (loading) {
     return (
@@ -84,15 +124,6 @@ function ProductDetailContent({ id }: { id: string }) {
       ? Math.ceil((new Date(endDate).getTime() - new Date(startDate).getTime()) / (1000 * 60 * 60 * 24))
       : 0
 
-  const getStatusText = (status: string) => {
-    const statusMap: { [key: string]: { text: string; color: string } } = {
-      ACTIVE: { text: "활성화", color: "bg-green-100 text-green-800" },
-      INACTIVE: { text: "비활성화", color: "bg-gray-100 text-gray-800" },
-      DELETED: { text: "삭제됨", color: "bg-red-100 text-red-800" },
-    }
-    return statusMap[status] || { text: status, color: "" }
-  }
-
   return (
     <div className="min-h-screen bg-white">
       <Header />
@@ -106,67 +137,37 @@ function ProductDetailContent({ id }: { id: string }) {
           목록으로
         </Link>
 
-        {isOwner && (
-          <div className="flex gap-2 mb-6">
-            <Link href={`/seller/product/${id}/edit`}>
-              <Button variant="outline" className="rounded-lg bg-transparent">
-                <Edit className="h-4 w-4 mr-2" />
-                상품 수정
-              </Button>
-            </Link>
-            <Select defaultValue={product.status}>
-              <SelectTrigger className="w-40 rounded-lg">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ACTIVE">활성화</SelectItem>
-                <SelectItem value="INACTIVE">비활성화</SelectItem>
-                <SelectItem value="DELETED">삭제</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        )}
-
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 md:gap-12">
           <div className="space-y-4">
             <div className="aspect-square bg-gray-50 rounded-lg overflow-hidden">
               <img
-                src={product.images[0] || "/placeholder.svg"}
+                src={product.images?.[0]?.url || "/placeholder.svg"}
                 alt={product.name}
                 className="w-full h-full object-cover"
               />
             </div>
-            <div className="grid grid-cols-4 gap-3">
-              {product.images.slice(0, 4).map((image, index) => (
-                <div
-                  key={index}
-                  className="aspect-square bg-gray-50 rounded-lg overflow-hidden cursor-pointer hover:opacity-70 transition-opacity border border-gray-200"
-                >
-                  <img
-                    src={image || "/placeholder.svg"}
-                    alt={`${product.name} ${index + 2}`}
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-              ))}
-            </div>
+            {product.images && product.images.length > 1 && (
+              <div className="grid grid-cols-4 gap-3">
+                {product.images.slice(1, 5).map((image: any, index: number) => (
+                  <div
+                    key={index}
+                    className="aspect-square bg-gray-50 rounded-lg overflow-hidden cursor-pointer hover:opacity-70 transition-opacity border border-gray-200"
+                  >
+                    <img
+                      src={image.url || "/placeholder.svg"}
+                      alt={`${product.name} ${index + 2}`}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="space-y-6">
             <div>
               <Badge className="mb-3 bg-blue-100 text-primary hover:bg-blue-100">{product.category}</Badge>
               <h1 className="text-3xl font-bold mb-3 leading-tight">{product.name}</h1>
-              <div className="flex items-center gap-4 mb-4 text-sm">
-                <div className="flex items-center gap-1">
-                  <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                  <span className="font-medium">{product.seller.rating}</span>
-                  <span className="text-muted-foreground">({product.seller.reviews})</span>
-                </div>
-                <div className="flex items-center gap-1 text-muted-foreground">
-                  <MapPin className="h-4 w-4" />
-                  <span>{product.seller.location}</span>
-                </div>
-              </div>
               <div className="flex items-baseline gap-2 mb-6">
                 <Badge className="bg-accent text-white hover:bg-accent text-lg font-bold px-3 py-1">
                   ₩{product.pricePerDay.toLocaleString()}
@@ -231,27 +232,12 @@ function ProductDetailContent({ id }: { id: string }) {
                   </Button>
                   <Button
                     variant="outline"
+                    onClick={handleAddToCart}
                     disabled={!startDate || !endDate}
                     className="rounded-lg h-11 px-4 bg-transparent"
                   >
                     <ShoppingCart className="h-5 w-5" />
                   </Button>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-blue-50 border-blue-100">
-              <CardContent className="p-5">
-                <h3 className="font-semibold mb-3">판매자 정보</h3>
-                <div className="space-y-2">
-                  <p className="font-medium text-lg">{product.seller.name}</p>
-                  <div className="flex items-center gap-3 text-sm">
-                    <div className="flex items-center gap-1">
-                      <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                      <span className="font-medium">{product.seller.rating}</span>
-                    </div>
-                    <span className="text-muted-foreground">리뷰 {product.seller.reviews}개</span>
-                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -262,21 +248,7 @@ function ProductDetailContent({ id }: { id: string }) {
           <Card>
             <CardContent className="p-6">
               <h2 className="text-xl font-bold mb-4">상품 설명</h2>
-              <p className="text-muted-foreground leading-relaxed">{product.description}</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-6">
-              <h2 className="text-xl font-bold mb-4">상세 사양</h2>
-              <ul className="space-y-2">
-                {product.specs.map((spec, index) => (
-                  <li key={index} className="flex items-start gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-primary mt-2 flex-shrink-0" />
-                    <span className="text-sm">{spec}</span>
-                  </li>
-                ))}
-              </ul>
+              <p className="text-muted-foreground leading-relaxed whitespace-pre-wrap">{product.description}</p>
             </CardContent>
           </Card>
         </div>

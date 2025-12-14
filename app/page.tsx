@@ -16,16 +16,14 @@ export default async function HomePage() {
   ]
 
   let products = []
-  let errorMessage = ""
 
   try {
     console.log("[v0] Fetching products for homepage")
     const response = await productAPI.list({ size: 8 })
     console.log("[v0] Products response:", response)
-    products = response.data.content || response.data || []
+    products = response.data.products || []
   } catch (error) {
     console.error("[v0] Failed to fetch products:", error)
-    errorMessage = error instanceof Error ? error.message : "알 수 없는 오류가 발생했습니다"
     products = []
   }
 
@@ -99,39 +97,21 @@ export default async function HomePage() {
 
           {products.length === 0 ? (
             <Card className="p-12 text-center border-gray-200">
-              <div className="max-w-2xl mx-auto">
-                <p className="text-lg font-semibold text-destructive mb-4">상품을 불러올 수 없습니다</p>
-                <p className="text-sm text-muted-foreground mb-6">{errorMessage}</p>
-                <div className="text-left bg-muted p-4 rounded-lg space-y-2">
-                  <p className="text-sm font-semibold">확인 사항:</p>
-                  <ol className="text-sm text-muted-foreground space-y-1 list-decimal list-inside">
-                    <li>Vars 섹션에서 NEXT_PUBLIC_API_BASE_URL 환경 변수가 설정되었는지 확인</li>
-                    <li>백엔드 서버가 실행 중인지 확인 (예: http://localhost:8080)</li>
-                    <li>백엔드 서버의 CORS 설정 확인</li>
-                    <li>브라우저 콘솔(F12)에서 상세 로그 확인</li>
-                  </ol>
-                </div>
-              </div>
+              <p className="text-muted-foreground">상품이 없습니다</p>
             </Card>
           ) : (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
               {products.map((product: any) => (
-                <Link key={product.id} href={`/products/${product.id}`}>
+                <Link key={product.productId} href={`/products/${product.productId}`}>
                   <Card className="overflow-hidden hover:shadow-lg transition-shadow group border-gray-200">
                     <div className="aspect-square overflow-hidden bg-gray-50 relative">
-                      {product.badge && (
-                        <Badge className="absolute top-2 left-2 z-10 bg-primary text-white text-xs">
-                          {product.badge}
-                        </Badge>
-                      )}
                       <img
-                        src={product.image || product.imageUrls?.[0] || "/placeholder.svg"}
+                        src={product.thumbnailUrl || "/placeholder.svg"}
                         alt={product.name}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                       />
                     </div>
                     <CardContent className="p-3">
-                      <p className="text-xs text-muted-foreground mb-1">{product.category}</p>
                       <h3 className="font-medium text-sm mb-2 line-clamp-2 leading-tight">{product.name}</h3>
                       <div className="flex items-center gap-2">
                         <Badge variant="secondary" className="bg-accent text-white hover:bg-accent text-xs font-bold">

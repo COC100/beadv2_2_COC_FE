@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-
+import { useRouter } from "next/navigation"
 import { useState } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
@@ -9,8 +9,12 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
+import { memberAPI } from "@/lib/api"
+import { useToast } from "@/hooks/use-toast"
 
 export default function SignupPage() {
+  const router = useRouter()
+  const { toast } = useToast()
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -19,15 +23,45 @@ export default function SignupPage() {
     phone: "",
   })
   const [agreed, setAgreed] = useState(false)
+  const [loading, setLoading] = useState(false)
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault()
+
     if (formData.password !== formData.confirmPassword) {
-      alert("비밀번호가 일치하지 않습니다.")
+      toast({
+        variant: "destructive",
+        title: "비밀번호가 일치하지 않습니다",
+      })
       return
     }
-    // TODO: API call to member-service:8085/api/members/signup
-    console.log("Signup:", formData)
+
+    setLoading(true)
+
+    try {
+      await memberAPI.signup({
+        email: formData.email,
+        password: formData.password,
+        name: formData.name,
+        phone: formData.phone,
+      })
+
+      toast({
+        title: "회원가입 성공",
+        description: "로그인 페이지로 이동합니다.",
+      })
+
+      router.push("/login")
+    } catch (error: any) {
+      console.error("[v0] Signup failed:", error)
+      toast({
+        variant: "destructive",
+        title: "회원가입 실패",
+        description: error.message || "회원가입 중 오류가 발생했습니다.",
+      })
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -58,6 +92,7 @@ export default function SignupPage() {
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                   required
+                  disabled={loading}
                 />
               </div>
               <div className="space-y-2">
@@ -71,6 +106,7 @@ export default function SignupPage() {
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   required
+                  disabled={loading}
                 />
               </div>
               <div className="space-y-2">
@@ -84,6 +120,7 @@ export default function SignupPage() {
                   value={formData.phone}
                   onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                   required
+                  disabled={loading}
                 />
               </div>
               <div className="space-y-2">
@@ -96,6 +133,7 @@ export default function SignupPage() {
                   value={formData.password}
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                   required
+                  disabled={loading}
                 />
               </div>
               <div className="space-y-2">
@@ -108,6 +146,7 @@ export default function SignupPage() {
                   value={formData.confirmPassword}
                   onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
                   required
+                  disabled={loading}
                 />
               </div>
               <div className="flex items-center space-x-2">
@@ -126,8 +165,8 @@ export default function SignupPage() {
                   에 동의합니다
                 </label>
               </div>
-              <Button type="submit" className="w-full" size="lg" disabled={!agreed}>
-                회원가입
+              <Button type="submit" className="w-full" size="lg" disabled={!agreed || loading}>
+                {loading ? "가입 중..." : "회원가입"}
               </Button>
             </form>
           </CardContent>
