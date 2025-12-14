@@ -20,74 +20,8 @@ export default async function HomePage() {
     const response = await productAPI.list({ size: 8 })
     products = response.data.content || response.data || []
   } catch (error) {
-    console.info("[v0] Using fallback product data")
-    // Fallback data
-    products = [
-      {
-        id: 1,
-        name: 'MacBook Pro 16" M3',
-        category: "노트북",
-        pricePerDay: 25000,
-        image: "/macbook-pro-laptop.png",
-        badge: "인기",
-      },
-      {
-        id: 2,
-        name: "Sony A7 IV 미러리스",
-        category: "카메라",
-        pricePerDay: 35000,
-        image: "/sony-mirrorless-camera.png",
-        badge: "신규",
-      },
-      {
-        id: 3,
-        name: 'iPad Pro 12.9"',
-        category: "태블릿",
-        pricePerDay: 15000,
-        image: "/ipad-pro-tablet.png",
-        badge: "",
-      },
-      {
-        id: 4,
-        name: "Canon EOS R5",
-        category: "카메라",
-        pricePerDay: 40000,
-        image: "/canon-eos-camera.jpg",
-        badge: "인기",
-      },
-      {
-        id: 5,
-        name: "DJI Mavic 3 드론",
-        category: "드론",
-        pricePerDay: 30000,
-        image: "/generic-drone.png",
-        badge: "",
-      },
-      {
-        id: 6,
-        name: "Surface Pro 9",
-        category: "노트북",
-        pricePerDay: 18000,
-        image: "/microsoft-surface-tablet.jpg",
-        badge: "",
-      },
-      {
-        id: 7,
-        name: "후지필름 X-T5",
-        category: "카메라",
-        pricePerDay: 28000,
-        image: "/fujifilm-camera.jpg",
-        badge: "",
-      },
-      {
-        id: 8,
-        name: "삼성 갤럭시 탭 S9",
-        category: "태블릿",
-        pricePerDay: 12000,
-        image: "/samsung-tablet.png",
-        badge: "",
-      },
-    ]
+    console.error("[v0] Failed to fetch products:", error)
+    products = []
   }
 
   return (

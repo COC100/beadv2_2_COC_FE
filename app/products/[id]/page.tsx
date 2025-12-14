@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { ArrowLeft, ShoppingCart, Calendar, Star, MapPin, Edit } from "lucide-react"
 import { Header } from "@/components/header"
@@ -11,39 +11,63 @@ import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { productAPI } from "@/lib/api"
+import { useToast } from "@/hooks/use-toast"
 
-export default async function ProductDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params
-  return <ProductDetailContent id={id} />
+export default function ProductDetailPage({ params }: { params: { id: string } }) {
+  return <ProductDetailContent id={params.id} />
 }
 
 function ProductDetailContent({ id }: { id: string }) {
+  const { toast } = useToast()
   const [startDate, setStartDate] = useState("")
   const [endDate, setEndDate] = useState("")
-  const isOwner = false // Mock seller check - replace with actual logic
+  const [product, setProduct] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+  const isOwner = false
 
-  const product = {
-    id: Number.parseInt(id),
-    name: 'MacBook Pro 16" M3',
-    category: "노트북",
-    pricePerDay: 25000,
-    description:
-      "최신 M3 칩이 탑재된 MacBook Pro 16인치 모델입니다. 영상 편집, 개발, 디자인 작업에 완벽한 성능을 제공합니다.",
-    specs: [
-      "M3 Pro 12코어 CPU",
-      "18코어 GPU",
-      "36GB 통합 메모리",
-      "512GB SSD 저장공간",
-      "16.2인치 Liquid Retina XDR 디스플레이",
-    ],
-    images: ["/macbook-pro-laptop.png", "/macbook-pro-laptop.png", "/macbook-pro-laptop.png"],
-    seller: {
-      name: "테크렌탈샵",
-      rating: 4.9,
-      reviews: 127,
-      location: "서울 강남구",
-    },
-    status: "ACTIVE",
+  useEffect(() => {
+    const fetchProduct = async () => {
+      try {
+        setLoading(true)
+        const response = await productAPI.getDetail(Number(id))
+        setProduct(response.data)
+      } catch (error) {
+        console.error("[v0] Failed to fetch product:", error)
+        toast({
+          variant: "destructive",
+          title: "상품 조회 실패",
+          description: "상품 정보를 불러올 수 없습니다.",
+        })
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchProduct()
+  }, [id])
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-white">
+        <Header />
+        <div className="container mx-auto px-4 py-8">
+          <p className="text-center">상품 정보를 불러오는 중...</p>
+        </div>
+        <Footer />
+      </div>
+    )
+  }
+
+  if (!product) {
+    return (
+      <div className="min-h-screen bg-white">
+        <Header />
+        <div className="container mx-auto px-4 py-8">
+          <p className="text-center text-muted-foreground">상품을 찾을 수 없습니다.</p>
+        </div>
+        <Footer />
+      </div>
+    )
   }
 
   const calculateTotal = () => {
