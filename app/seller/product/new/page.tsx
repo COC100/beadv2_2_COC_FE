@@ -16,6 +16,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useToast } from "@/hooks/use-toast"
 import { productAPI } from "@/lib/api"
+import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd"
 
 export default function NewProductPage() {
   const router = useRouter()
@@ -93,6 +94,16 @@ export default function NewProductPage() {
     } finally {
       setIsSubmitting(false)
     }
+  }
+
+  const onDragEnd = (result: any) => {
+    if (!result.destination) return
+
+    const newImages = Array.from(images)
+    const [reorderedImage] = newImages.splice(result.source.index, 1)
+    newImages.splice(result.destination.index, 0, reorderedImage)
+
+    setImages(newImages)
   }
 
   return (
@@ -186,6 +197,9 @@ export default function NewProductPage() {
 
                   <div className="space-y-2">
                     <Label>상품 이미지</Label>
+                    <p className="text-xs text-muted-foreground mb-2">
+                      이미지를 드래그하여 순서를 변경할 수 있습니다. 첫 번째 이미지가 대표 이미지로 설정됩니다.
+                    </p>
                     <div className="border-2 border-dashed rounded-lg p-6 text-center hover:border-primary transition-colors cursor-pointer">
                       <input
                         type="file"
@@ -202,26 +216,46 @@ export default function NewProductPage() {
                       </label>
                     </div>
                     {images.length > 0 && (
-                      <div className="grid grid-cols-5 gap-3 mt-3">
-                        {images.map((img, index) => (
-                          <div key={index} className="relative aspect-square bg-gray-50 rounded-lg overflow-hidden">
-                            <img
-                              src={img || "/placeholder.svg"}
-                              alt={`상품 이미지 ${index + 1}`}
-                              className="w-full h-full object-cover"
-                            />
-                            <Button
-                              type="button"
-                              size="icon"
-                              variant="destructive"
-                              className="absolute top-1 right-1 h-6 w-6"
-                              onClick={() => setImages(images.filter((_, i) => i !== index))}
+                      <DragDropContext onDragEnd={onDragEnd}>
+                        <Droppable droppableId="images">
+                          {(provided) => (
+                            <div
+                              {...provided.droppableProps}
+                              ref={provided.innerRef}
+                              className="grid grid-cols-5 gap-3 mt-3"
                             >
-                              <X className="h-3 w-3" />
-                            </Button>
-                          </div>
-                        ))}
-                      </div>
+                              {images.map((img, index) => (
+                                <Draggable key={img} draggableId={img} index={index}>
+                                  {(provided) => (
+                                    <div
+                                      {...provided.draggableProps}
+                                      {...provided.dragHandleProps}
+                                      ref={provided.innerRef}
+                                      className="relative aspect-square bg-gray-50 rounded-lg overflow-hidden"
+                                    >
+                                      <img
+                                        src={img || "/placeholder.svg"}
+                                        alt={`상품 이미지 ${index + 1}`}
+                                        className="w-full h-full object-cover"
+                                      />
+                                      <Button
+                                        type="button"
+                                        size="icon"
+                                        variant="destructive"
+                                        className="absolute top-1 right-1 h-6 w-6"
+                                        onClick={() => setImages(images.filter((_, i) => i !== index))}
+                                      >
+                                        <X className="h-3 w-3" />
+                                      </Button>
+                                    </div>
+                                  )}
+                                </Draggable>
+                              ))}
+                              {provided.placeholder}
+                            </div>
+                          )}
+                        </Droppable>
+                      </DragDropContext>
                     )}
                   </div>
 
