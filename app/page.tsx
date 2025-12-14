@@ -9,7 +9,7 @@ import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { productAPI } from "@/lib/api"
 import React from "react"
-import { useRouter } from "next/router"
+import { useRouter } from "next/navigation"
 
 export default function HomePage() {
   const router = useRouter()
@@ -24,6 +24,8 @@ export default function HomePage() {
   ]
 
   React.useEffect(() => {
+    if (typeof window === "undefined") return
+
     const token = localStorage.getItem("accessToken")
     if (!token) {
       router.push("/intro")
