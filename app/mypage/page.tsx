@@ -21,16 +21,12 @@ export default function MyPage() {
   useEffect(() => {
     const token = localStorage.getItem("accessToken")
     if (!token) {
-      toast({
-        title: "로그인이 필요합니다",
-        variant: "destructive",
-      })
-      router.push("/login")
+      router.push("/intro")
       return
     }
 
     fetchUserData()
-  }, [])
+  }, [router])
 
   const fetchUserData = async () => {
     try {
@@ -51,7 +47,7 @@ export default function MyPage() {
         description: "다시 로그인해주세요",
         variant: "destructive",
       })
-      router.push("/login")
+      router.push("/intro")
     } finally {
       setLoading(false)
     }

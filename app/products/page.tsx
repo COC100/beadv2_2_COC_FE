@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { Card, CardContent } from "@/components/ui/card"
@@ -33,6 +34,7 @@ const CATEGORIES = [
 ]
 
 export default function ProductsPage() {
+  const router = useRouter()
   const { toast } = useToast()
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedCategory, setSelectedCategory] = useState("ALL")
@@ -44,6 +46,14 @@ export default function ProductsPage() {
   const [showFilters, setShowFilters] = useState(false)
   const [products, setProducts] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const token = localStorage.getItem("accessToken")
+    if (!token) {
+      router.push("/intro")
+      return
+    }
+  }, [router])
 
   useEffect(() => {
     fetchProducts()

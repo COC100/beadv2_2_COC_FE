@@ -1,4 +1,5 @@
 import Link from "next/link"
+import { redirect } from "next/navigation"
 import { Camera, Laptop, Tablet, Headphones, ChevronRight, Package, Shield, Clock } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -6,8 +7,16 @@ import { Badge } from "@/components/ui/badge"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { productAPI } from "@/lib/api"
+import { cookies } from "next/headers"
 
 export default async function HomePage() {
+  const cookieStore = await cookies()
+  const token = cookieStore.get("accessToken")
+
+  if (!token) {
+    redirect("/intro")
+  }
+
   const categories = [
     { name: "노트북", icon: Laptop, href: "/products?category=LAPTOP" },
     { name: "카메라", icon: Camera, href: "/products?category=CAMERA" },

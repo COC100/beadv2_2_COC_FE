@@ -29,6 +29,12 @@ function ProductDetailContent({ id }: { id: string }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    const token = localStorage.getItem("accessToken")
+    if (!token) {
+      router.push("/intro")
+      return
+    }
+
     const fetchProduct = async () => {
       try {
         setLoading(true)
@@ -46,7 +52,7 @@ function ProductDetailContent({ id }: { id: string }) {
       }
     }
     fetchProduct()
-  }, [id])
+  }, [id, router])
 
   const handleAddToCart = async () => {
     if (!startDate || !endDate) {

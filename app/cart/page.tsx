@@ -35,16 +35,12 @@ export default function CartPage() {
   useEffect(() => {
     const token = localStorage.getItem("accessToken")
     if (!token) {
-      toast({
-        title: "로그인이 필요합니다",
-        variant: "destructive",
-      })
-      router.push("/login")
+      router.push("/intro")
       return
     }
 
     fetchCart()
-  }, [])
+  }, [router])
 
   const fetchCart = async () => {
     try {
