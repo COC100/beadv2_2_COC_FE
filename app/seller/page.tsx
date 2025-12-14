@@ -49,12 +49,18 @@ export default function SellerPage() {
         })
         setProducts(productsResponse.products || [])
 
-        const rentals = await sellerAPI.getRentals({
-          status: "REQUESTED",
-          startDate: new Date().toISOString().split("T")[0],
-          endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
-        })
-        setReservations(rentals || [])
+        try {
+          const rentals = await sellerAPI.getRentals({
+            status: "REQUESTED",
+            startDate: new Date().toISOString().split("T")[0],
+            endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
+          })
+          setReservations(rentals || [])
+        } catch (rentalError) {
+          console.error("[v0] Failed to load rentals (non-critical):", rentalError)
+          // Don't show error toast for rentals - it's not critical
+          setReservations([])
+        }
       } catch (error: any) {
         console.error("[v0] Failed to load seller data:", error)
         if (error.message.includes("404") || error.message.includes("Not Found")) {
@@ -215,9 +221,6 @@ export default function SellerPage() {
                             <Badge className="bg-accent text-white hover:bg-accent">
                               ₩{product.pricePerDay.toLocaleString()}/일
                             </Badge>
-                            <Badge className={getStatusText(product.status).className}>
-                              {getStatusText(product.status).text}
-                            </Badge>
                           </div>
                         </div>
                         <div className="flex gap-2">
@@ -334,10 +337,6 @@ export default function SellerPage() {
                         <p className="font-medium">{sellerInfo.storePhone}</p>
                       </div>
                     )}
-                    <div>
-                      <p className="text-sm text-muted-foreground mb-1">상태</p>
-                      <Badge>{sellerInfo.status}</Badge>
-                    </div>
                     <div className="pt-4">
                       <Link href="/seller/settings">
                         <Button variant="outline" className="rounded-lg bg-transparent">
