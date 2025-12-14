@@ -9,9 +9,11 @@ import { Footer } from "@/components/footer"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { memberAPI, accountAPI } from "@/lib/api"
+import { useToast } from "@/hooks/use-toast"
 
 export default function MyPage() {
   const router = useRouter()
+  const { toast } = useToast()
   const [member, setMember] = useState<any>(null)
   const [balance, setBalance] = useState(0)
   const [loading, setLoading] = useState(true)
@@ -22,7 +24,11 @@ export default function MyPage() {
       const memberId = localStorage.getItem("memberId")
 
       if (!token || !memberId) {
-        alert("로그인이 필요합니다.")
+        toast({
+          variant: "destructive",
+          title: "로그인 필요",
+          description: "로그인이 필요합니다.",
+        })
         router.push("/login")
         return
       }
@@ -44,7 +50,11 @@ export default function MyPage() {
         }
       } catch (error) {
         console.error("[v0] Failed to fetch user data:", error)
-        alert("사용자 정보를 불러오는데 실패했습니다.")
+        toast({
+          variant: "destructive",
+          title: "오류 발생",
+          description: "사용자 정보를 불러오는데 실패했습니다.",
+        })
         router.push("/login")
       } finally {
         setLoading(false)
@@ -58,7 +68,10 @@ export default function MyPage() {
     localStorage.removeItem("accessToken")
     localStorage.removeItem("refreshToken")
     localStorage.removeItem("memberId")
-    alert("로그아웃되었습니다.")
+    toast({
+      title: "로그아웃 완료",
+      description: "로그아웃되었습니다.",
+    })
     router.push("/")
   }
 

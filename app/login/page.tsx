@@ -10,9 +10,11 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { memberAPI } from "@/lib/api"
+import { useToast } from "@/hooks/use-toast"
 
 export default function LoginPage() {
   const router = useRouter()
+  const { toast } = useToast()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [loading, setLoading] = useState(false)
@@ -30,14 +32,25 @@ export default function LoginPage() {
         localStorage.setItem("refreshToken", response.data.refreshToken)
         localStorage.setItem("memberId", response.data.memberId.toString())
 
-        alert("로그인 성공!")
+        toast({
+          title: "로그인 성공!",
+          description: "Modi에 오신 것을 환영합니다.",
+        })
         router.push("/")
       } else {
-        alert(response.error?.message || "로그인에 실패했습니다.")
+        toast({
+          variant: "destructive",
+          title: "로그인 실패",
+          description: response.error?.message || "로그인에 실패했습니다.",
+        })
       }
     } catch (error) {
       console.error("[v0] Login error:", error)
-      alert("로그인 중 오류가 발생했습니다.")
+      toast({
+        variant: "destructive",
+        title: "오류 발생",
+        description: "로그인 중 오류가 발생했습니다.",
+      })
     } finally {
       setLoading(false)
     }

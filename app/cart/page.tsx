@@ -10,9 +10,11 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import { cartAPI } from "@/lib/api"
+import { useToast } from "@/hooks/use-toast"
 
 export default function CartPage() {
   const router = useRouter()
+  const { toast } = useToast()
   const [cartItems, setCartItems] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -25,7 +27,11 @@ export default function CartPage() {
     const memberId = localStorage.getItem("memberId")
 
     if (!token || !memberId) {
-      alert("로그인이 필요합니다.")
+      toast({
+        variant: "destructive",
+        title: "로그인 필요",
+        description: "로그인이 필요합니다.",
+      })
       router.push("/login")
       return
     }
@@ -62,13 +68,24 @@ export default function CartPage() {
       const response = await cartAPI.removeFromCart(itemId)
       if (response.success) {
         setCartItems(cartItems.filter((item) => item.id !== itemId))
-        alert("장바구니에서 삭제되었습니다.")
+        toast({
+          title: "삭제 완료",
+          description: "장바구니에서 삭제되었습니다.",
+        })
       } else {
-        alert("삭제에 실패했습니다.")
+        toast({
+          variant: "destructive",
+          title: "삭제 실패",
+          description: "삭제에 실패했습니다.",
+        })
       }
     } catch (error) {
       console.error("[v0] Failed to remove item:", error)
-      alert("삭제 중 오류가 발생했습니다.")
+      toast({
+        variant: "destructive",
+        title: "오류 발생",
+        description: "삭제 중 오류가 발생했습니다.",
+      })
     }
   }
 

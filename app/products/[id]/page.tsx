@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { productAPI, cartAPI } from "@/lib/api"
+import { useToast } from "@/hooks/use-toast"
 
 export default async function ProductDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -20,6 +21,7 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
 
 function ProductDetailContent({ id }: { id: string }) {
   const router = useRouter()
+  const { toast } = useToast()
   const [startDate, setStartDate] = useState("")
   const [endDate, setEndDate] = useState("")
   const [product, setProduct] = useState<any>(null)
@@ -32,12 +34,20 @@ function ProductDetailContent({ id }: { id: string }) {
         if (response.success && response.data) {
           setProduct(response.data)
         } else {
-          alert("상품을 찾을 수 없습니다.")
+          toast({
+            variant: "destructive",
+            title: "상품 없음",
+            description: "상품을 찾을 수 없습니다.",
+          })
           router.push("/products")
         }
       } catch (error) {
         console.error("[v0] Failed to fetch product:", error)
-        alert("상품 정보를 불러오는데 실패했습니다.")
+        toast({
+          variant: "destructive",
+          title: "오류 발생",
+          description: "상품 정보를 불러오는데 실패했습니다.",
+        })
         router.push("/products")
       } finally {
         setLoading(false)
@@ -57,7 +67,11 @@ function ProductDetailContent({ id }: { id: string }) {
 
   const handleAddToCart = async () => {
     if (!startDate || !endDate) {
-      alert("대여 기간을 선택해주세요.")
+      toast({
+        variant: "destructive",
+        title: "대여 기간 선택",
+        description: "대여 기간을 선택해주세요.",
+      })
       return
     }
 
@@ -70,13 +84,24 @@ function ProductDetailContent({ id }: { id: string }) {
       })
 
       if (response.success) {
-        alert("장바구니에 추가되었습니다.")
+        toast({
+          title: "장바구니 추가",
+          description: "장바구니에 추가되었습니다.",
+        })
       } else {
-        alert(response.error?.message || "장바구니 추가에 실패했습니다.")
+        toast({
+          variant: "destructive",
+          title: "추가 실패",
+          description: response.error?.message || "장바구니 추가에 실패했습니다.",
+        })
       }
     } catch (error) {
       console.error("[v0] Failed to add to cart:", error)
-      alert("장바구니 추가에 실패했습니다.")
+      toast({
+        variant: "destructive",
+        title: "오류 발생",
+        description: "장바구니 추가에 실패했습니다.",
+      })
     }
   }
 

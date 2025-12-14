@@ -11,8 +11,10 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Mail, Phone, MapPin } from "lucide-react"
 import { useState } from "react"
+import { useToast } from "@/hooks/use-toast"
 
 export default function ContactPage() {
+  const { toast } = useToast()
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -23,7 +25,10 @@ export default function ContactPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     // TODO: API 연동
-    alert("문의가 접수되었습니다. 빠른 시일 내에 답변 드리겠습니다.")
+    toast({
+      title: "문의 접수 완료",
+      description: "문의가 접수되었습니다. 빠른 시일 내에 답변 드리겠습니다.",
+    })
     setFormData({ name: "", email: "", subject: "", message: "" })
   }
 

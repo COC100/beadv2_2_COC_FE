@@ -15,9 +15,11 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { ArrowLeft, User, Lock, AlertCircle, CheckCircle2 } from "lucide-react"
 import Link from "next/link"
 import { memberAPI } from "@/lib/api"
+import { useToast } from "@/hooks/use-toast"
 
 export default function SettingsPage() {
   const router = useRouter()
+  const { toast } = useToast()
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null)
 
@@ -112,11 +114,18 @@ export default function SettingsPage() {
       if (response.success) {
         localStorage.removeItem("accessToken")
         localStorage.removeItem("refreshToken")
-        alert("회원 탈퇴가 완료되었습니다.")
+        toast({
+          title: "회원 탈퇴 완료",
+          description: "회원 탈퇴가 완료되었습니다.",
+        })
         router.push("/")
       }
     } catch (error) {
-      alert("회원 탈퇴에 실패했습니다.")
+      toast({
+        variant: "destructive",
+        title: "탈퇴 실패",
+        description: "회원 탈퇴에 실패했습니다.",
+      })
     }
   }
 
