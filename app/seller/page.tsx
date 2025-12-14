@@ -47,9 +47,12 @@ export default function SellerPage() {
         try {
           const productsResponse = await productAPI.list({
             sellerId: seller.id,
-            requiresAuth: true,
+            size: 100,
           })
-          setProducts(productsResponse.products || [])
+          const activeProducts = (productsResponse.products || []).filter(
+            (p: any) => p.status === "ACTIVE" || p.status === "INACTIVE",
+          )
+          setProducts(activeProducts)
         } catch (productError) {
           console.error("[v0] Failed to load products (non-critical):", productError)
           setProducts([])
