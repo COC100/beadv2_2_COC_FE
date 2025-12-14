@@ -1,6 +1,9 @@
 "use client"
 
-import { useState } from "react"
+import type React from "react"
+
+import { useState, useEffect } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { ArrowLeft, MapPin, Plus } from "lucide-react"
 import { Header } from "@/components/header"
@@ -10,52 +13,152 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Label } from "@/components/ui/label"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
+import { useToast } from "@/hooks/use-toast"
+import { memberAPI, rentalAPI, cartAPI } from "@/lib/api"
 
 export default function ReservationPage() {
-  const [selectedAddressId, setSelectedAddressId] = useState<number>(1)
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const { toast } = useToast()
+  const [selectedAddressId, setSelectedAddressId] = useState<number | null>(null)
+  const [addresses, setAddresses] = useState<any[]>([])
+  const [cartItems, setCartItems] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [formData, setFormData] = useState({
+    name: "",
+    recipient: "",
+    phone: "",
+    address: "",
+    detailAddress: "",
+    zipCode: "",
+  })
 
-  // Mock data
-  const addresses = [
-    {
-      id: 1,
-      name: "집",
-      address: "서울특별시 강남구 테헤란로 123",
-      detailAddress: "삼성빌딩 402호",
-      phone: "010-1234-5678",
-      isDefault: true,
-    },
-    {
-      id: 2,
-      name: "회사",
-      address: "서울특별시 서초구 서초대로 456",
-      detailAddress: "7층",
-      phone: "010-1234-5678",
-      isDefault: false,
-    },
-  ]
+  useEffect(() => {
+    const loadData = async () => {
+      const token = localStorage.getItem("accessToken")
+      if (!token) {
+        router.push("/intro")
+        return
+      }
 
-  const cartItems = [
-    {
-      id: 1,
-      productName: 'MacBook Pro 16" M3',
-      pricePerDay: 25000,
-      startDate: "2025-01-15",
-      endDate: "2025-01-20",
-      days: 5,
-      total: 125000,
-    },
-    {
-      id: 2,
-      productName: "Sony A7 IV 미러리스",
-      pricePerDay: 35000,
-      startDate: "2025-01-18",
-      endDate: "2025-01-22",
-      days: 4,
-      total: 140000,
-    },
-  ]
+      try {
+        const addressResponse = await memberAPI.getAddresses()
+        const addressList = addressResponse.addressList || []
+        setAddresses(addressList)
 
-  const totalAmount = cartItems.reduce((sum, item) => sum + item.total, 0)
+        // Set default address
+        const defaultAddr = addressList.find((a: any) => a.isDefault)
+        if (defaultAddr) {
+          setSelectedAddressId(defaultAddr.id)
+        } else if (addressList.length > 0) {
+          setSelectedAddressId(addressList[0].id)
+        }
+
+        const cartResponse = await cartAPI.list()
+        setCartItems(cartResponse.items || [])
+      } catch (error: any) {
+        console.error("[v0] Failed to load reservation data:", error)
+        if (error.message.includes("401")) {
+          router.push("/intro")
+        } else {
+          toast({
+            title: "데이터 로딩 실패",
+            description: "예약 정보를 불러오는데 실패했습니다",
+            variant: "destructive",
+          })
+        }
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadData()
+  }, [router, toast])
+
+  const handleAddAddress = async (e: React.FormEvent) => {
+    e.preventDefault()
+
+    try {
+      await memberAPI.createAddress({
+        addressLabel: formData.name,
+        recipientName: formData.recipient,
+        recipientPhone: formData.phone,
+        postcode: formData.zipCode,
+        roadAddress: formData.address,
+        detailAddress: formData.detailAddress,
+        isDefault: addresses.length === 0,
+        type: "MEMBER",
+      })
+
+      const response = await memberAPI.getAddresses()
+      setAddresses(response.addressList || [])
+      setIsDialogOpen(false)
+      toast({
+        title: "주소 추가 완료",
+        description: "주소가 성공적으로 추가되었습니다",
+      })
+    } catch (error: any) {
+      console.error("[v0] Failed to add address:", error)
+      toast({
+        title: "주소 추가 실패",
+        description: error.message || "주소 추가에 실패했습니다",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const handleReservation = async () => {
+    if (!selectedAddressId) {
+      toast({
+        title: "주소 선택 필요",
+        description: "배송받을 주소를 선택해주세요",
+        variant: "destructive",
+      })
+      return
+    }
+
+    try {
+      const cartItemIds = cartItems.map((item) => item.cartItemId)
+      await rentalAPI.createFromCart(cartItemIds)
+
+      toast({
+        title: "예약 신청 완료",
+        description: "예약이 성공적으로 신청되었습니다",
+      })
+      router.push("/mypage/rentals")
+    } catch (error: any) {
+      console.error("[v0] Failed to create rental:", error)
+      toast({
+        title: "예약 신청 실패",
+        description: error.message || "예약 신청에 실패했습니다",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const totalAmount = cartItems.reduce((sum, item) => sum + (item.price || 0), 0)
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-white">
+        <Header />
+        <div className="container mx-auto px-4 py-12 text-center">
+          <p className="text-muted-foreground">로딩 중...</p>
+        </div>
+        <Footer />
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-white">
@@ -81,16 +184,106 @@ export default function ReservationPage() {
                     <MapPin className="h-5 w-5 text-primary" />
                     배송 주소
                   </h2>
-                  <Link href="/mypage/addresses">
-                    <Button variant="outline" size="sm" className="rounded-lg bg-transparent">
-                      <Plus className="h-4 w-4 mr-1" />
-                      주소 추가
-                    </Button>
-                  </Link>
+                  <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+                    <DialogTrigger asChild>
+                      <Button variant="outline" size="sm" className="rounded-lg bg-transparent">
+                        <Plus className="h-4 w-4 mr-1" />
+                        주소 추가
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="sm:max-w-[500px] rounded-2xl">
+                      <DialogHeader>
+                        <DialogTitle>주소 추가</DialogTitle>
+                        <DialogDescription>배송받을 주소 정보를 입력하세요</DialogDescription>
+                      </DialogHeader>
+                      <form onSubmit={handleAddAddress} className="space-y-4 mt-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="name">주소지 이름</Label>
+                          <Input
+                            id="name"
+                            placeholder="예: 집, 회사"
+                            value={formData.name}
+                            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                            className="rounded-xl"
+                            required
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="recipient">받는 사람</Label>
+                          <Input
+                            id="recipient"
+                            placeholder="이름"
+                            value={formData.recipient}
+                            onChange={(e) => setFormData({ ...formData, recipient: e.target.value })}
+                            className="rounded-xl"
+                            required
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="phone">연락처</Label>
+                          <Input
+                            id="phone"
+                            type="tel"
+                            placeholder="010-0000-0000"
+                            value={formData.phone}
+                            onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                            className="rounded-xl"
+                            required
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="zipCode">우편번호</Label>
+                          <Input
+                            id="zipCode"
+                            placeholder="12345"
+                            value={formData.zipCode}
+                            onChange={(e) => setFormData({ ...formData, zipCode: e.target.value })}
+                            className="rounded-xl"
+                            required
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="address">주소</Label>
+                          <Input
+                            id="address"
+                            placeholder="도로명 주소"
+                            value={formData.address}
+                            onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                            className="rounded-xl"
+                            required
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="detailAddress">상세 주소</Label>
+                          <Input
+                            id="detailAddress"
+                            placeholder="동/호수"
+                            value={formData.detailAddress}
+                            onChange={(e) => setFormData({ ...formData, detailAddress: e.target.value })}
+                            className="rounded-xl"
+                            required
+                          />
+                        </div>
+                        <div className="flex gap-3 pt-4">
+                          <Button type="submit" className="flex-1 rounded-xl">
+                            추가하기
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => setIsDialogOpen(false)}
+                            className="flex-1 rounded-xl"
+                          >
+                            취소
+                          </Button>
+                        </div>
+                      </form>
+                    </DialogContent>
+                  </Dialog>
                 </div>
 
                 <RadioGroup
-                  value={selectedAddressId.toString()}
+                  value={selectedAddressId?.toString()}
                   onValueChange={(value) => setSelectedAddressId(Number.parseInt(value))}
                 >
                   <div className="space-y-3">
@@ -101,16 +294,16 @@ export default function ReservationPage() {
                             <RadioGroupItem value={addr.id.toString()} id={`address-${addr.id}`} className="mt-1" />
                             <Label htmlFor={`address-${addr.id}`} className="flex-1 cursor-pointer">
                               <div className="flex items-center gap-2 mb-2">
-                                <span className="font-semibold">{addr.name}</span>
+                                <span className="font-semibold">{addr.addressLabel}</span>
                                 {addr.isDefault && (
                                   <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded">
                                     기본 배송지
                                   </span>
                                 )}
                               </div>
-                              <p className="text-sm text-muted-foreground mb-1">{addr.address}</p>
+                              <p className="text-sm text-muted-foreground mb-1">{addr.roadAddress}</p>
                               <p className="text-sm text-muted-foreground mb-1">{addr.detailAddress}</p>
-                              <p className="text-sm text-muted-foreground">{addr.phone}</p>
+                              <p className="text-sm text-muted-foreground">{addr.recipientPhone}</p>
                             </Label>
                           </div>
                         </CardContent>
@@ -126,17 +319,14 @@ export default function ReservationPage() {
                 <h2 className="text-xl font-bold mb-4">주문 상품</h2>
                 <div className="space-y-4">
                   {cartItems.map((item) => (
-                    <div key={item.id} className="flex justify-between items-start pb-4 border-b last:border-0">
+                    <div key={item.cartItemId} className="flex justify-between items-start pb-4 border-b last:border-0">
                       <div>
-                        <p className="font-semibold mb-1">{item.productName}</p>
+                        <p className="font-semibold mb-1">상품 #{item.productId}</p>
                         <p className="text-sm text-muted-foreground">
-                          {item.startDate} ~ {item.endDate} ({item.days}일)
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          {item.pricePerDay.toLocaleString()}원 x {item.days}일
+                          {item.startDate} ~ {item.endDate}
                         </p>
                       </div>
-                      <p className="font-bold text-primary">₩{item.total.toLocaleString()}</p>
+                      <p className="font-bold text-primary">₩{item.price?.toLocaleString()}</p>
                     </div>
                   ))}
                 </div>
@@ -167,7 +357,7 @@ export default function ReservationPage() {
                   <span className="text-primary text-xl">₩{totalAmount.toLocaleString()}</span>
                 </div>
 
-                <Button className="w-full h-11 rounded-lg" size="lg">
+                <Button className="w-full h-11 rounded-lg" size="lg" onClick={handleReservation}>
                   예약 신청하기
                 </Button>
 

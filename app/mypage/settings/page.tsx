@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
@@ -11,21 +11,21 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { ArrowLeft, User, Lock, AlertCircle, CheckCircle2 } from "lucide-react"
+import { ArrowLeft, User, Lock } from "lucide-react"
 import Link from "next/link"
+import { useToast } from "@/hooks/use-toast"
+import { memberAPI } from "@/lib/api"
 
 export default function SettingsPage() {
   const router = useRouter()
+  const { toast } = useToast()
   const [loading, setLoading] = useState(false)
-  const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null)
+  const [profileLoading, setProfileLoading] = useState(true)
 
-  // Profile state
   const [profile, setProfile] = useState({
-    name: "홍길동",
-    email: "user@example.com",
-    phone: "010-1234-5678",
-    address: "서울시 강남구 테헤란로 123",
+    name: "",
+    email: "",
+    phone: "",
   })
 
   // Password state
@@ -35,17 +35,54 @@ export default function SettingsPage() {
     confirmPassword: "",
   })
 
+  useEffect(() => {
+    const loadProfile = async () => {
+      const token = localStorage.getItem("accessToken")
+      if (!token) {
+        router.push("/intro")
+        return
+      }
+
+      try {
+        const profileData = await memberAPI.getProfile()
+        setProfile({
+          name: profileData.name || "",
+          email: localStorage.getItem("user") ? JSON.parse(localStorage.getItem("user")!).email : "",
+          phone: profileData.phone || "",
+        })
+      } catch (error: any) {
+        console.error("[v0] Failed to load profile:", error)
+        if (error.message.includes("401")) {
+          router.push("/intro")
+        }
+      } finally {
+        setProfileLoading(false)
+      }
+    }
+
+    loadProfile()
+  }, [router])
+
   const handleProfileUpdate = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
-    setMessage(null)
 
     try {
-      // API call would go here
-      await new Promise((resolve) => setTimeout(resolve, 1000))
-      setMessage({ type: "success", text: "개인정보가 성공적으로 수정되었습니다." })
-    } catch (error) {
-      setMessage({ type: "error", text: "개인정보 수정에 실패했습니다." })
+      await memberAPI.updateProfile({
+        name: profile.name,
+        phone: profile.phone,
+      })
+      toast({
+        title: "개인정보 수정 완료",
+        description: "개인정보가 성공적으로 수정되었습니다.",
+      })
+    } catch (error: any) {
+      console.error("[v0] Failed to update profile:", error)
+      toast({
+        title: "개인정보 수정 실패",
+        description: error.message || "개인정보 수정에 실패했습니다.",
+        variant: "destructive",
+      })
     } finally {
       setLoading(false)
     }
@@ -54,30 +91,89 @@ export default function SettingsPage() {
   const handlePasswordUpdate = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
-    setMessage(null)
 
     if (passwords.newPassword !== passwords.confirmPassword) {
-      setMessage({ type: "error", text: "새 비밀번호가 일치하지 않습니다." })
+      toast({
+        title: "비밀번호 불일치",
+        description: "새 비밀번호가 일치하지 않습니다.",
+        variant: "destructive",
+      })
       setLoading(false)
       return
     }
 
     if (passwords.newPassword.length < 8) {
-      setMessage({ type: "error", text: "비밀번호는 8자 이상이어야 합니다." })
+      toast({
+        title: "비밀번호 규칙 위반",
+        description: "비밀번호는 8자 이상이어야 합니다.",
+        variant: "destructive",
+      })
       setLoading(false)
       return
     }
 
     try {
-      // API call would go here
-      await new Promise((resolve) => setTimeout(resolve, 1000))
-      setMessage({ type: "success", text: "비밀번호가 성공적으로 변경되었습니다." })
+      const user = localStorage.getItem("user")
+      const memberId = user ? JSON.parse(user).id : null
+
+      if (!memberId) {
+        throw new Error("회원 정보를 찾을 수 없습니다")
+      }
+
+      await memberAPI.updatePassword(memberId, {
+        name: profile.name,
+        password: passwords.newPassword,
+        email: profile.email,
+        verificationCode: "000000", // TODO: Implement verification code
+      })
+      toast({
+        title: "비밀번호 변경 완료",
+        description: "비밀번호가 성공적으로 변경되었습니다.",
+      })
       setPasswords({ currentPassword: "", newPassword: "", confirmPassword: "" })
-    } catch (error) {
-      setMessage({ type: "error", text: "비밀번호 변경에 실패했습니다." })
+    } catch (error: any) {
+      console.error("[v0] Failed to update password:", error)
+      toast({
+        title: "비밀번호 변경 실패",
+        description: error.message || "비밀번호 변경에 실패했습니다.",
+        variant: "destructive",
+      })
     } finally {
       setLoading(false)
     }
+  }
+
+  const handleDeleteAccount = async () => {
+    try {
+      await memberAPI.deleteAccount()
+      localStorage.removeItem("accessToken")
+      localStorage.removeItem("refreshToken")
+      localStorage.removeItem("user")
+      toast({
+        title: "회원 탈퇴 완료",
+        description: "그동안 이용해주셔서 감사합니다.",
+      })
+      router.push("/intro")
+    } catch (error: any) {
+      console.error("[v0] Failed to delete account:", error)
+      toast({
+        title: "회원 탈퇴 실패",
+        description: error.message || "회원 탈퇴에 실패했습니다.",
+        variant: "destructive",
+      })
+    }
+  }
+
+  if (profileLoading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Header />
+        <div className="container mx-auto px-4 py-12 text-center">
+          <p className="text-muted-foreground">로딩 중...</p>
+        </div>
+        <Footer />
+      </div>
+    )
   }
 
   return (
@@ -96,13 +192,6 @@ export default function SettingsPage() {
           <h1 className="text-4xl font-bold mb-2">개인정보 수정</h1>
           <p className="text-muted-foreground text-lg">개인정보 및 비밀번호를 관리하세요</p>
         </div>
-
-        {message && (
-          <Alert variant={message.type === "error" ? "destructive" : "default"} className="mb-6 rounded-2xl">
-            {message.type === "success" ? <CheckCircle2 className="h-4 w-4" /> : <AlertCircle className="h-4 w-4" />}
-            <AlertDescription>{message.text}</AlertDescription>
-          </Alert>
-        )}
 
         <Tabs defaultValue="profile" className="space-y-6">
           <TabsList className="grid w-full grid-cols-2 rounded-xl mx-auto">
@@ -125,12 +214,13 @@ export default function SettingsPage() {
               <CardContent>
                 <form onSubmit={handleProfileUpdate} className="space-y-6">
                   <div className="space-y-2">
-                    <Label htmlFor="name">이름</Label>
+                    <Label htmlFor="name">이름 *</Label>
                     <Input
                       id="name"
                       value={profile.name}
                       onChange={(e) => setProfile({ ...profile, name: e.target.value })}
                       className="rounded-xl"
+                      required
                     />
                   </div>
 
@@ -146,13 +236,14 @@ export default function SettingsPage() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="phone">전화번호</Label>
+                    <Label htmlFor="phone">전화번호 *</Label>
                     <Input
                       id="phone"
                       type="tel"
                       value={profile.phone}
                       onChange={(e) => setProfile({ ...profile, phone: e.target.value })}
                       className="rounded-xl"
+                      required
                     />
                   </div>
 
@@ -183,7 +274,7 @@ export default function SettingsPage() {
               <CardContent>
                 <form onSubmit={handlePasswordUpdate} className="space-y-6">
                   <div className="space-y-2">
-                    <Label htmlFor="currentPassword">현재 비밀번호</Label>
+                    <Label htmlFor="currentPassword">현재 비밀번호 *</Label>
                     <Input
                       id="currentPassword"
                       type="password"
@@ -195,7 +286,7 @@ export default function SettingsPage() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="newPassword">새 비밀번호</Label>
+                    <Label htmlFor="newPassword">새 비밀번호 *</Label>
                     <Input
                       id="newPassword"
                       type="password"
@@ -207,7 +298,7 @@ export default function SettingsPage() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="confirmPassword">새 비밀번호 확인</Label>
+                    <Label htmlFor="confirmPassword">새 비밀번호 확인 *</Label>
                     <Input
                       id="confirmPassword"
                       type="password"
@@ -244,7 +335,12 @@ export default function SettingsPage() {
             <p className="text-sm text-muted-foreground mb-3">
               서비스 이용이 불편하신가요? 탈퇴 시 모든 데이터가 삭제되며 복구할 수 없습니다.
             </p>
-            <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-destructive text-xs">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-muted-foreground hover:text-destructive text-xs"
+              onClick={handleDeleteAccount}
+            >
               회원 탈퇴
             </Button>
           </div>
