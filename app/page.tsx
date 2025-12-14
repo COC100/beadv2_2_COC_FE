@@ -1,3 +1,9 @@
+"use client"
+
+import { useEffect } from "react"
+
+import { useState } from "react"
+
 import Link from "next/link"
 import { Camera, Laptop, Tablet, Headphones, ChevronRight, Package, Shield, Clock } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -5,80 +11,34 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
+import { productAPI } from "@/lib/api"
 
 export default function HomePage() {
-  const categories = [
-    { name: "노트북", icon: Laptop, href: "/products?category=laptop" },
-    { name: "카메라", icon: Camera, href: "/products?category=camera" },
-    { name: "태블릿", icon: Tablet, href: "/products?category=tablet" },
-    { name: "오디오", icon: Headphones, href: "/products?category=audio" },
-  ]
+  const [products, setProducts] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
 
-  const products = [
-    {
-      id: 1,
-      name: 'MacBook Pro 16" M3',
-      category: "노트북",
-      pricePerDay: 25000,
-      image: "/macbook-pro-laptop.png",
-      badge: "인기",
-    },
-    {
-      id: 2,
-      name: "Sony A7 IV 미러리스",
-      category: "카메라",
-      pricePerDay: 35000,
-      image: "/sony-mirrorless-camera.png",
-      badge: "신규",
-    },
-    {
-      id: 3,
-      name: 'iPad Pro 12.9"',
-      category: "태블릿",
-      pricePerDay: 15000,
-      image: "/ipad-pro-tablet.png",
-      badge: "",
-    },
-    {
-      id: 4,
-      name: "Canon EOS R5",
-      category: "카메라",
-      pricePerDay: 40000,
-      image: "/canon-eos-camera.jpg",
-      badge: "인기",
-    },
-    {
-      id: 5,
-      name: "DJI Mavic 3 드론",
-      category: "드론",
-      pricePerDay: 30000,
-      image: "/generic-drone.png",
-      badge: "",
-    },
-    {
-      id: 6,
-      name: "Surface Pro 9",
-      category: "노트북",
-      pricePerDay: 18000,
-      image: "/microsoft-surface-tablet.jpg",
-      badge: "",
-    },
-    {
-      id: 7,
-      name: "후지필름 X-T5",
-      category: "카메라",
-      pricePerDay: 28000,
-      image: "/fujifilm-camera.jpg",
-      badge: "",
-    },
-    {
-      id: 8,
-      name: "삼성 갤럭시 탭 S9",
-      category: "태블릿",
-      pricePerDay: 12000,
-      image: "/samsung-tablet.png",
-      badge: "",
-    },
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        const response = await productAPI.getProducts({ size: 8 })
+        if (response.success && response.data) {
+          setProducts(response.data.content || [])
+        }
+      } catch (error) {
+        console.error("[v0] Failed to fetch products:", error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchProducts()
+  }, [])
+
+  const categories = [
+    { name: "노트북", icon: Laptop, href: "/products?category=LAPTOP" },
+    { name: "카메라", icon: Camera, href: "/products?category=CAMERA" },
+    { name: "태블릿", icon: Tablet, href: "/products?category=TABLET" },
+    { name: "오디오", icon: Headphones, href: "/products?category=AUDIO" },
   ]
 
   return (
@@ -149,36 +109,42 @@ export default function HomePage() {
             </Link>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
-            {products.map((product) => (
-              <Link key={product.id} href={`/products/${product.id}`}>
-                <Card className="overflow-hidden hover:shadow-lg transition-shadow group border-gray-200">
-                  <div className="aspect-square overflow-hidden bg-gray-50 relative">
-                    {product.badge && (
-                      <Badge className="absolute top-2 left-2 z-10 bg-primary text-white text-xs">
-                        {product.badge}
-                      </Badge>
-                    )}
-                    <img
-                      src={product.image || "/placeholder.svg"}
-                      alt={product.name}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                    />
-                  </div>
-                  <CardContent className="p-3">
-                    <p className="text-xs text-muted-foreground mb-1">{product.category}</p>
-                    <h3 className="font-medium text-sm mb-2 line-clamp-2 leading-tight">{product.name}</h3>
-                    <div className="flex items-center gap-2">
-                      <Badge variant="secondary" className="bg-accent text-white hover:bg-accent text-xs font-bold">
-                        ₩{product.pricePerDay.toLocaleString()}
-                      </Badge>
-                      <span className="text-xs text-muted-foreground">/일</span>
+          {loading ? (
+            <div className="text-center py-12">
+              <p className="text-muted-foreground">상품을 불러오는 중...</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
+              {products.map((product) => (
+                <Link key={product.id} href={`/products/${product.id}`}>
+                  <Card className="overflow-hidden hover:shadow-lg transition-shadow group border-gray-200">
+                    <div className="aspect-square overflow-hidden bg-gray-50 relative">
+                      {product.badge && (
+                        <Badge className="absolute top-2 left-2 z-10 bg-primary text-white text-xs">
+                          {product.badge}
+                        </Badge>
+                      )}
+                      <img
+                        src={product.thumbnailUrl || "/placeholder.svg"}
+                        alt={product.name}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      />
                     </div>
-                  </CardContent>
-                </Card>
-              </Link>
-            ))}
-          </div>
+                    <CardContent className="p-3">
+                      <p className="text-xs text-muted-foreground mb-1">{product.category}</p>
+                      <h3 className="font-medium text-sm mb-2 line-clamp-2 leading-tight">{product.name}</h3>
+                      <div className="flex items-center gap-2">
+                        <Badge variant="secondary" className="bg-accent text-white hover:bg-accent text-xs font-bold">
+                          ₩{product.price?.toLocaleString()}
+                        </Badge>
+                        <span className="text-xs text-muted-foreground">/일</span>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </Link>
+              ))}
+            </div>
+          )}
         </div>
       </section>
 

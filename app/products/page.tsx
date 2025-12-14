@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import Link from "next/link"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
@@ -15,6 +15,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Search, SlidersHorizontal, CalendarIcon } from "lucide-react"
 import { format } from "date-fns"
 import { ko } from "date-fns/locale"
+import { productAPI } from "@/lib/api"
 
 const CATEGORIES = [
   { value: "ALL", label: "전체" },
@@ -39,158 +40,39 @@ export default function ProductsPage() {
   const [startDate, setStartDate] = useState<Date>()
   const [endDate, setEndDate] = useState<Date>()
   const [showFilters, setShowFilters] = useState(false)
+  const [products, setProducts] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
 
-  const [products, setProducts] = useState([
-    {
-      id: 1,
-      name: 'MacBook Pro 16" M3',
-      category: "LAPTOP",
-      pricePerDay: 25000,
-      image: "/macbook-pro-laptop.png",
-      badge: "인기",
-      createdAt: new Date("2024-01-15"),
-    },
-    {
-      id: 2,
-      name: "Sony A7 IV 미러리스",
-      category: "CAMERA",
-      pricePerDay: 35000,
-      image: "/sony-mirrorless-camera.png",
-      badge: "신규",
-      createdAt: new Date("2024-03-10"),
-    },
-    {
-      id: 3,
-      name: 'iPad Pro 12.9"',
-      category: "TABLET",
-      pricePerDay: 15000,
-      image: "/ipad-pro-tablet.png",
-      badge: "",
-      createdAt: new Date("2024-02-20"),
-    },
-    {
-      id: 4,
-      name: "Canon EOS R5",
-      category: "CAMERA",
-      pricePerDay: 40000,
-      image: "/canon-eos-camera.jpg",
-      badge: "인기",
-      createdAt: new Date("2024-01-05"),
-    },
-    {
-      id: 5,
-      name: "DJI Mavic 3 드론",
-      category: "DRONE",
-      pricePerDay: 30000,
-      image: "/generic-drone.png",
-      badge: "",
-      createdAt: new Date("2024-02-28"),
-    },
-    {
-      id: 6,
-      name: "Surface Pro 9",
-      category: "LAPTOP",
-      pricePerDay: 18000,
-      image: "/microsoft-surface-tablet.jpg",
-      badge: "",
-      createdAt: new Date("2024-01-25"),
-    },
-    {
-      id: 7,
-      name: "후지필름 X-T5",
-      category: "CAMERA",
-      pricePerDay: 28000,
-      image: "/fujifilm-camera.jpg",
-      badge: "",
-      createdAt: new Date("2024-02-15"),
-    },
-    {
-      id: 8,
-      name: "삼성 갤럭시 탭 S9",
-      category: "TABLET",
-      pricePerDay: 12000,
-      image: "/samsung-tablet.png",
-      badge: "",
-      createdAt: new Date("2024-03-01"),
-    },
-    {
-      id: 9,
-      name: 'Dell XPS 15"',
-      category: "LAPTOP",
-      pricePerDay: 22000,
-      image: "/placeholder.svg?height=400&width=400",
-      badge: "",
-      createdAt: new Date("2024-01-30"),
-    },
-    {
-      id: 10,
-      name: "GoPro Hero 12",
-      category: "CAMERA",
-      pricePerDay: 15000,
-      image: "/placeholder.svg?height=400&width=400",
-      badge: "신규",
-      createdAt: new Date("2024-03-05"),
-    },
-    {
-      id: 11,
-      name: "Microsoft Surface Laptop",
-      category: "LAPTOP",
-      pricePerDay: 20000,
-      image: "/placeholder.svg?height=400&width=400",
-      badge: "",
-      createdAt: new Date("2024-02-10"),
-    },
-    {
-      id: 12,
-      name: "Nikon Z6 III",
-      category: "CAMERA",
-      pricePerDay: 38000,
-      image: "/placeholder.svg?height=400&width=400",
-      badge: "",
-      createdAt: new Date("2024-02-05"),
-    },
-  ])
+  useEffect(() => {
+    fetchProducts()
+  }, [selectedCategory, sortBy, minPrice, maxPrice, startDate, endDate])
+
+  const fetchProducts = async () => {
+    setLoading(true)
+    try {
+      const response = await productAPI.getProducts({
+        category: selectedCategory !== "ALL" ? selectedCategory : undefined,
+        minPrice: minPrice ? Number(minPrice) : undefined,
+        maxPrice: maxPrice ? Number(maxPrice) : undefined,
+        startDate: startDate ? format(startDate, "yyyy-MM-dd") : undefined,
+        endDate: endDate ? format(endDate, "yyyy-MM-dd") : undefined,
+        sort: sortBy === "price-high" ? "price,desc" : sortBy === "price-low" ? "price,asc" : "createdAt,desc",
+      })
+
+      if (response.success && response.data) {
+        setProducts(response.data.content || [])
+      }
+    } catch (error) {
+      console.error("[v0] Failed to fetch products:", error)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const filteredProducts = useMemo(() => {
-    let filtered = products
-
-    // Search filter
-    if (searchQuery) {
-      filtered = filtered.filter((product) => product.name.toLowerCase().includes(searchQuery.toLowerCase()))
-    }
-
-    // Category filter
-    if (selectedCategory !== "ALL") {
-      filtered = filtered.filter((product) => product.category === selectedCategory)
-    }
-
-    // Price filter
-    if (minPrice) {
-      filtered = filtered.filter((product) => product.pricePerDay >= Number(minPrice))
-    }
-    if (maxPrice) {
-      filtered = filtered.filter((product) => product.pricePerDay <= Number(maxPrice))
-    }
-
-    // Sort
-    const sorted = [...filtered]
-    switch (sortBy) {
-      case "latest":
-        sorted.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
-        break
-      case "oldest":
-        sorted.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())
-        break
-      case "price-high":
-        sorted.sort((a, b) => b.pricePerDay - a.pricePerDay)
-        break
-      case "price-low":
-        sorted.sort((a, b) => a.pricePerDay - b.pricePerDay)
-        break
-    }
-
-    return sorted
-  }, [searchQuery, selectedCategory, minPrice, maxPrice, sortBy])
+    if (!searchQuery) return products
+    return products.filter((product) => product.name.toLowerCase().includes(searchQuery.toLowerCase()))
+  }, [products, searchQuery])
 
   const handleResetFilters = () => {
     setSearchQuery("")
@@ -354,7 +236,11 @@ export default function ProductsPage() {
             </div>
           </div>
 
-          {filteredProducts.length === 0 ? (
+          {loading ? (
+            <div className="text-center py-12">
+              <p className="text-muted-foreground">상품을 불러오는 중...</p>
+            </div>
+          ) : filteredProducts.length === 0 ? (
             <div className="text-center py-12">
               <p className="text-muted-foreground">검색 결과가 없습니다.</p>
             </div>
@@ -364,13 +250,8 @@ export default function ProductsPage() {
                 <Link key={product.id} href={`/products/${product.id}`}>
                   <Card className="overflow-hidden hover:shadow-lg transition-shadow group border-gray-200">
                     <div className="aspect-square overflow-hidden bg-gray-50 relative">
-                      {product.badge && (
-                        <Badge className="absolute top-2 left-2 z-10 bg-primary text-white text-xs">
-                          {product.badge}
-                        </Badge>
-                      )}
                       <img
-                        src={product.image || "/placeholder.svg"}
+                        src={product.thumbnailUrl || "/placeholder.svg"}
                         alt={product.name}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                       />
@@ -382,7 +263,7 @@ export default function ProductsPage() {
                       <h3 className="font-medium text-sm mb-2 line-clamp-2 leading-tight">{product.name}</h3>
                       <div className="flex items-center gap-2">
                         <Badge variant="secondary" className="bg-accent text-white hover:bg-accent text-xs font-bold">
-                          ₩{product.pricePerDay.toLocaleString()}
+                          ₩{product.price?.toLocaleString()}
                         </Badge>
                         <span className="text-xs text-muted-foreground">/일</span>
                       </div>

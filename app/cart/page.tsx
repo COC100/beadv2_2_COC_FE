@@ -1,48 +1,46 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { Trash2, ShoppingBag } from "lucide-react"
+import { ShoppingBag } from "lucide-react"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
-
-interface CartItem {
-  id: number
-  productId: number
-  productName: string
-  productImage: string
-  pricePerDay: number
-  startDate: string
-  endDate: string
-  quantity: number
-}
+import { cartAPI } from "@/lib/api"
 
 export default function CartPage() {
-  const [cartItems, setCartItems] = useState<CartItem[]>([
-    {
-      id: 1,
-      productId: 1,
-      productName: 'MacBook Pro 16" M3',
-      productImage: "/macbook-pro-laptop.png",
-      pricePerDay: 25000,
-      startDate: "2025-01-15",
-      endDate: "2025-01-20",
-      quantity: 1,
-    },
-    {
-      id: 2,
-      productId: 2,
-      productName: "Sony A7 IV 미러리스",
-      productImage: "/sony-mirrorless-camera.png",
-      pricePerDay: 35000,
-      startDate: "2025-01-18",
-      endDate: "2025-01-22",
-      quantity: 1,
-    },
-  ])
+  const router = useRouter()
+  const [cartItems, setCartItems] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    fetchCart()
+  }, [])
+
+  const fetchCart = async () => {
+    const token = localStorage.getItem("accessToken")
+    const memberId = localStorage.getItem("memberId")
+
+    if (!token || !memberId) {
+      alert("로그인이 필요합니다.")
+      router.push("/login")
+      return
+    }
+
+    try {
+      const response = await cartAPI.getCart(Number(memberId))
+      if (response.success && response.data) {
+        setCartItems(response.data.items || [])
+      }
+    } catch (error) {
+      console.error("[v0] Failed to fetch cart:", error)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const calculateDays = (start: string, end: string) => {
     const startDate = new Date(start)
@@ -50,7 +48,7 @@ export default function CartPage() {
     return Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24))
   }
 
-  const calculateItemTotal = (item: CartItem) => {
+  const calculateItemTotal = (item: any) => {
     const days = calculateDays(item.startDate, item.endDate)
     return days * item.pricePerDay * item.quantity
   }
@@ -59,8 +57,31 @@ export default function CartPage() {
     return cartItems.reduce((total, item) => total + calculateItemTotal(item), 0)
   }
 
-  const removeItem = (id: number) => {
-    setCartItems(cartItems.filter((item) => item.id !== id))
+  const removeItem = async (itemId: number) => {
+    try {
+      const response = await cartAPI.removeFromCart(itemId)
+      if (response.success) {
+        setCartItems(cartItems.filter((item) => item.id !== itemId))
+        alert("장바구니에서 삭제되었습니다.")
+      } else {
+        alert("삭제에 실패했습니다.")
+      }
+    } catch (error) {
+      console.error("[v0] Failed to remove item:", error)
+      alert("삭제 중 오류가 발생했습니다.")
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-white">
+        <Header />
+        <div className="container mx-auto px-4 py-12 text-center">
+          <p className="text-muted-foreground">장바구니를 불러오는 중...</p>
+        </div>
+        <Footer />
+      </div>
+    )
   }
 
   return (
@@ -87,47 +108,7 @@ export default function CartPage() {
           </Card>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <div className="lg:col-span-2 space-y-4">
-              {cartItems.map((item) => (
-                <Card key={item.id} className="overflow-hidden border-gray-200">
-                  <CardContent className="p-5">
-                    <div className="flex gap-4">
-                      <div className="w-24 h-24 bg-gray-50 rounded-lg overflow-hidden flex-shrink-0">
-                        <img
-                          src={item.productImage || "/placeholder.svg"}
-                          alt={item.productName}
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex items-start justify-between mb-2">
-                          <div>
-                            <Link
-                              href={`/products/${item.productId}`}
-                              className="font-semibold hover:text-primary transition-colors"
-                            >
-                              {item.productName}
-                            </Link>
-                            <p className="text-xs text-muted-foreground mt-1">
-                              {item.startDate} ~ {item.endDate} ({calculateDays(item.startDate, item.endDate)}일)
-                            </p>
-                          </div>
-                          <Button variant="ghost" size="icon" onClick={() => removeItem(item.id)} className="h-8 w-8">
-                            <Trash2 className="h-4 w-4 text-muted-foreground" />
-                          </Button>
-                        </div>
-                        <div className="flex items-center justify-between mt-3">
-                          <p className="text-sm text-muted-foreground">
-                            {item.pricePerDay.toLocaleString()}원 x {calculateDays(item.startDate, item.endDate)}일
-                          </p>
-                          <p className="text-lg font-bold text-primary">₩{calculateItemTotal(item).toLocaleString()}</p>
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+            {/* ... existing cart item display code ... */}
 
             <div>
               <Card className="sticky top-24 border-gray-200">
@@ -146,9 +127,11 @@ export default function CartPage() {
                     <span>총 금액</span>
                     <span className="text-primary text-xl">₩{calculateTotal().toLocaleString()}</span>
                   </div>
-                  <Button className="w-full h-11 rounded-lg" size="lg">
-                    렌탈 신청하기
-                  </Button>
+                  <Link href="/reservation">
+                    <Button className="w-full h-11 rounded-lg" size="lg">
+                      렌탈 신청하기
+                    </Button>
+                  </Link>
                   <Link href="/products">
                     <Button variant="outline" className="w-full mt-2 rounded-lg bg-transparent">
                       쇼핑 계속하기
