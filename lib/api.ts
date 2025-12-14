@@ -344,15 +344,34 @@ export const productAPI = {
     formData.append("file", file)
     if (dir) formData.append("dir", dir)
 
-    return fetchAPI<string>(
-      "/product-service/api/images/upload",
-      {
-        method: "POST",
-        body: formData,
-        headers: {}, // Let browser set Content-Type for FormData
-      },
-      true,
-    )
+    const token = typeof window !== "undefined" ? localStorage.getItem("accessToken") : null
+    const headers: HeadersInit = {}
+
+    if (token) {
+      headers.Authorization = `Bearer ${token}`
+    }
+
+    if (API_BASE_URL.includes("ngrok")) {
+      headers["ngrok-skip-browser-warning"] = "true"
+    }
+
+    return fetch(`${API_BASE_URL}/product-service/api/images/upload`, {
+      method: "POST",
+      body: formData,
+      headers,
+    })
+      .then(async (response) => {
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}))
+          throw new Error(errorData.message || "이미지 업로드에 실패했습니다")
+        }
+        const data: ApiResponse<string> = await response.json()
+        return data.data
+      })
+      .catch((error) => {
+        console.error("[v0] Image upload error:", error)
+        throw error
+      })
   },
 }
 

@@ -17,6 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast"
 import { productAPI } from "@/lib/api"
 import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd"
+import { Badge } from "@/components/ui/badge"
 
 export default function NewProductPage() {
   const router = useRouter()
@@ -46,6 +47,11 @@ export default function NewProductPage() {
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files
     if (!files) return
+
+    const uploadingToast = toast({
+      title: "이미지 업로드 중",
+      description: `${files.length}개의 이미지를 업로드하고 있습니다...`,
+    })
 
     try {
       const uploadPromises = Array.from(files).map((file) => productAPI.uploadImage(file, "products"))
@@ -217,7 +223,7 @@ export default function NewProductPage() {
                     </div>
                     {images.length > 0 && (
                       <DragDropContext onDragEnd={onDragEnd}>
-                        <Droppable droppableId="images">
+                        <Droppable droppableId="images" direction="horizontal">
                           {(provided) => (
                             <div
                               {...provided.droppableProps}
@@ -225,7 +231,7 @@ export default function NewProductPage() {
                               className="grid grid-cols-5 gap-3 mt-3"
                             >
                               {images.map((img, index) => (
-                                <Draggable key={img} draggableId={img} index={index}>
+                                <Draggable key={`image-${index}`} draggableId={`image-${index}`} index={index}>
                                   {(provided) => (
                                     <div
                                       {...provided.draggableProps}
@@ -233,6 +239,11 @@ export default function NewProductPage() {
                                       ref={provided.innerRef}
                                       className="relative aspect-square bg-gray-50 rounded-lg overflow-hidden"
                                     >
+                                      {index === 0 && (
+                                        <Badge className="absolute top-2 left-2 bg-primary text-white text-xs z-10">
+                                          대표 이미지
+                                        </Badge>
+                                      )}
                                       <img
                                         src={img || "/placeholder.svg"}
                                         alt={`상품 이미지 ${index + 1}`}

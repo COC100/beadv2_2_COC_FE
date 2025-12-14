@@ -92,6 +92,11 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
     const files = e.target.files
     if (!files) return
 
+    const uploadingToast = toast({
+      title: "이미지 업로드 중",
+      description: `${files.length}개의 이미지를 업로드하고 있습니다...`,
+    })
+
     try {
       const uploadPromises = Array.from(files).map((file) => productAPI.uploadImage(file, "products"))
       const uploadedUrls = await Promise.all(uploadPromises)

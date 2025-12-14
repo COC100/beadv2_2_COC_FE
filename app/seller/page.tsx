@@ -30,6 +30,7 @@ export default function SellerPage() {
   const [sellerInfo, setSellerInfo] = useState<any>(null)
   const [products, setProducts] = useState<any[]>([])
   const [reservations, setReservations] = useState<any[]>([])
+  const [statusChanging, setStatusChanging] = useState<{ [key: number]: boolean }>({})
 
   useEffect(() => {
     const loadSellerData = async () => {
@@ -110,6 +111,42 @@ export default function SellerPage() {
         description: error.message || "예약 승인에 실패했습니다",
         variant: "destructive",
       })
+    }
+  }
+
+  const handleToggleStatus = async (productId: number, currentStatus: string) => {
+    setStatusChanging({ ...statusChanging, [productId]: true })
+    try {
+      if (currentStatus === "ACTIVE") {
+        await productAPI.deactivate(productId)
+        toast({
+          title: "상태 변경 완료",
+          description: "상품이 예약 불가 상태로 변경되었습니다",
+        })
+      } else {
+        await productAPI.activate(productId)
+        toast({
+          title: "상태 변경 완료",
+          description: "상품이 예약 가능 상태로 변경되었습니다",
+        })
+      }
+
+      // Reload products
+      const productsResponse = await productAPI.list({
+        size: 100,
+      })
+      const myProducts = (productsResponse.products || []).filter(
+        (p: any) => p.sellerId === sellerInfo.sellerId && (p.status === "ACTIVE" || p.status === "INACTIVE"),
+      )
+      setProducts(myProducts)
+    } catch (error: any) {
+      toast({
+        title: "상태 변경 실패",
+        description: error.message || "상태 변경에 실패했습니다",
+        variant: "destructive",
+      })
+    } finally {
+      setStatusChanging({ ...statusChanging, [productId]: false })
     }
   }
 
@@ -248,6 +285,19 @@ export default function SellerPage() {
                             </div>
                           </div>
                           <div className="flex gap-2">
+                            <Button
+                              variant={product.status === "ACTIVE" ? "outline" : "default"}
+                              size="sm"
+                              className="rounded-lg"
+                              onClick={() => handleToggleStatus(product.productId, product.status)}
+                              disabled={statusChanging[product.productId]}
+                            >
+                              {statusChanging[product.productId]
+                                ? "변경 중..."
+                                : product.status === "ACTIVE"
+                                  ? "예약 불가로 변경"
+                                  : "예약 가능으로 변경"}
+                            </Button>
                             <Link href={`/seller/product/${product.productId}/edit`}>
                               <Button variant="outline" size="sm" className="rounded-lg bg-transparent">
                                 <Edit className="h-4 w-4 mr-1" />
