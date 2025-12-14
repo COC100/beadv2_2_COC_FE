@@ -31,8 +31,6 @@ export default function HomePage() {
     }
 
     const fetchProducts = async () => {
-      if (!checkAuth()) return
-
       try {
         setLoading(true)
         const response = await productAPI.list({ size: 8, sortType: "LATEST" })
@@ -41,9 +39,10 @@ export default function HomePage() {
         console.error("[v0] Failed to fetch products:", error)
         toast({
           title: "상품 로딩 실패",
-          description: "상품 목록을 불러올 수 없습니다.",
+          description: error.message || "상품 목록을 불러올 수 없습니다. 백엔드 설정을 확인해주세요.",
           variant: "destructive",
         })
+        if (!checkAuth()) return
       } finally {
         setLoading(false)
       }

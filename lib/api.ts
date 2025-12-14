@@ -58,13 +58,17 @@ async function fetchAPI<T>(endpoint: string, options: RequestInit = {}, requires
     console.log("[v0] Content-Type:", contentType)
 
     if (response.status === 401) {
-      console.error("[v0] 401 Unauthorized, clearing token and redirecting")
-      if (typeof window !== "undefined") {
-        localStorage.removeItem("accessToken")
-        localStorage.removeItem("refreshToken")
-        localStorage.removeItem("user")
+      if (requiresAuth) {
+        console.error("[v0] 401 Unauthorized on authenticated endpoint, clearing token and redirecting")
+        if (typeof window !== "undefined") {
+          localStorage.removeItem("accessToken")
+          localStorage.removeItem("refreshToken")
+          localStorage.removeItem("user")
+        }
+        handleAuthError()
+      } else {
+        console.warn("[v0] 401 on public endpoint - backend may require auth incorrectly")
       }
-      handleAuthError()
       throw new Error("Unauthorized")
     }
 
