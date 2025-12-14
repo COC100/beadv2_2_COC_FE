@@ -24,7 +24,7 @@ export default function LoginPage() {
     setLoading(true)
 
     try {
-      const response = await memberAPI.login({ email, password })
+      const response = await memberAPI.login(email, password)
 
       if (response.success && response.data) {
         // Store token in localStorage or cookie
@@ -41,7 +41,7 @@ export default function LoginPage() {
         toast({
           variant: "destructive",
           title: "로그인 실패",
-          description: response.error?.message || "로그인에 실패했습니다.",
+          description: "로그인에 실패했습니다.",
         })
       }
     } catch (error) {

@@ -21,9 +21,8 @@ export default function MyPage() {
   useEffect(() => {
     const fetchData = async () => {
       const token = localStorage.getItem("accessToken")
-      const memberId = localStorage.getItem("memberId")
 
-      if (!token || !memberId) {
+      if (!token) {
         toast({
           variant: "destructive",
           title: "로그인 필요",
@@ -34,10 +33,7 @@ export default function MyPage() {
       }
 
       try {
-        const [memberResponse, accountResponse] = await Promise.all([
-          memberAPI.getMemberProfile(Number(memberId)),
-          accountAPI.getDepositBalance(Number(memberId)),
-        ])
+        const [memberResponse, accountResponse] = await Promise.all([memberAPI.getProfile(), accountAPI.getBalance()])
 
         if (memberResponse.success && memberResponse.data) {
           setMember(memberResponse.data)

@@ -50,13 +50,13 @@ export default function ProductsPage() {
   const fetchProducts = async () => {
     setLoading(true)
     try {
-      const response = await productAPI.getProducts({
+      const response = await productAPI.list({
         category: selectedCategory !== "ALL" ? selectedCategory : undefined,
         minPrice: minPrice ? Number(minPrice) : undefined,
         maxPrice: maxPrice ? Number(maxPrice) : undefined,
         startDate: startDate ? format(startDate, "yyyy-MM-dd") : undefined,
         endDate: endDate ? format(endDate, "yyyy-MM-dd") : undefined,
-        sort: sortBy === "price-high" ? "price,desc" : sortBy === "price-low" ? "price,asc" : "createdAt,desc",
+        sortType: sortBy === "price-high" ? "price,desc" : sortBy === "price-low" ? "price,asc" : "createdAt,desc",
       })
 
       if (response.success && response.data) {

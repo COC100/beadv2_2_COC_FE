@@ -54,7 +54,7 @@ export default function SignupPage() {
         email: formData.email,
         password: formData.password,
         name: formData.name,
-        phoneNumber: formData.phone,
+        phone: formData.phone,
       })
 
       if (response.success) {
@@ -67,7 +67,7 @@ export default function SignupPage() {
         toast({
           variant: "destructive",
           title: "회원가입 실패",
-          description: response.error?.message || "회원가입에 실패했습니다.",
+          description: "회원가입에 실패했습니다.",
         })
       }
     } catch (error) {

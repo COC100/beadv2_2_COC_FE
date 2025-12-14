@@ -24,9 +24,8 @@ export default function CartPage() {
 
   const fetchCart = async () => {
     const token = localStorage.getItem("accessToken")
-    const memberId = localStorage.getItem("memberId")
 
-    if (!token || !memberId) {
+    if (!token) {
       toast({
         variant: "destructive",
         title: "로그인 필요",
@@ -37,7 +36,7 @@ export default function CartPage() {
     }
 
     try {
-      const response = await cartAPI.getCart(Number(memberId))
+      const response = await cartAPI.list()
       if (response.success && response.data) {
         setCartItems(response.data.items || [])
       }
@@ -65,7 +64,7 @@ export default function CartPage() {
 
   const removeItem = async (itemId: number) => {
     try {
-      const response = await cartAPI.removeFromCart(itemId)
+      const response = await cartAPI.deleteItem(itemId)
       if (response.success) {
         setCartItems(cartItems.filter((item) => item.id !== itemId))
         toast({

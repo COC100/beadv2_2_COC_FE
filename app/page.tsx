@@ -20,7 +20,7 @@ export default function HomePage() {
   useEffect(() => {
     const fetchProducts = async () => {
       try {
-        const response = await productAPI.getProducts({ size: 8 })
+        const response = await productAPI.list({ size: 8 })
         if (response.success && response.data) {
           setProducts(response.data.content || [])
         }

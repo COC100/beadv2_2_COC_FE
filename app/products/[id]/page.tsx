@@ -30,7 +30,7 @@ function ProductDetailContent({ id }: { id: string }) {
   useEffect(() => {
     const fetchProduct = async () => {
       try {
-        const response = await productAPI.getProductById(Number(id))
+        const response = await productAPI.getDetail(Number(id))
         if (response.success && response.data) {
           setProduct(response.data)
         } else {
@@ -76,11 +76,10 @@ function ProductDetailContent({ id }: { id: string }) {
     }
 
     try {
-      const response = await cartAPI.addToCart({
+      const response = await cartAPI.addItem({
         productId: Number(id),
         startDate,
         endDate,
-        quantity: 1,
       })
 
       if (response.success) {
@@ -92,7 +91,7 @@ function ProductDetailContent({ id }: { id: string }) {
         toast({
           variant: "destructive",
           title: "추가 실패",
-          description: response.error?.message || "장바구니 추가에 실패했습니다.",
+          description: "장바구니 추가에 실패했습니다.",
         })
       }
     } catch (error) {
