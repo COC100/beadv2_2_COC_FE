@@ -30,6 +30,7 @@ export default function SellerPage() {
   const [sellerInfo, setSellerInfo] = useState<any>(null)
   const [products, setProducts] = useState<any[]>([])
   const [reservations, setReservations] = useState<any[]>([])
+  const [statusChanging, setStatusChanging] = useState<{ [key: number]: boolean }>({})
 
   useEffect(() => {
     const loadSellerData = async () => {
@@ -43,22 +44,21 @@ export default function SellerPage() {
         const seller = await sellerAPI.getSelf()
         setSellerInfo(seller)
 
-        // Load products separately
+        // Load products (non-critical)
         try {
           const productsResponse = await productAPI.list({
-            sellerId: seller.id,
             size: 100,
           })
-          const activeProducts = (productsResponse.products || []).filter(
-            (p: any) => p.status === "ACTIVE" || p.status === "INACTIVE",
+          const myProducts = (productsResponse.products || []).filter(
+            (p: any) => p.sellerId === seller.sellerId && (p.status === "ACTIVE" || p.status === "INACTIVE"),
           )
-          setProducts(activeProducts)
+          setProducts(myProducts)
         } catch (productError) {
           console.error("[v0] Failed to load products (non-critical):", productError)
           setProducts([])
         }
 
-        // Load rentals separately and silently fail
+        // Load rentals (non-critical)
         try {
           const rentals = await sellerAPI.getRentals({
             status: "REQUESTED",
@@ -70,26 +70,27 @@ export default function SellerPage() {
           console.error("[v0] Failed to load rentals (non-critical):", rentalError)
           setReservations([])
         }
+
+        // Successfully loaded seller data, set loading to false
+        setIsLoading(false)
       } catch (error: any) {
         console.error("[v0] Failed to load seller data:", error)
+        // Only redirect if it's a critical error (seller not found or unauthorized)
         if (error.message.includes("404") || error.message.includes("Not Found")) {
           router.push("/become-seller")
         } else if (error.message.includes("401") || error.message.includes("Unauthorized")) {
           router.push("/intro")
         } else {
-          toast({
-            title: "데이터 로딩 실패",
-            description: "판매자 정보를 불러오는데 실패했습니다",
-            variant: "destructive",
-          })
+          // For other errors, still show the page but with empty data
+          setIsLoading(false)
+          setProducts([])
+          setReservations([])
         }
-      } finally {
-        setIsLoading(false)
       }
     }
 
     loadSellerData()
-  }, [router, toast])
+  }, [router])
 
   const handleAcceptRental = async (rentalItemId: number) => {
     try {
@@ -98,7 +99,6 @@ export default function SellerPage() {
         title: "예약 승인 완료",
         description: "예약이 승인되었습니다",
       })
-      // Reload reservations
       const rentals = await sellerAPI.getRentals({
         status: "REQUESTED",
         startDate: new Date().toISOString().split("T")[0],
@@ -111,6 +111,42 @@ export default function SellerPage() {
         description: error.message || "예약 승인에 실패했습니다",
         variant: "destructive",
       })
+    }
+  }
+
+  const handleToggleStatus = async (productId: number, currentStatus: string) => {
+    setStatusChanging({ ...statusChanging, [productId]: true })
+    try {
+      if (currentStatus === "ACTIVE") {
+        await productAPI.deactivate(productId)
+        toast({
+          title: "상태 변경 완료",
+          description: "상품이 예약 불가 상태로 변경되었습니다",
+        })
+      } else {
+        await productAPI.activate(productId)
+        toast({
+          title: "상태 변경 완료",
+          description: "상품이 예약 가능 상태로 변경되었습니다",
+        })
+      }
+
+      // Reload products
+      const productsResponse = await productAPI.list({
+        size: 100,
+      })
+      const myProducts = (productsResponse.products || []).filter(
+        (p: any) => p.sellerId === sellerInfo.sellerId && (p.status === "ACTIVE" || p.status === "INACTIVE"),
+      )
+      setProducts(myProducts)
+    } catch (error: any) {
+      toast({
+        title: "상태 변경 실패",
+        description: error.message || "상태 변경에 실패했습니다",
+        variant: "destructive",
+      })
+    } finally {
+      setStatusChanging({ ...statusChanging, [productId]: false })
     }
   }
 
@@ -137,7 +173,7 @@ export default function SellerPage() {
     )
   }
 
-  const monthlySettlement = 0 // Calculate from settlements API
+  const monthlySettlement = 0
 
   return (
     <div className="min-h-screen bg-white">
@@ -210,118 +246,159 @@ export default function SellerPage() {
           </TabsList>
 
           <TabsContent value="products" className="space-y-4">
-            {products.map((product) => (
-              <Card key={product.id}>
-                <CardContent className="p-5">
-                  <div className="flex gap-4">
-                    <div className="w-24 h-24 bg-gray-50 rounded-lg overflow-hidden flex-shrink-0">
-                      <img
-                        src={product.image || "/placeholder.svg"}
-                        alt={product.name}
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex items-start justify-between mb-2">
-                        <div>
-                          <h3 className="font-semibold mb-1">{product.name}</h3>
-                          <p className="text-sm text-muted-foreground mb-2">{product.category}</p>
-                          <div className="flex items-center gap-2">
-                            <Badge className="bg-accent text-white hover:bg-accent">
-                              ₩{product.pricePerDay.toLocaleString()}/일
-                            </Badge>
+            {products.length === 0 ? (
+              <Card>
+                <CardContent className="p-12 text-center">
+                  <Package className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <p className="text-muted-foreground mb-4">등록된 상품이 없습니다</p>
+                  <Link href="/seller/product/new">
+                    <Button className="rounded-lg">
+                      <Plus className="h-4 w-4 mr-2" />첫 상품 등록하기
+                    </Button>
+                  </Link>
+                </CardContent>
+              </Card>
+            ) : (
+              products.map((product) => (
+                <Card key={product.productId}>
+                  <CardContent className="p-5">
+                    <div className="flex gap-4">
+                      <div className="w-24 h-24 bg-gray-50 rounded-lg overflow-hidden flex-shrink-0">
+                        <img
+                          src={product.thumbnailUrl || "/placeholder.svg"}
+                          alt={product.name}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex items-start justify-between mb-2">
+                          <div>
+                            <h3 className="font-semibold mb-1">{product.name}</h3>
+                            <p className="text-sm text-muted-foreground mb-2">{product.category}</p>
+                            <div className="flex items-center gap-2">
+                              <Badge className="bg-accent text-white hover:bg-accent">
+                                ₩{product.pricePerDay?.toLocaleString()}/일
+                              </Badge>
+                              <Badge variant={product.status === "ACTIVE" ? "default" : "secondary"}>
+                                {product.status === "ACTIVE" ? "예약 가능" : "예약 불가"}
+                              </Badge>
+                            </div>
                           </div>
-                        </div>
-                        <div className="flex gap-2">
-                          <Link href={`/seller/product/${product.id}/edit`}>
-                            <Button variant="outline" size="sm" className="rounded-lg bg-transparent">
-                              <Edit className="h-4 w-4 mr-1" />
-                              수정
+                          <div className="flex gap-2">
+                            <Button
+                              variant={product.status === "ACTIVE" ? "outline" : "default"}
+                              size="sm"
+                              className="rounded-lg"
+                              onClick={() => handleToggleStatus(product.productId, product.status)}
+                              disabled={statusChanging[product.productId]}
+                            >
+                              {statusChanging[product.productId]
+                                ? "변경 중..."
+                                : product.status === "ACTIVE"
+                                  ? "예약 불가로 변경"
+                                  : "예약 가능으로 변경"}
                             </Button>
-                          </Link>
-                          <Link href={`/products/${product.id}`}>
-                            <Button variant="outline" size="sm" className="rounded-lg bg-transparent">
-                              보기
-                            </Button>
-                          </Link>
+                            <Link href={`/seller/product/${product.productId}/edit`}>
+                              <Button variant="outline" size="sm" className="rounded-lg bg-transparent">
+                                <Edit className="h-4 w-4 mr-1" />
+                                수정
+                              </Button>
+                            </Link>
+                            <Link href={`/products/${product.productId}`}>
+                              <Button variant="outline" size="sm" className="rounded-lg bg-transparent">
+                                보기
+                              </Button>
+                            </Link>
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                  </CardContent>
+                </Card>
+              ))
+            )}
           </TabsContent>
 
           <TabsContent value="reservations" className="space-y-4">
-            {reservations.map((reservation) => (
-              <Card key={reservation.id}>
-                <CardContent className="p-5">
-                  <div className="flex items-start justify-between mb-3">
-                    <div>
-                      <h3 className="font-semibold mb-1">{reservation.productName}</h3>
-                      <p className="text-sm text-muted-foreground mb-1">고객: {reservation.customerName}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {reservation.startDate} ~ {reservation.endDate}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <Badge className={getStatusText(reservation.status).className}>
-                        {getStatusText(reservation.status).text}
-                      </Badge>
-                      <p className="text-lg font-bold text-primary mt-2">₩{reservation.totalAmount.toLocaleString()}</p>
-                    </div>
-                  </div>
-                  {reservation.status === "PENDING" && (
-                    <div className="flex gap-2 pt-3 border-t">
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button
-                            size="sm"
-                            className="flex-1 rounded-lg"
-                            onClick={() => handleAcceptRental(reservation.id)}
-                          >
-                            <Check className="h-4 w-4 mr-1" />
-                            승인
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>예약을 승인하시겠습니까?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              승인 후에는 취소할 수 없습니다. 고객에게 승인 알림이 전송됩니다.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>취소</AlertDialogCancel>
-                            <AlertDialogAction>승인하기</AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button size="sm" variant="outline" className="flex-1 rounded-lg bg-transparent">
-                            <X className="h-4 w-4 mr-1" />
-                            거절
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>예약을 거절하시겠습니까?</AlertDialogTitle>
-                            <AlertDialogDescription>거절 사유를 고객에게 알릴 수 있습니다.</AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>취소</AlertDialogCancel>
-                            <AlertDialogAction className="bg-red-600">거절하기</AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </div>
-                  )}
+            {reservations.length === 0 ? (
+              <Card>
+                <CardContent className="p-12 text-center">
+                  <Clock className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <p className="text-muted-foreground">대기 중인 예약이 없습니다</p>
                 </CardContent>
               </Card>
-            ))}
+            ) : (
+              reservations.map((reservation) => (
+                <Card key={reservation.id}>
+                  <CardContent className="p-5">
+                    <div className="flex items-start justify-between mb-3">
+                      <div>
+                        <h3 className="font-semibold mb-1">{reservation.productName}</h3>
+                        <p className="text-sm text-muted-foreground mb-1">고객: {reservation.customerName}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {reservation.startDate} ~ {reservation.endDate}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <Badge className={getStatusText(reservation.status).className}>
+                          {getStatusText(reservation.status).text}
+                        </Badge>
+                        <p className="text-lg font-bold text-primary mt-2">
+                          ₩{reservation.totalAmount.toLocaleString()}
+                        </p>
+                      </div>
+                    </div>
+                    {reservation.status === "PENDING" && (
+                      <div className="flex gap-2 pt-3 border-t">
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              size="sm"
+                              className="flex-1 rounded-lg"
+                              onClick={() => handleAcceptRental(reservation.id)}
+                            >
+                              <Check className="h-4 w-4 mr-1" />
+                              승인
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>예약을 승인하시겠습니까?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                승인 후에는 취소할 수 없습니다. 고객에게 승인 알림이 전송됩니다.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>취소</AlertDialogCancel>
+                              <AlertDialogAction>승인하기</AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button size="sm" variant="outline" className="flex-1 rounded-lg bg-transparent">
+                              <X className="h-4 w-4 mr-1" />
+                              거절
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>예약을 거절하시겠습니까?</AlertDialogTitle>
+                              <AlertDialogDescription>거절 사유를 고객에게 알릴 수 있습니다.</AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>취소</AlertDialogCancel>
+                              <AlertDialogAction className="bg-red-600">거절하기</AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              ))
+            )}
           </TabsContent>
 
           <TabsContent value="settings">

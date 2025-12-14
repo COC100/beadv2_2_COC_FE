@@ -222,7 +222,7 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
                 onClick={() => handleStatusChange("INACTIVE")}
               >
                 <EyeOff className="h-4 w-4 mr-2" />
-                숨김
+                예약 불가로 변경
               </Button>
             ) : (
               <Button
@@ -231,7 +231,7 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
                 onClick={() => handleStatusChange("ACTIVE")}
               >
                 <Eye className="h-4 w-4 mr-2" />
-                활성화
+                예약 가능으로 변경
               </Button>
             )}
             <Button variant="destructive" className="rounded-lg" onClick={handleDelete}>
@@ -273,7 +273,14 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
 
           <div className="space-y-6">
             <div>
-              <Badge className="mb-3 bg-blue-100 text-primary hover:bg-blue-100">{product.category}</Badge>
+              <div className="flex items-center gap-2 mb-3">
+                <Badge className="bg-blue-100 text-primary hover:bg-blue-100">{product.category}</Badge>
+                {product.status === "ACTIVE" ? (
+                  <Badge className="bg-green-100 text-green-800 hover:bg-green-100">예약 가능</Badge>
+                ) : (
+                  <Badge className="bg-gray-100 text-gray-800 hover:bg-gray-100">예약 불가</Badge>
+                )}
+              </div>
               <h1 className="text-3xl font-bold mb-3 leading-tight">{product.name}</h1>
               <div className="flex items-baseline gap-2 mb-6">
                 <Badge className="bg-accent text-white hover:bg-accent text-lg font-bold px-3 py-1">
