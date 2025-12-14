@@ -35,13 +35,18 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
       }
 
       try {
+        console.log("[v0] Loading product ID:", params.id)
         const productData = await productAPI.getDetail(Number(params.id))
+        console.log("[v0] Product data received:", productData)
         setProduct(productData)
 
         try {
           const seller = await sellerAPI.getSelf()
-          setIsOwner(seller.id === productData.sellerId)
+          console.log("[v0] Seller data:", seller)
+          console.log("[v0] Product sellerId:", productData.sellerId, "Seller id:", seller.sellerId)
+          setIsOwner(seller.sellerId === productData.sellerId)
         } catch (error) {
+          console.log("[v0] Not a seller or seller check failed")
           setIsOwner(false)
         }
       } catch (error: any) {

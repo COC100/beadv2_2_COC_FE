@@ -55,7 +55,9 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
   useEffect(() => {
     const loadProduct = async () => {
       try {
+        console.log("[v0] Loading product for edit, ID:", params.id)
         const productData = await productAPI.getDetail(Number(params.id))
+        console.log("[v0] Product data received for edit:", productData)
         setProduct(productData)
         setFormData({
           name: productData.name,
@@ -65,6 +67,7 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
         })
 
         if (productData.images && productData.images.length > 0) {
+          console.log("[v0] Product images:", productData.images)
           setImages(
             productData.images.map((img: any) => ({
               imageId: img.imageId,
@@ -74,6 +77,7 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
           )
         }
       } catch (error: any) {
+        console.error("[v0] Failed to load product:", error)
         toast({
           title: "상품 로딩 실패",
           description: error.message,
