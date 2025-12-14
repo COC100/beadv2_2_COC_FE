@@ -43,12 +43,19 @@ export default function SellerPage() {
         const seller = await sellerAPI.getSelf()
         setSellerInfo(seller)
 
-        const productsResponse = await productAPI.list({
-          sellerId: seller.id,
-          requiresAuth: true,
-        })
-        setProducts(productsResponse.products || [])
+        // Load products separately
+        try {
+          const productsResponse = await productAPI.list({
+            sellerId: seller.id,
+            requiresAuth: true,
+          })
+          setProducts(productsResponse.products || [])
+        } catch (productError) {
+          console.error("[v0] Failed to load products (non-critical):", productError)
+          setProducts([])
+        }
 
+        // Load rentals separately and silently fail
         try {
           const rentals = await sellerAPI.getRentals({
             status: "REQUESTED",
@@ -58,7 +65,6 @@ export default function SellerPage() {
           setReservations(rentals || [])
         } catch (rentalError) {
           console.error("[v0] Failed to load rentals (non-critical):", rentalError)
-          // Don't show error toast for rentals - it's not critical
           setReservations([])
         }
       } catch (error: any) {
