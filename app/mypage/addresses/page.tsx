@@ -1,8 +1,8 @@
 "use client"
 
 import type React from "react"
-
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
@@ -30,8 +30,9 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { ArrowLeft, MapPin, Plus, Edit2, Trash2, CheckCircle2, AlertCircle } from "lucide-react"
+import { ArrowLeft, MapPin, Plus, Edit2, Trash2 } from "lucide-react"
+import { useToast } from "@/hooks/use-toast"
+import { memberAPI } from "@/lib/api"
 
 interface Address {
   id: number
@@ -45,33 +46,12 @@ interface Address {
 }
 
 export default function AddressesPage() {
-  const [addresses, setAddresses] = useState<Address[]>([
-    {
-      id: 1,
-      name: "집",
-      recipient: "홍길동",
-      phone: "010-1234-5678",
-      address: "서울시 강남구 테헤란로 123",
-      detailAddress: "101동 101호",
-      zipCode: "06234",
-      isDefault: true,
-    },
-    {
-      id: 2,
-      name: "회사",
-      recipient: "홍길동",
-      phone: "010-1234-5678",
-      address: "서울시 서초구 강남대로 456",
-      detailAddress: "5층",
-      zipCode: "06789",
-      isDefault: false,
-    },
-  ])
-
+  const [addresses, setAddresses] = useState<Address[]>([])
+  const [isLoading, setIsLoading] = useState(true)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingAddress, setEditingAddress] = useState<Address | null>(null)
-  const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null)
-
+  const router = useRouter()
+  const { toast } = useToast()
   const [formData, setFormData] = useState({
     name: "",
     recipient: "",
@@ -80,6 +60,36 @@ export default function AddressesPage() {
     detailAddress: "",
     zipCode: "",
   })
+
+  useEffect(() => {
+    const loadAddresses = async () => {
+      const token = localStorage.getItem("accessToken")
+      if (!token) {
+        router.push("/intro")
+        return
+      }
+
+      try {
+        const response = await memberAPI.getAddresses()
+        setAddresses(response.addressList || [])
+      } catch (error: any) {
+        console.error("[v0] Failed to load addresses:", error)
+        if (error.message.includes("401")) {
+          router.push("/intro")
+        } else {
+          toast({
+            title: "주소 로딩 실패",
+            description: "주소 목록을 불러오는데 실패했습니다",
+            variant: "destructive",
+          })
+        }
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    loadAddresses()
+  }, [router, toast])
 
   const handleAddAddress = () => {
     setEditingAddress(null)
@@ -107,45 +117,109 @@ export default function AddressesPage() {
     setIsDialogOpen(true)
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (editingAddress) {
-      // Update existing address
-      setAddresses(addresses.map((addr) => (addr.id === editingAddress.id ? { ...addr, ...formData } : addr)))
-      setMessage({ type: "success", text: "주소가 성공적으로 수정되었습니다." })
-    } else {
-      // Add new address
-      const newAddress: Address = {
-        id: Date.now(),
-        ...formData,
-        isDefault: addresses.length === 0,
+    try {
+      if (editingAddress) {
+        await memberAPI.updateAddress(editingAddress.id, {
+          addressLabel: formData.name,
+          recipientName: formData.recipient,
+          recipientPhone: formData.phone,
+          postcode: formData.zipCode,
+          roadAddress: formData.address,
+          detailAddress: formData.detailAddress,
+          isDefault: editingAddress.isDefault,
+          type: "MEMBER",
+        })
+        toast({
+          title: "주소 수정 완료",
+          description: "주소가 성공적으로 수정되었습니다",
+        })
+      } else {
+        await memberAPI.createAddress({
+          addressLabel: formData.name,
+          recipientName: formData.recipient,
+          recipientPhone: formData.phone,
+          postcode: formData.zipCode,
+          roadAddress: formData.address,
+          detailAddress: formData.detailAddress,
+          isDefault: addresses.length === 0,
+          type: "MEMBER",
+        })
+        toast({
+          title: "주소 추가 완료",
+          description: "주소가 성공적으로 추가되었습니다",
+        })
       }
-      setAddresses([...addresses, newAddress])
-      setMessage({ type: "success", text: "주소가 성공적으로 추가되었습니다." })
-    }
 
-    setIsDialogOpen(false)
-    setTimeout(() => setMessage(null), 3000)
+      const response = await memberAPI.getAddresses()
+      setAddresses(response.addressList || [])
+      setIsDialogOpen(false)
+    } catch (error: any) {
+      console.error("[v0] Failed to save address:", error)
+      toast({
+        title: "주소 저장 실패",
+        description: error.message || "주소 저장에 실패했습니다",
+        variant: "destructive",
+      })
+    }
   }
 
-  const handleDeleteAddress = (id: number) => {
-    const addressToDelete = addresses.find((addr) => addr.id === id)
-    if (addressToDelete?.isDefault && addresses.length > 1) {
-      setMessage({ type: "error", text: "대표 주소지는 다른 주소지를 대표로 설정한 후 삭제할 수 있습니다." })
-      setTimeout(() => setMessage(null), 3000)
-      return
+  const handleDeleteAddress = async (id: number) => {
+    try {
+      await memberAPI.deleteAddress(id)
+      const response = await memberAPI.getAddresses()
+      setAddresses(response.addressList || [])
+      toast({
+        title: "주소 삭제 완료",
+        description: "주소가 성공적으로 삭제되었습니다",
+      })
+    } catch (error: any) {
+      console.error("[v0] Failed to delete address:", error)
+      toast({
+        title: "주소 삭제 실패",
+        description: error.message || "주소 삭제에 실패했습니다",
+        variant: "destructive",
+      })
     }
-
-    setAddresses(addresses.filter((addr) => addr.id !== id))
-    setMessage({ type: "success", text: "주소가 성공적으로 삭제되었습니다." })
-    setTimeout(() => setMessage(null), 3000)
   }
 
-  const handleSetDefault = (id: number) => {
-    setAddresses(addresses.map((addr) => ({ ...addr, isDefault: addr.id === id })))
-    setMessage({ type: "success", text: "대표 주소지가 변경되었습니다." })
-    setTimeout(() => setMessage(null), 3000)
+  const handleSetDefault = async (id: number) => {
+    try {
+      const address = addresses.find((a) => a.id === id)
+      if (address) {
+        await memberAPI.updateAddress(id, {
+          ...address,
+          isDefault: true,
+        })
+        const response = await memberAPI.getAddresses()
+        setAddresses(response.addressList || [])
+        toast({
+          title: "대표 주소 설정 완료",
+          description: "대표 주소지가 변경되었습니다",
+        })
+      }
+    } catch (error: any) {
+      console.error("[v0] Failed to set default address:", error)
+      toast({
+        title: "설정 실패",
+        description: error.message || "대표 주소 설정에 실패했습니다",
+        variant: "destructive",
+      })
+    }
+  }
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Header />
+        <div className="container mx-auto px-4 py-12 text-center">
+          <p className="text-muted-foreground">로딩 중...</p>
+        </div>
+        <Footer />
+      </div>
+    )
   }
 
   return (
@@ -269,13 +343,6 @@ export default function AddressesPage() {
             </Dialog>
           </div>
         </div>
-
-        {message && (
-          <Alert variant={message.type === "error" ? "destructive" : "default"} className="mb-6 rounded-2xl">
-            {message.type === "success" ? <CheckCircle2 className="h-4 w-4" /> : <AlertCircle className="h-4 w-4" />}
-            <AlertDescription>{message.text}</AlertDescription>
-          </Alert>
-        )}
 
         <div className="space-y-4">
           {addresses.length === 0 ? (

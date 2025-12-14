@@ -1,15 +1,83 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
+import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { User, Wallet, Settings, LogOut, MapPin } from "lucide-react"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
+import { useToast } from "@/hooks/use-toast"
+import { memberAPI, accountAPI } from "@/lib/api"
 
 export default function MyPage() {
-  const [balance] = useState(150000)
+  const [profile, setProfile] = useState<any>(null)
+  const [balance, setBalance] = useState(0)
+  const [isLoading, setIsLoading] = useState(true)
+  const router = useRouter()
+  const { toast } = useToast()
+
+  useEffect(() => {
+    const loadData = async () => {
+      const token = localStorage.getItem("accessToken")
+      if (!token) {
+        router.push("/intro")
+        return
+      }
+
+      try {
+        // Load member profile
+        const profileData = await memberAPI.getProfile()
+        setProfile(profileData)
+
+        // Load wallet balance
+        const walletData = await accountAPI.getBalance()
+        setBalance(walletData.balance)
+      } catch (error: any) {
+        console.error("[v0] Failed to load mypage data:", error)
+        if (error.message.includes("401") || error.message.includes("unauthorized")) {
+          localStorage.removeItem("accessToken")
+          localStorage.removeItem("refreshToken")
+          localStorage.removeItem("user")
+          router.push("/intro")
+        } else {
+          toast({
+            title: "데이터 로딩 실패",
+            description: "정보를 불러오는데 실패했습니다",
+            variant: "destructive",
+          })
+        }
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    loadData()
+  }, [router, toast])
+
+  const handleLogout = () => {
+    localStorage.removeItem("accessToken")
+    localStorage.removeItem("refreshToken")
+    localStorage.removeItem("user")
+    toast({
+      title: "로그아웃 완료",
+      description: "안전하게 로그아웃되었습니다",
+    })
+    router.push("/intro")
+  }
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Header />
+        <div className="container mx-auto px-4 py-12 text-center">
+          <p className="text-muted-foreground">로딩 중...</p>
+        </div>
+        <Footer />
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -30,8 +98,8 @@ export default function MyPage() {
                   <div className="w-24 h-24 bg-gradient-to-br from-primary to-accent rounded-full flex items-center justify-center mx-auto mb-4">
                     <User className="h-12 w-12 text-white" />
                   </div>
-                  <h3 className="font-semibold text-xl">홍길동</h3>
-                  <p className="text-sm text-muted-foreground mt-1">user@example.com</p>
+                  <h3 className="font-semibold text-xl">{profile?.name || "사용자"}</h3>
+                  <p className="text-sm text-muted-foreground mt-1">{profile?.phone || ""}</p>
                 </div>
 
                 <div className="space-y-2">
@@ -50,6 +118,7 @@ export default function MyPage() {
                   <Button
                     variant="ghost"
                     className="w-full justify-start text-destructive hover:text-destructive rounded-xl"
+                    onClick={handleLogout}
                   >
                     <LogOut className="h-4 w-4 mr-2" />
                     로그아웃

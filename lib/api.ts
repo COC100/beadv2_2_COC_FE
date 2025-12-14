@@ -1,94 +1,556 @@
-// API configuration for Modi microservices
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || ""
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost"
+console.log("[v0] API_BASE_URL:", API_BASE_URL)
 
-export const API_ENDPOINTS = {
-  // Member Service - Port 8085
-  MEMBER: {
-    BASE: `${API_BASE_URL}:8085/api`,
-    SIGNUP: "/members/signup",
-    LOGIN: "/auth/login",
-    SOCIAL_LOGIN: (provider: string) => `/auth/social/${provider}`,
-    PROFILE: "/members/profile",
-    UPDATE_PROFILE: "/members/profile",
-    UPDATE_PASSWORD: (id: number) => `/members/${id}/passwords`,
-    DELETE_ACCOUNT: (id: number) => `/members/${id}`,
-  },
-
-  // Account Service - Port 8081 (Wallet/Deposit)
-  ACCOUNT: {
-    BASE: `${API_BASE_URL}:8081/api`,
-    BALANCE: "/account/balance",
-    TRANSACTIONS: "/account/transactions",
-    DEPOSIT_CONFIRM: "/account/deposits/confirm",
-  },
-
-  // Product Service - Port 8082
-  PRODUCT: {
-    BASE: `${API_BASE_URL}:8082/api`,
-    LIST: "/products",
-    DETAIL: (id: number) => `/products/${id}`,
-    CREATE: "/products",
-    UPDATE: (id: number) => `/products/${id}`,
-    DELETE: (id: number) => `/products/${id}`,
-    IMAGES: "/images",
-  },
-
-  // Rental Service - Port 8083
-  RENTAL: {
-    BASE: `${API_BASE_URL}:8083/api`,
-    CREATE: "/rentals",
-    CREATE_FROM_CART: "/rentals/carts",
-    LIST: "/rentals",
-    DETAIL: (id: number) => `/rentals/${id}`,
-    ACCEPT: (itemId: number) => `/rentals/${itemId}/accept`,
-    REJECT: (itemId: number) => `/rentals/${itemId}/reject`,
-    PAY: (id: number) => `/rentals/${id}/pay`,
-    RETURN: (itemId: number) => `/rentals/${itemId}/return`,
-    CANCEL: (itemId: number) => `/rentals/${itemId}/cancel`,
-    REFUND: (id: number) => `/rentals/${id}/refund`,
-    EXTEND: (itemId: number) => `/rentals/${itemId}/extend`,
-  },
-
-  // Seller Service - Port 8084
-  SELLER: {
-    BASE: `${API_BASE_URL}:8084/api`,
-    REGISTER: "/sellers",
-    PROFILE: "/sellers/me",
-    UPDATE_PROFILE: "/sellers/me",
-    RENTALS: "/sellers/me/rentals",
-    SETTLEMENTS: "/settlements/sellers/me",
-    SETTLEMENT_DETAIL: (id: number) => `/settlements/sellers/me/${id}/lines`,
-  },
-
-  // Cart endpoints (Member Service)
-  CART: {
-    BASE: `${API_BASE_URL}:8085/api`,
-    LIST: "/carts/me",
-    ADD_ITEM: "/carts/me/items",
-    UPDATE_ITEM: (itemId: number) => `/carts/me/items/${itemId}`,
-    DELETE_ITEM: (itemId: number) => `/carts/me/items/${itemId}`,
-  },
+// Common API response wrapper
+export interface ApiResponse<T> {
+  success: boolean
+  code: string
+  message: string
+  data: T
 }
 
-// Helper function to make API calls with JWT token
-export async function fetchAPI(endpoint: string, options: RequestInit = {}) {
-  const token = localStorage.getItem("accessToken")
+// Helper function to handle redirects on auth failure
+const handleAuthError = () => {
+  if (typeof window !== "undefined") {
+    const currentPath = window.location.pathname
+    const publicPaths = ["/login", "/signup", "/intro", "/forgot-password"]
+    if (!publicPaths.some((path) => currentPath.startsWith(path))) {
+      window.location.href = "/intro"
+    }
+  }
+}
 
-  const headers = {
+// Helper function for API calls
+async function fetchAPI<T>(endpoint: string, options: RequestInit = {}, requiresAuth = true): Promise<T> {
+  const url = `${API_BASE_URL}${endpoint}`
+
+  console.log("[v0] API Request:", { url, requiresAuth })
+
+  const headers: HeadersInit = {
     "Content-Type": "application/json",
-    ...(token && { Authorization: `Bearer ${token}` }),
     ...options.headers,
   }
 
-  const response = await fetch(endpoint, {
-    ...options,
-    headers,
-  })
-
-  if (!response.ok) {
-    throw new Error(`API Error: ${response.statusText}`)
+  if (requiresAuth && typeof window !== "undefined") {
+    const token = localStorage.getItem("accessToken")
+    if (!token) {
+      console.error("[v0] No auth token found, redirecting to intro")
+      handleAuthError()
+      throw new Error("No authentication token")
+    }
+    headers.Authorization = `Bearer ${token}`
   }
 
-  return response.json()
+  try {
+    const response = await fetch(url, {
+      ...options,
+      headers,
+    })
+
+    console.log("[v0] API Response:", response.status, response.statusText)
+
+    if (response.status === 401) {
+      console.error("[v0] 401 Unauthorized, clearing token and redirecting")
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("accessToken")
+        localStorage.removeItem("refreshToken")
+        localStorage.removeItem("user")
+      }
+      handleAuthError()
+      throw new Error("Unauthorized")
+    }
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}))
+      throw new Error(errorData.message || `API Error: ${response.statusText}`)
+    }
+
+    const data: ApiResponse<T> = await response.json()
+    return data.data
+  } catch (error) {
+    console.error("[v0] API Error:", error)
+    throw error
+  }
+}
+
+// Member Service APIs
+export const memberAPI = {
+  signup: (data: {
+    email: string
+    password: string
+    name: string
+    phone: string
+  }) =>
+    fetchAPI(
+      "/member-service/api/members/signup",
+      {
+        method: "POST",
+        body: JSON.stringify(data),
+      },
+      false,
+    ),
+
+  login: (data: { email: string; password: string }) =>
+    fetchAPI<{ accessToken: string; refreshToken: string; member: any }>(
+      "/member-service/api/auth/login",
+      {
+        method: "POST",
+        body: JSON.stringify(data),
+      },
+      false,
+    ),
+
+  getProfile: () => fetchAPI("/member-service/api/members/profile", {}, true),
+
+  updateProfile: (data: { name?: string; phone?: string }) =>
+    fetchAPI(
+      "/member-service/api/members/profile",
+      {
+        method: "PUT",
+        body: JSON.stringify(data),
+      },
+      true,
+    ),
+
+  updatePassword: (
+    memberId: number,
+    data: {
+      name: string
+      password: string
+      email: string
+      verificationCode: string
+    },
+  ) =>
+    fetchAPI(
+      `/member-service/api/members/${memberId}/passwords`,
+      {
+        method: "PATCH",
+        body: JSON.stringify(data),
+      },
+      true,
+    ),
+
+  deleteAccount: () =>
+    fetchAPI(
+      "/member-service/api/members",
+      {
+        method: "DELETE",
+      },
+      true,
+    ),
+
+  // Address APIs
+  getAddresses: () => fetchAPI<{ addressList: any[] }>("/member-service/api/addresses/profile", {}, true),
+
+  createAddress: (data: any) =>
+    fetchAPI(
+      "/member-service/api/addresses/profile",
+      {
+        method: "POST",
+        body: JSON.stringify(data),
+      },
+      true,
+    ),
+
+  updateAddress: (addressId: number, data: any) =>
+    fetchAPI(
+      `/member-service/api/addresses/profile/${addressId}`,
+      {
+        method: "PUT",
+        body: JSON.stringify(data),
+      },
+      true,
+    ),
+
+  deleteAddress: (addressId: number) =>
+    fetchAPI(
+      `/member-service/api/addresses/profile/${addressId}`,
+      {
+        method: "DELETE",
+      },
+      true,
+    ),
+}
+
+// Account Service APIs
+export const accountAPI = {
+  getBalance: () => fetchAPI<{ balance: number; createdAt: string }>("/account-service/api/accounts/balance", {}, true),
+
+  getTransactions: () => fetchAPI<any[]>("/account-service/api/accounts/transactions", {}, true),
+
+  requestDeposit: (amount: number) =>
+    fetchAPI(
+      "/account-service/api/deposits/pg/request",
+      {
+        method: "POST",
+        body: JSON.stringify({ amount }),
+      },
+      true,
+    ),
+
+  approveDeposit: (data: { paymentKey: string; orderId: string; amount: number }) =>
+    fetchAPI(
+      "/account-service/api/deposits/pg/approve",
+      {
+        method: "POST",
+        body: JSON.stringify(data),
+      },
+      true,
+    ),
+
+  getDepositConfig: () =>
+    fetchAPI<{ clientKey: string; successUrl: string; failUrl: string }>(
+      "/account-service/api/deposits/pg/config",
+      {},
+      true,
+    ),
+
+  cancelDeposit: (data: { paymentKey: string; orderId: string; amount: number; reason: string }) =>
+    fetchAPI(
+      "/account-service/api/deposits/pg/cancel",
+      {
+        method: "POST",
+        body: JSON.stringify(data),
+      },
+      true,
+    ),
+}
+
+// Product Service APIs
+export const productAPI = {
+  list: (params?: {
+    keyword?: string
+    category?: string
+    minPrice?: number
+    maxPrice?: number
+    sellerId?: number
+    startDate?: string
+    endDate?: string
+    cursor?: string
+    size?: number
+    sortType?: string
+  }) => {
+    const queryParams = new URLSearchParams()
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          queryParams.append(key, value.toString())
+        }
+      })
+    }
+    const endpoint = `/product-service/api/products${queryParams.toString() ? `?${queryParams.toString()}` : ""}`
+    return fetchAPI<{
+      products: any[]
+      nextCursor: string
+      hasNext: boolean
+    }>(endpoint, {}, false)
+  },
+
+  getDetail: (productId: number) => fetchAPI<any>(`/product-service/api/products/${productId}`, {}, false),
+
+  create: (data: {
+    name: string
+    description: string
+    pricePerDay: number
+    category: string
+    images?: string[]
+  }) =>
+    fetchAPI(
+      "/product-service/api/products",
+      {
+        method: "POST",
+        body: JSON.stringify(data),
+      },
+      true,
+    ),
+
+  update: (productId: number, data: any) =>
+    fetchAPI(
+      `/product-service/api/products/${productId}`,
+      {
+        method: "PUT",
+        body: JSON.stringify(data),
+      },
+      true,
+    ),
+
+  activate: (productId: number) =>
+    fetchAPI(
+      `/product-service/api/products/${productId}/active`,
+      {
+        method: "PATCH",
+      },
+      true,
+    ),
+
+  deactivate: (productId: number) =>
+    fetchAPI(
+      `/product-service/api/products/${productId}/inactive`,
+      {
+        method: "PATCH",
+      },
+      true,
+    ),
+
+  delete: (productId: number) =>
+    fetchAPI(
+      `/product-service/api/products/${productId}`,
+      {
+        method: "DELETE",
+      },
+      true,
+    ),
+
+  uploadImage: (file: File, dir?: string) => {
+    const formData = new FormData()
+    formData.append("file", file)
+    if (dir) formData.append("dir", dir)
+
+    return fetchAPI<string>(
+      "/product-service/api/images/upload",
+      {
+        method: "POST",
+        body: formData,
+        headers: {}, // Let browser set Content-Type for FormData
+      },
+      true,
+    )
+  },
+}
+
+// Rental Service APIs
+export const rentalAPI = {
+  create: (data: { productId: number; startDate: string; endDate: string }) =>
+    fetchAPI(
+      "/rental-service/api/rentals",
+      {
+        method: "POST",
+        body: JSON.stringify(data),
+      },
+      true,
+    ),
+
+  createFromCart: (cartItemIds: number[]) =>
+    fetchAPI(
+      "/rental-service/api/rentals/carts",
+      {
+        method: "POST",
+        body: JSON.stringify({ cartItemIds }),
+      },
+      true,
+    ),
+
+  list: (params?: { startDate?: string; endDate?: string; rentalStatus?: string }) => {
+    const queryParams = new URLSearchParams()
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value) queryParams.append(key, value)
+      })
+    }
+    return fetchAPI<any[]>(
+      `/rental-service/api/rentals${queryParams.toString() ? `?${queryParams.toString()}` : ""}`,
+      {},
+      true,
+    )
+  },
+
+  getDetail: (rentalId: number) => fetchAPI<any>(`/rental-service/api/rentals/${rentalId}`, {}, true),
+
+  accept: (rentalItemId: number) =>
+    fetchAPI(
+      `/rental-service/api/rentals/${rentalItemId}/accept`,
+      {
+        method: "PATCH",
+      },
+      true,
+    ),
+
+  reject: (rentalItemId: number) =>
+    fetchAPI(
+      `/rental-service/api/rentals/${rentalItemId}/reject`,
+      {
+        method: "PATCH",
+      },
+      true,
+    ),
+
+  pay: (rentalId: number) =>
+    fetchAPI<any>(
+      `/rental-service/api/rentals/${rentalId}/pay`,
+      {
+        method: "POST",
+      },
+      true,
+    ),
+
+  cancel: (rentalItemId: number) =>
+    fetchAPI(
+      `/rental-service/api/rentals/${rentalItemId}/cancel`,
+      {
+        method: "PATCH",
+      },
+      true,
+    ),
+
+  returnItem: (
+    rentalItemId: number,
+    data?: {
+      damageFee?: number
+      damageReason?: string
+      lateFee?: number
+      lateReason?: string
+      memo?: string
+    },
+  ) =>
+    fetchAPI(
+      `/rental-service/api/rentals/${rentalItemId}/return`,
+      {
+        method: "POST",
+        body: JSON.stringify(data || {}),
+      },
+      true,
+    ),
+
+  refund: (rentalItemId: number) =>
+    fetchAPI(
+      `/rental-service/api/rentals/${rentalItemId}/refund`,
+      {
+        method: "POST",
+      },
+      true,
+    ),
+
+  extend: (rentalItemId: number, newEndDate: string) =>
+    fetchAPI(
+      `/rental-service/api/rentals/${rentalItemId}/extend`,
+      {
+        method: "POST",
+        body: JSON.stringify({ newEndDate }),
+      },
+      true,
+    ),
+}
+
+// Cart APIs (Rental Service)
+export const cartAPI = {
+  list: () => fetchAPI<{ items: any[]; updatedAt: string }>("/rental-service/api/carts", {}, true),
+
+  addItem: (data: { productId: number; startDate: string; endDate: string }) =>
+    fetchAPI(
+      "/rental-service/api/carts/items",
+      {
+        method: "POST",
+        body: JSON.stringify(data),
+      },
+      true,
+    ),
+
+  updateItem: (cartItemId: number, data: { startDate: string; endDate: string }) =>
+    fetchAPI(
+      `/rental-service/api/carts/me/items/${cartItemId}`,
+      {
+        method: "PUT",
+        body: JSON.stringify(data),
+      },
+      true,
+    ),
+
+  deleteItem: (cartItemId: number) =>
+    fetchAPI(
+      `/rental-service/api/carts/me/items/${cartItemId}`,
+      {
+        method: "DELETE",
+      },
+      true,
+    ),
+}
+
+// Seller Service APIs
+export const sellerAPI = {
+  register: (data: { storeName: string; bizRegNo?: string; storePhone?: string }) =>
+    fetchAPI(
+      "/seller-service/api/sellers",
+      {
+        method: "POST",
+        body: JSON.stringify(data),
+      },
+      true,
+    ),
+
+  getSelf: () => fetchAPI<any>("/seller-service/api/sellers/self", {}, true),
+
+  updateSelf: (data: { storeName: string; bizRegNo?: string; storePhone?: string; status: string }) =>
+    fetchAPI(
+      "/seller-service/api/sellers/self",
+      {
+        method: "PUT",
+        body: JSON.stringify(data),
+      },
+      true,
+    ),
+
+  getRentals: (params?: {
+    productId?: number
+    status?: string
+    startDate?: string
+    endDate?: string
+    page?: number
+    size?: number
+  }) => {
+    const queryParams = new URLSearchParams()
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          queryParams.append(key, value.toString())
+        }
+      })
+    }
+    return fetchAPI<any[]>(
+      `/seller-service/api/sellers/self/rentals${queryParams.toString() ? `?${queryParams.toString()}` : ""}`,
+      {},
+      true,
+    )
+  },
+
+  getSettlements: (params?: { periodYm?: string; page?: number; size?: number }) => {
+    const queryParams = new URLSearchParams()
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          queryParams.append(key, value.toString())
+        }
+      })
+    }
+    return fetchAPI<any>(
+      `/seller-service/api/settlements/sellers/self${queryParams.toString() ? `?${queryParams.toString()}` : ""}`,
+      {},
+      true,
+    )
+  },
+
+  getSettlementDetail: (sellerSettlementId: number) =>
+    fetchAPI<any>(`/seller-service/api/settlements/sellers/self/${sellerSettlementId}`, {}, true),
+
+  getSettlementLines: (sellerSettlementId: number) =>
+    fetchAPI<any[]>(`/seller-service/api/settlements/sellers/self/${sellerSettlementId}/lines`, {}, true),
+
+  paySettlement: (sellerSettlementId: number, paidAt?: string) =>
+    fetchAPI(
+      `/seller-service/api/settlements/sellers/self/${sellerSettlementId}/pay`,
+      {
+        method: "POST",
+        body: JSON.stringify(paidAt ? { paidAt } : {}),
+      },
+      true,
+    ),
+
+  cancelSettlement: (sellerSettlementId: number) =>
+    fetchAPI(
+      `/seller-service/api/settlements/sellers/self/${sellerSettlementId}/cancel`,
+      {
+        method: "POST",
+      },
+      true,
+    ),
 }

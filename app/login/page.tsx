@@ -1,22 +1,51 @@
 "use client"
 
 import type React from "react"
-
 import { useState } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { useToast } from "@/hooks/use-toast"
+import { memberAPI } from "@/lib/api"
 
 export default function LoginPage() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
+  const [isLoading, setIsLoading] = useState(false)
+  const router = useRouter()
+  const { toast } = useToast()
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
-    // TODO: API call to member-service:8085/api/auth/login
-    console.log("Login:", { email, password })
+    setIsLoading(true)
+
+    try {
+      const response = await memberAPI.login({ email, password })
+
+      // Store auth tokens
+      localStorage.setItem("accessToken", response.accessToken)
+      localStorage.setItem("refreshToken", response.refreshToken)
+      localStorage.setItem("user", JSON.stringify(response.member))
+
+      toast({
+        title: "로그인 성공",
+        description: `${response.member.name}님, 환영합니다!`,
+      })
+
+      router.push("/")
+    } catch (error: any) {
+      console.error("[v0] Login failed:", error)
+      toast({
+        title: "로그인 실패",
+        description: error.message || "이메일 또는 비밀번호를 확인해주세요",
+        variant: "destructive",
+      })
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -62,8 +91,8 @@ export default function LoginPage() {
                   required
                 />
               </div>
-              <Button type="submit" className="w-full" size="lg">
-                로그인
+              <Button type="submit" className="w-full" size="lg" disabled={isLoading}>
+                {isLoading ? "로그인 중..." : "로그인"}
               </Button>
             </form>
           </CardContent>
