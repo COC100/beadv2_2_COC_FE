@@ -273,14 +273,18 @@ export const productAPI = {
       })
     }
     const endpoint = `/product-service/api/products${queryParams.toString() ? `?${queryParams.toString()}` : ""}`
+    const hasToken = typeof window !== "undefined" && !!localStorage.getItem("accessToken")
     return fetchAPI<{
       products: any[]
       nextCursor: string
       hasNext: boolean
-    }>(endpoint, {}, false)
+    }>(endpoint, {}, hasToken)
   },
 
-  getDetail: (productId: number) => fetchAPI<any>(`/product-service/api/products/${productId}`, {}, false),
+  getDetail: (productId: number) => {
+    const hasToken = typeof window !== "undefined" && !!localStorage.getItem("accessToken")
+    return fetchAPI<any>(`/product-service/api/products/${productId}`, {}, hasToken)
+  },
 
   create: (data: {
     name: string
