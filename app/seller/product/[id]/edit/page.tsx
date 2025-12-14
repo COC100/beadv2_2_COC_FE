@@ -55,28 +55,44 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
   useEffect(() => {
     const loadProduct = async () => {
       try {
-        const productData = await productAPI.getDetail(Number(params.id))
+        const productId = Number(params.id)
+        console.log("[v0 DEBUG] Loading product for edit, ID:", productId)
+
+        if (isNaN(productId)) {
+          throw new Error("잘못된 상품 ID입니다")
+        }
+
+        const productData = await productAPI.getDetail(productId)
+        console.log("[v0 DEBUG] Raw product data for edit:", JSON.stringify(productData, null, 2))
+
+        if (!productData) {
+          throw new Error("상품 데이터를 불러올 수 없습니다")
+        }
+
         setProduct(productData)
         setFormData({
-          name: productData.name,
-          category: productData.category,
-          pricePerDay: productData.pricePerDay.toString(),
-          description: productData.description,
+          name: productData.name || "",
+          category: productData.category || "",
+          pricePerDay: productData.pricePerDay ? productData.pricePerDay.toString() : "",
+          description: productData.description || "",
         })
 
-        if (productData.images && productData.images.length > 0) {
+        if (productData.images && Array.isArray(productData.images) && productData.images.length > 0) {
+          console.log("[v0 DEBUG] Product images:", productData.images)
           setImages(
-            productData.images.map((img: any) => ({
-              imageId: img.imageId,
-              url: img.url,
-              ordering: img.ordering,
+            productData.images.map((img: any, index: number) => ({
+              imageId: img.imageId || null,
+              url: img.url || "",
+              ordering: img.ordering !== undefined ? img.ordering : index,
             })),
           )
         }
       } catch (error: any) {
+        console.error("[v0 DEBUG] Failed to load product:", error)
+        console.error("[v0 DEBUG] Error stack:", error.stack)
         toast({
           title: "상품 로딩 실패",
-          description: error.message,
+          description: error.message || "상품 정보를 불러올 수 없습니다",
           variant: "destructive",
         })
         router.push("/seller")
@@ -197,6 +213,22 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
         <Header />
         <div className="container mx-auto px-4 py-12 text-center">
           <p>로딩 중...</p>
+        </div>
+        <Footer />
+      </div>
+    )
+  }
+
+  if (!product) {
+    return (
+      <div className="min-h-screen bg-white">
+        <Header />
+        <div className="container mx-auto px-4 py-12 text-center">
+          <p>상품을 찾을 수 없습니다</p>
+          <p className="text-sm text-muted-foreground mt-2">브라우저 콘솔(F12)에서 자세한 오류를 확인하세요</p>
+          <Link href="/seller">
+            <Button className="mt-4">판매자 페이지로 돌아가기</Button>
+          </Link>
         </div>
         <Footer />
       </div>

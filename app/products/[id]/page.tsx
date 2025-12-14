@@ -35,17 +35,43 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
       }
 
       try {
-        const productData = await productAPI.getDetail(Number(params.id))
+        const productId = Number(params.id)
+        console.log("[v0 DEBUG] Loading product ID:", productId)
+
+        if (isNaN(productId)) {
+          throw new Error("잘못된 상품 ID입니다")
+        }
+
+        const productData = await productAPI.getDetail(productId)
+        console.log("[v0 DEBUG] Raw product data:", JSON.stringify(productData, null, 2))
+
+        if (!productData) {
+          throw new Error("상품 데이터를 불러올 수 없습니다")
+        }
+
         setProduct(productData)
 
+        // Check if user is seller/owner
         try {
           const seller = await sellerAPI.getSelf()
-          setIsOwner(seller.id === productData.sellerId)
+          console.log("[v0 DEBUG] Seller data:", JSON.stringify(seller, null, 2))
+          const isProductOwner = seller?.sellerId === productData?.sellerId
+          console.log(
+            "[v0 DEBUG] Is owner?",
+            isProductOwner,
+            "Seller ID:",
+            seller?.sellerId,
+            "Product Seller ID:",
+            productData?.sellerId,
+          )
+          setIsOwner(isProductOwner)
         } catch (error) {
+          console.log("[v0 DEBUG] Not a seller or seller check failed:", error)
           setIsOwner(false)
         }
       } catch (error: any) {
-        console.error("[v0] Failed to load product:", error)
+        console.error("[v0 DEBUG] Failed to load product:", error)
+        console.error("[v0 DEBUG] Error stack:", error.stack)
         toast({
           title: "상품 로딩 실패",
           description: error.message || "상품 정보를 불러올 수 없습니다",
@@ -183,6 +209,7 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
         <Header />
         <div className="container mx-auto px-4 py-12 text-center">
           <p>상품을 찾을 수 없습니다</p>
+          <p className="text-sm text-muted-foreground mt-2">브라우저 콘솔(F12)에서 자세한 오류를 확인하세요</p>
         </div>
         <Footer />
       </div>
