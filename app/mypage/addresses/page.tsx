@@ -71,10 +71,20 @@ export default function AddressesPage() {
 
       try {
         const response = await memberAPI.getAddresses()
-        setAddresses(response.addressList || [])
+        const mappedAddresses = response.addressList.map((addr: any) => ({
+          id: addr.addressId || addr.id,
+          name: addr.addressLabel,
+          recipient: addr.recipientName,
+          phone: addr.recipientPhone,
+          address: addr.roadAddress,
+          detailAddress: addr.detailAddress,
+          zipCode: addr.postcode,
+          isDefault: addr.isDefault,
+        }))
+        setAddresses(mappedAddresses)
       } catch (error: any) {
         console.error("[v0] Failed to load addresses:", error)
-        if (error.message.includes("401")) {
+        if (error.message.includes("401") || error.message.includes("Unauthorized")) {
           router.push("/intro")
         } else {
           toast({
@@ -154,7 +164,17 @@ export default function AddressesPage() {
       }
 
       const response = await memberAPI.getAddresses()
-      setAddresses(response.addressList || [])
+      const mappedAddresses = response.addressList.map((addr: any) => ({
+        id: addr.addressId || addr.id,
+        name: addr.addressLabel,
+        recipient: addr.recipientName,
+        phone: addr.recipientPhone,
+        address: addr.roadAddress,
+        detailAddress: addr.detailAddress,
+        zipCode: addr.postcode,
+        isDefault: addr.isDefault,
+      }))
+      setAddresses(mappedAddresses)
       setIsDialogOpen(false)
     } catch (error: any) {
       console.error("[v0] Failed to save address:", error)
@@ -170,7 +190,17 @@ export default function AddressesPage() {
     try {
       await memberAPI.deleteAddress(id)
       const response = await memberAPI.getAddresses()
-      setAddresses(response.addressList || [])
+      const mappedAddresses = response.addressList.map((addr: any) => ({
+        id: addr.addressId || addr.id,
+        name: addr.addressLabel,
+        recipient: addr.recipientName,
+        phone: addr.recipientPhone,
+        address: addr.roadAddress,
+        detailAddress: addr.detailAddress,
+        zipCode: addr.postcode,
+        isDefault: addr.isDefault,
+      }))
+      setAddresses(mappedAddresses)
       toast({
         title: "주소 삭제 완료",
         description: "주소가 성공적으로 삭제되었습니다",
@@ -194,7 +224,17 @@ export default function AddressesPage() {
           isDefault: true,
         })
         const response = await memberAPI.getAddresses()
-        setAddresses(response.addressList || [])
+        const mappedAddresses = response.addressList.map((addr: any) => ({
+          id: addr.addressId || addr.id,
+          name: addr.addressLabel,
+          recipient: addr.recipientName,
+          phone: addr.recipientPhone,
+          address: addr.roadAddress,
+          detailAddress: addr.detailAddress,
+          zipCode: addr.postcode,
+          isDefault: addr.isDefault,
+        }))
+        setAddresses(mappedAddresses)
         toast({
           title: "대표 주소 설정 완료",
           description: "대표 주소지가 변경되었습니다",

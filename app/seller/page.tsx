@@ -18,50 +18,88 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
+import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
+import { useToast } from "@/hooks/use-toast"
+import { sellerAPI, productAPI } from "@/lib/api"
 
 export default function SellerPage() {
-  // Mock data
-  const products = [
-    {
-      id: 1,
-      name: 'MacBook Pro 16" M3',
-      category: "노트북",
-      pricePerDay: 25000,
-      status: "ACTIVE",
-      image: "/macbook-pro-laptop.png",
-    },
-    {
-      id: 2,
-      name: "Sony A7 IV",
-      category: "카메라",
-      pricePerDay: 35000,
-      status: "ACTIVE",
-      image: "/sony-mirrorless-camera.png",
-    },
-  ]
+  const router = useRouter()
+  const { toast } = useToast()
+  const [isLoading, setIsLoading] = useState(true)
+  const [sellerInfo, setSellerInfo] = useState<any>(null)
+  const [products, setProducts] = useState<any[]>([])
+  const [reservations, setReservations] = useState<any[]>([])
 
-  const reservations = [
-    {
-      id: 1,
-      productName: 'MacBook Pro 16"',
-      customerName: "김철수",
-      startDate: "2025-01-15",
-      endDate: "2025-01-20",
-      totalAmount: 125000,
-      status: "PENDING",
-    },
-    {
-      id: 2,
-      productName: "Sony A7 IV",
-      customerName: "이영희",
-      startDate: "2025-01-18",
-      endDate: "2025-01-22",
-      totalAmount: 140000,
-      status: "APPROVED",
-    },
-  ]
+  useEffect(() => {
+    const loadSellerData = async () => {
+      const token = localStorage.getItem("accessToken")
+      if (!token) {
+        router.push("/intro")
+        return
+      }
 
-  const monthlySettlement = 450000
+      try {
+        // Get seller info
+        const seller = await sellerAPI.getSelf()
+        setSellerInfo(seller)
+
+        // Get seller's products - API spec doesn't have this, so we'll note it
+        // For now, use all products filtered by sellerId
+        const productsResponse = await productAPI.list({ sellerId: seller.id })
+        setProducts(productsResponse.products || [])
+
+        // Get seller's rentals
+        const rentals = await sellerAPI.getRentals({
+          status: "REQUESTED",
+          startDate: new Date().toISOString().split("T")[0],
+          endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
+        })
+        setReservations(rentals || [])
+      } catch (error: any) {
+        console.error("[v0] Failed to load seller data:", error)
+        if (error.message.includes("404") || error.message.includes("Not Found")) {
+          // No seller profile, redirect to registration
+          router.push("/become-seller")
+        } else if (error.message.includes("401") || error.message.includes("Unauthorized")) {
+          router.push("/intro")
+        } else {
+          toast({
+            title: "데이터 로딩 실패",
+            description: "판매자 정보를 불러오는데 실패했습니다",
+            variant: "destructive",
+          })
+        }
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    loadSellerData()
+  }, [router, toast])
+
+  const handleAcceptRental = async (rentalItemId: number) => {
+    try {
+      await sellerAPI.getRentals()
+      toast({
+        title: "예약 승인 완료",
+        description: "예약이 승인되었습니다",
+      })
+      // Reload reservations
+      const rentals = await sellerAPI.getRentals({
+        status: "REQUESTED",
+        startDate: new Date().toISOString().split("T")[0],
+        endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
+      })
+      setReservations(rentals || [])
+    } catch (error: any) {
+      toast({
+        title: "승인 실패",
+        description: error.message || "예약 승인에 실패했습니다",
+        variant: "destructive",
+      })
+    }
+  }
 
   const getStatusText = (status: string) => {
     const statusMap: { [key: string]: { text: string; className: string } } = {
@@ -73,6 +111,20 @@ export default function SellerPage() {
     }
     return statusMap[status] || { text: status, className: "" }
   }
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-white">
+        <Header />
+        <div className="container mx-auto px-4 py-12 text-center">
+          <p className="text-muted-foreground">로딩 중...</p>
+        </div>
+        <Footer />
+      </div>
+    )
+  }
+
+  const monthlySettlement = 0 // Calculate from settlements API
 
   return (
     <div className="min-h-screen bg-white">
@@ -214,7 +266,11 @@ export default function SellerPage() {
                     <div className="flex gap-2 pt-3 border-t">
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
-                          <Button size="sm" className="flex-1 rounded-lg">
+                          <Button
+                            size="sm"
+                            className="flex-1 rounded-lg"
+                            onClick={() => handleAcceptRental(reservation.id)}
+                          >
                             <Check className="h-4 w-4 mr-1" />
                             승인
                           </Button>
@@ -262,27 +318,37 @@ export default function SellerPage() {
             <Card>
               <CardContent className="p-6">
                 <h2 className="text-xl font-bold mb-4">판매자 정보</h2>
-                <div className="space-y-4">
-                  <div>
-                    <p className="text-sm text-muted-foreground mb-1">스토어명</p>
-                    <p className="font-medium">테크렌탈샵</p>
+                {sellerInfo && (
+                  <div className="space-y-4">
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-1">스토어명</p>
+                      <p className="font-medium">{sellerInfo.storeName}</p>
+                    </div>
+                    {sellerInfo.bizRegNo && (
+                      <div>
+                        <p className="text-sm text-muted-foreground mb-1">사업자등록번호</p>
+                        <p className="font-medium">{sellerInfo.bizRegNo}</p>
+                      </div>
+                    )}
+                    {sellerInfo.storePhone && (
+                      <div>
+                        <p className="text-sm text-muted-foreground mb-1">연락처</p>
+                        <p className="font-medium">{sellerInfo.storePhone}</p>
+                      </div>
+                    )}
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-1">상태</p>
+                      <Badge>{sellerInfo.status}</Badge>
+                    </div>
+                    <div className="pt-4">
+                      <Link href="/seller/settings">
+                        <Button variant="outline" className="rounded-lg bg-transparent">
+                          정보 수정
+                        </Button>
+                      </Link>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground mb-1">사업자등록번호</p>
-                    <p className="font-medium">123-45-67890</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground mb-1">연락처</p>
-                    <p className="font-medium">02-1234-5678</p>
-                  </div>
-                  <div className="pt-4">
-                    <Link href="/seller/settings">
-                      <Button variant="outline" className="rounded-lg bg-transparent">
-                        정보 수정
-                      </Button>
-                    </Link>
-                  </div>
-                </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
