@@ -1,5 +1,6 @@
+"use client"
+
 import Link from "next/link"
-import { redirect } from "next/navigation"
 import { Camera, Laptop, Tablet, Headphones, ChevronRight, Package, Shield, Clock } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -7,15 +8,13 @@ import { Badge } from "@/components/ui/badge"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { productAPI } from "@/lib/api"
-import { cookies } from "next/headers"
+import React from "react"
+import { useRouter } from "next/router"
 
-export default async function HomePage() {
-  const cookieStore = await cookies()
-  const token = cookieStore.get("accessToken")
-
-  if (!token) {
-    redirect("/intro")
-  }
+export default function HomePage() {
+  const router = useRouter()
+  const [products, setProducts] = React.useState<any[]>([])
+  const [loading, setLoading] = React.useState(true)
 
   const categories = [
     { name: "노트북", icon: Laptop, href: "/products?category=LAPTOP" },
@@ -24,16 +23,40 @@ export default async function HomePage() {
     { name: "오디오", icon: Headphones, href: "/products?category=AUDIO" },
   ]
 
-  let products = []
+  React.useEffect(() => {
+    const token = localStorage.getItem("accessToken")
+    if (!token) {
+      router.push("/intro")
+      return
+    }
 
-  try {
-    console.log("[v0] Fetching products for homepage")
-    const response = await productAPI.list({ size: 8 })
-    console.log("[v0] Products response:", response)
-    products = response.data.products || []
-  } catch (error) {
-    console.error("[v0] Failed to fetch products:", error)
-    products = []
+    // Fetch products
+    async function fetchProducts() {
+      try {
+        console.log("[v0] Fetching products for homepage")
+        const response = await productAPI.list({ size: 8 })
+        console.log("[v0] Products response:", response)
+        setProducts(response.data.products || [])
+      } catch (error) {
+        console.error("[v0] Failed to fetch products:", error)
+        setProducts([])
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchProducts()
+  }, [router])
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">로딩 중...</p>
+        </div>
+      </div>
+    )
   }
 
   return (

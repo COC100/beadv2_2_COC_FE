@@ -34,7 +34,6 @@ export default function LoginPage() {
         memberInfo: response.data.member,
       })
 
-      // 토큰 저장
       localStorage.setItem("accessToken", response.data.accessToken)
       localStorage.setItem("refreshToken", response.data.refreshToken)
       localStorage.setItem("userInfo", JSON.stringify(response.data.member))
@@ -44,9 +43,7 @@ export default function LoginPage() {
         description: `${response.data.member.name}님, 환영합니다!`,
       })
 
-      setTimeout(() => {
-        router.push("/")
-      }, 500)
+      router.push("/")
     } catch (error: any) {
       console.error("[v0] Login failed:", error)
       const errorMessage = error.message || "이메일 또는 비밀번호를 확인해주세요."
