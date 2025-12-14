@@ -1,6 +1,7 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { Trash2, ShoppingBag, Settings } from "lucide-react"
 import { Header } from "@/components/header"
@@ -10,6 +11,8 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { cartAPI } from "@/lib/api"
+import { useToast } from "@/hooks/use-toast"
 
 interface CartItem {
   id: number
@@ -23,30 +26,43 @@ interface CartItem {
 }
 
 export default function CartPage() {
-  const [cartItems, setCartItems] = useState<CartItem[]>([
-    {
-      id: 1,
-      productId: 1,
-      productName: 'MacBook Pro 16" M3',
-      productImage: "/macbook-pro-laptop.png",
-      pricePerDay: 25000,
-      startDate: "2025-01-15",
-      endDate: "2025-01-20",
-      quantity: 1,
-    },
-    {
-      id: 2,
-      productId: 2,
-      productName: "Sony A7 IV 미러리스",
-      productImage: "/sony-mirrorless-camera.png",
-      pricePerDay: 35000,
-      startDate: "2025-01-18",
-      endDate: "2025-01-22",
-      quantity: 1,
-    },
-  ])
-
+  const router = useRouter()
+  const { toast } = useToast()
+  const [loading, setLoading] = useState(true)
+  const [cartItems, setCartItems] = useState<any[]>([])
   const [editingItemId, setEditingItemId] = useState<number | null>(null)
+
+  useEffect(() => {
+    const token = localStorage.getItem("accessToken")
+    if (!token) {
+      toast({
+        title: "로그인이 필요합니다",
+        variant: "destructive",
+      })
+      router.push("/login")
+      return
+    }
+
+    fetchCart()
+  }, [])
+
+  const fetchCart = async () => {
+    try {
+      setLoading(true)
+      console.log("[v0] Fetching cart data")
+      const response = await cartAPI.list()
+      console.log("[v0] Cart response:", response)
+      setCartItems(response.data.items || [])
+    } catch (error) {
+      console.error("[v0] Failed to fetch cart:", error)
+      toast({
+        title: "장바구니를 불러오는데 실패했습니다",
+        variant: "destructive",
+      })
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const calculateDays = (start: string, end: string) => {
     const startDate = new Date(start)
@@ -63,13 +79,53 @@ export default function CartPage() {
     return cartItems.reduce((total, item) => total + calculateItemTotal(item), 0)
   }
 
-  const removeItem = (id: number) => {
-    setCartItems(cartItems.filter((item) => item.id !== id))
+  const removeItem = async (itemId: number) => {
+    try {
+      console.log("[v0] Removing cart item:", itemId)
+      await cartAPI.deleteItem(itemId)
+      setCartItems(cartItems.filter((item) => item.id !== itemId))
+      toast({
+        title: "상품이 삭제되었습니다",
+      })
+    } catch (error) {
+      console.error("[v0] Failed to remove item:", error)
+      toast({
+        title: "삭제에 실패했습니다",
+        variant: "destructive",
+      })
+    }
   }
 
-  const updateRentalPeriod = (id: number, startDate: string, endDate: string) => {
-    setCartItems(cartItems.map((item) => (item.id === id ? { ...item, startDate, endDate } : item)))
-    setEditingItemId(null)
+  const updateRentalPeriod = async (itemId: number, startDate: string, endDate: string) => {
+    try {
+      console.log("[v0] Updating cart item:", itemId, startDate, endDate)
+      await cartAPI.updateItem(itemId, { startDate, endDate })
+      setCartItems(cartItems.map((item) => (item.id === itemId ? { ...item, startDate, endDate } : item)))
+      setEditingItemId(null)
+      toast({
+        title: "대여 기간이 수정되었습니다",
+      })
+    } catch (error) {
+      console.error("[v0] Failed to update item:", error)
+      toast({
+        title: "수정에 실패했습니다",
+        variant: "destructive",
+      })
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-white">
+        <Header />
+        <div className="container mx-auto px-4 py-12">
+          <div className="text-center py-20">
+            <p className="text-muted-foreground">로딩 중...</p>
+          </div>
+        </div>
+        <Footer />
+      </div>
+    )
   }
 
   return (

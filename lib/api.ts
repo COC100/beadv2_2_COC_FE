@@ -1,5 +1,13 @@
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || ""
 
+if (typeof window !== "undefined") {
+  console.log("[v0] Environment variables:")
+  console.log("[v0] NEXT_PUBLIC_API_BASE_URL:", process.env.NEXT_PUBLIC_API_BASE_URL)
+  console.log("[v0] API_BASE_URL:", API_BASE_URL)
+}
+
+console.log("[v0] API_BASE_URL:", API_BASE_URL)
+
 // API Response wrapper type
 export interface ApiResponse<T> {
   success: boolean
@@ -9,6 +17,14 @@ export interface ApiResponse<T> {
 
 // Helper function to make API calls with JWT token
 async function fetchAPI<T>(endpoint: string, options: RequestInit = {}): Promise<ApiResponse<T>> {
+  const fullUrl = `${API_BASE_URL}${endpoint}`
+  console.log("[v0] Fetching:", fullUrl)
+
+  if (!API_BASE_URL) {
+    console.error("[v0] API_BASE_URL is not set! Please set NEXT_PUBLIC_API_BASE_URL in Vars section.")
+    throw new Error("API_BASE_URL is not configured. Please set NEXT_PUBLIC_API_BASE_URL environment variable.")
+  }
+
   const token = typeof window !== "undefined" ? localStorage.getItem("accessToken") : null
 
   const headers: Record<string, string> = {
@@ -20,17 +36,30 @@ async function fetchAPI<T>(endpoint: string, options: RequestInit = {}): Promise
     headers.Authorization = `Bearer ${token}`
   }
 
-  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-    ...options,
-    headers,
-  })
+  try {
+    const response = await fetch(fullUrl, {
+      ...options,
+      headers,
+    })
 
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}))
-    throw new Error(errorData.message || `API Error: ${response.statusText}`)
+    console.log("[v0] Response status:", response.status)
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}))
+      console.error("[v0] API Error:", errorData)
+      throw new Error(errorData.message || `API Error: ${response.statusText}`)
+    }
+
+    return response.json()
+  } catch (error) {
+    console.error("[v0] Fetch error:", error)
+    if (error instanceof TypeError && error.message.includes("fetch")) {
+      throw new Error(
+        `Cannot connect to API server at ${fullUrl}. Please ensure:\n1. Backend server is running\n2. NEXT_PUBLIC_API_BASE_URL is set correctly\n3. CORS is configured on backend`,
+      )
+    }
+    throw error
   }
-
-  return response.json()
 }
 
 // Member API (member-service)
