@@ -40,16 +40,15 @@ export default function SellerPage() {
       }
 
       try {
-        // Get seller info
         const seller = await sellerAPI.getSelf()
         setSellerInfo(seller)
 
-        // Get seller's products - API spec doesn't have this, so we'll note it
-        // For now, use all products filtered by sellerId
-        const productsResponse = await productAPI.list({ sellerId: seller.id })
+        const productsResponse = await productAPI.list({
+          sellerId: seller.id,
+          requiresAuth: true,
+        })
         setProducts(productsResponse.products || [])
 
-        // Get seller's rentals
         const rentals = await sellerAPI.getRentals({
           status: "REQUESTED",
           startDate: new Date().toISOString().split("T")[0],
@@ -59,7 +58,6 @@ export default function SellerPage() {
       } catch (error: any) {
         console.error("[v0] Failed to load seller data:", error)
         if (error.message.includes("404") || error.message.includes("Not Found")) {
-          // No seller profile, redirect to registration
           router.push("/become-seller")
         } else if (error.message.includes("401") || error.message.includes("Unauthorized")) {
           router.push("/intro")

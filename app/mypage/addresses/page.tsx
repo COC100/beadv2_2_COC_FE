@@ -220,8 +220,14 @@ export default function AddressesPage() {
       const address = addresses.find((a) => a.id === id)
       if (address) {
         await memberAPI.updateAddress(id, {
-          ...address,
+          addressLabel: address.name,
+          recipientName: address.recipient,
+          recipientPhone: address.phone,
+          postcode: address.zipCode,
+          roadAddress: address.address,
+          detailAddress: address.detailAddress,
           isDefault: true,
+          type: "MEMBER",
         })
         const response = await memberAPI.getAddresses()
         const mappedAddresses = response.addressList.map((addr: any) => ({
