@@ -37,7 +37,7 @@ async function fetchAPI<T>(endpoint: string, options: RequestInit = {}, requires
     if (!token) {
       console.error("[v0] No auth token found, redirecting to intro")
       handleAuthError()
-      throw new Error("No authentication token")
+      throw new Error("인증 토큰이 없습니다")
     }
     headers.Authorization = `Bearer ${token}`
   }
@@ -69,18 +69,20 @@ async function fetchAPI<T>(endpoint: string, options: RequestInit = {}, requires
       } else {
         console.warn("[v0] 401 on public endpoint - backend may require auth incorrectly")
       }
-      throw new Error("Unauthorized")
+      throw new Error("인증되지 않았습니다")
     }
 
     if (!response.ok) {
-      let errorMessage = `API Error: ${response.statusText}`
+      let errorMessage = `${response.statusText}`
       try {
         const errorData = await response.json()
-        errorMessage = errorData.message || errorMessage
+        errorMessage = errorData.message || errorData.error || errorMessage
       } catch {
         const errorText = await response.text()
         if (errorText.startsWith("<!DOCTYPE") || errorText.startsWith("<html")) {
-          errorMessage = "Server returned HTML instead of JSON. This might be an ngrok warning page or server error."
+          errorMessage = "서버 오류가 발생했습니다."
+        } else if (errorText) {
+          errorMessage = errorText
         }
       }
       throw new Error(errorMessage)
@@ -91,19 +93,17 @@ async function fetchAPI<T>(endpoint: string, options: RequestInit = {}, requires
       console.error("[v0] Non-JSON response:", responseText.substring(0, 200))
 
       if (responseText.startsWith("<!DOCTYPE") || responseText.startsWith("<html")) {
-        throw new Error(
-          "Server returned HTML instead of JSON. If using ngrok, make sure to disable the warning page by adding 'ngrok-skip-browser-warning' header or visit the ngrok URL in a browser first to bypass the warning.",
-        )
+        throw new Error("서버가 HTML 응답을 반환했습니다. ngrok을 사용하는 경우 경고 페이지를 우회해야 합니다.")
       }
 
-      throw new Error("Server returned non-JSON response")
+      throw new Error("서버 응답 형식이 올바르지 않습니다")
     }
 
     const data: ApiResponse<T> = await response.json()
     return data.data
-  } catch (error) {
+  } catch (error: any) {
     console.error("[v0] API Error:", error)
-    throw error
+    throw new Error(error.message || "요청 처리 중 오류가 발생했습니다")
   }
 }
 
