@@ -43,6 +43,7 @@ interface Address {
   detailAddress: string
   zipCode: string
   isDefault: boolean
+  _originalData?: any
 }
 
 export default function AddressesPage() {
@@ -71,8 +72,9 @@ export default function AddressesPage() {
 
       try {
         const response = await memberAPI.getAddresses()
-        const mappedAddresses = response.addressList.map((addr: any) => ({
-          id: addr.addressId ?? addr.id ?? 0,
+        const mappedAddresses = response.addressList.map((addr: any, index: number) => ({
+          // Use a temporary ID based on index since backend doesn't return addressId
+          id: index,
           name: addr.addressLabel || "",
           recipient: addr.recipientName || "",
           phone: addr.recipientPhone || "",
@@ -80,8 +82,11 @@ export default function AddressesPage() {
           detailAddress: addr.detailAddress || "",
           zipCode: addr.postcode || "",
           isDefault: addr.isDefault || false,
+          // Store original data for API calls
+          _originalData: addr,
         }))
         console.log("[v0] Loaded addresses:", mappedAddresses)
+        console.log("[v0] WARNING: Backend API does not return addressId in GET /addresses/profile response")
         setAddresses(mappedAddresses)
       } catch (error: any) {
         console.error("[v0] Failed to load addresses:", error)
@@ -133,7 +138,7 @@ export default function AddressesPage() {
 
     try {
       if (editingAddress) {
-        await memberAPI.updateAddress(editingAddress.id, {
+        await memberAPI.updateAddress(editingAddress._originalData.addressId, {
           addressLabel: formData.name,
           recipientName: formData.recipient,
           recipientPhone: formData.phone,
@@ -165,8 +170,8 @@ export default function AddressesPage() {
       }
 
       const response = await memberAPI.getAddresses()
-      const mappedAddresses = response.addressList.map((addr: any) => ({
-        id: addr.addressId ?? addr.id ?? 0,
+      const mappedAddresses = response.addressList.map((addr: any, index: number) => ({
+        id: index,
         name: addr.addressLabel || "",
         recipient: addr.recipientName || "",
         phone: addr.recipientPhone || "",
@@ -174,6 +179,7 @@ export default function AddressesPage() {
         detailAddress: addr.detailAddress || "",
         zipCode: addr.postcode || "",
         isDefault: addr.isDefault || false,
+        _originalData: addr,
       }))
       setAddresses(mappedAddresses)
       setIsDialogOpen(false)
@@ -191,8 +197,8 @@ export default function AddressesPage() {
     try {
       await memberAPI.deleteAddress(id)
       const response = await memberAPI.getAddresses()
-      const mappedAddresses = response.addressList.map((addr: any) => ({
-        id: addr.addressId ?? addr.id ?? 0,
+      const mappedAddresses = response.addressList.map((addr: any, index: number) => ({
+        id: index,
         name: addr.addressLabel || "",
         recipient: addr.recipientName || "",
         phone: addr.recipientPhone || "",
@@ -200,6 +206,7 @@ export default function AddressesPage() {
         detailAddress: addr.detailAddress || "",
         zipCode: addr.postcode || "",
         isDefault: addr.isDefault || false,
+        _originalData: addr,
       }))
       setAddresses(mappedAddresses)
       toast({
@@ -225,6 +232,19 @@ export default function AddressesPage() {
       }
       console.log("[v0] Found address:", address)
 
+      toast({
+        title: "기능 제한",
+        description:
+          "현재 백엔드 API가 주소 ID를 반환하지 않아 대표 주소 설정이 불가능합니다. 백엔드 팀에 문의해주세요.",
+        variant: "destructive",
+      })
+
+      console.error(
+        "[v0] Cannot set default address: Backend API does not return addressId in GET response, but PUT requires addressId in path",
+      )
+      return
+
+      /* Original code - commented out until backend adds addressId to response
       await memberAPI.updateAddress(id, {
         addressLabel: address.name,
         recipientName: address.recipient,
@@ -237,8 +257,8 @@ export default function AddressesPage() {
       })
 
       const response = await memberAPI.getAddresses()
-      const mappedAddresses = response.addressList.map((addr: any) => ({
-        id: addr.addressId ?? addr.id ?? 0,
+      const mappedAddresses = response.addressList.map((addr: any, index: number) => ({
+        id: index,
         name: addr.addressLabel || "",
         recipient: addr.recipientName || "",
         phone: addr.recipientPhone || "",
@@ -246,12 +266,14 @@ export default function AddressesPage() {
         detailAddress: addr.detailAddress || "",
         zipCode: addr.postcode || "",
         isDefault: addr.isDefault || false,
+        _originalData: addr,
       }))
       setAddresses(mappedAddresses)
       toast({
         title: "대표 주소 설정 완료",
         description: "대표 주소지가 변경되었습니다",
       })
+      */
     } catch (error: any) {
       console.error("[v0] Failed to set default address:", error)
       toast({
