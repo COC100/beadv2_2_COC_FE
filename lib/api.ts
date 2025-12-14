@@ -1,414 +1,265 @@
-// API configuration for Modi microservices
-// All services are accessed through NEXT_PUBLIC_API_BASE_URL/<service-name>/...
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || ""
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080"
-
-export const API_ENDPOINTS = {
-  // Member Service
-  MEMBER: {
-    SIGNUP: `${API_BASE_URL}/member-service/api/members/signup`,
-    PROFILE: `${API_BASE_URL}/member-service/api/members/profile`,
-    UPDATE_PROFILE: `${API_BASE_URL}/member-service/api/members/profile`,
-    UPDATE_PASSWORD: (memberId: number) => `${API_BASE_URL}/member-service/api/members/${memberId}/passwords`,
-    DELETE_ACCOUNT: `${API_BASE_URL}/member-service/api/members`,
-  },
-
-  // Authentication
-  AUTH: {
-    LOGIN: `${API_BASE_URL}/member-service/api/auth/login`,
-    EMAIL_VERIFY_SEND: `${API_BASE_URL}/member-service/api/auth/email/verify/send`,
-    EMAIL_VERIFY_CONFIRM: `${API_BASE_URL}/member-service/api/auth/email/verify/confirm`,
-    PASSWORD_RESET_SEND: `${API_BASE_URL}/member-service/api/auth/password/reset/send`,
-    PASSWORD_RESET_CONFIRM: `${API_BASE_URL}/member-service/api/auth/password/reset/confirm`,
-  },
-
-  // Address Management
-  ADDRESS: {
-    LIST: `${API_BASE_URL}/member-service/api/addresses/profile`,
-    CREATE: `${API_BASE_URL}/member-service/api/addresses/profile`,
-    UPDATE: (addressId: number) => `${API_BASE_URL}/member-service/api/addresses/profile/${addressId}`,
-    DELETE: (addressId: number) => `${API_BASE_URL}/member-service/api/addresses/profile/${addressId}`,
-  },
-
-  // Account Service (Wallet/Deposit)
-  ACCOUNT: {
-    BALANCE: `${API_BASE_URL}/account-service/api/accounts/balance`,
-    TRANSACTIONS: `${API_BASE_URL}/account-service/api/accounts/transactions`,
-    DEPOSIT_REQUEST: `${API_BASE_URL}/account-service/api/deposits/pg/request`,
-    DEPOSIT_APPROVE: `${API_BASE_URL}/account-service/api/deposits/pg/approve`,
-    DEPOSIT_CONFIG: `${API_BASE_URL}/account-service/api/deposits/pg/config`,
-    DEPOSIT_CANCEL: `${API_BASE_URL}/account-service/api/deposits/pg/cancel`,
-  },
-
-  // Product Service
-  PRODUCT: {
-    LIST: `${API_BASE_URL}/product-service/api/products`,
-    DETAIL: (productId: number) => `${API_BASE_URL}/product-service/api/products/${productId}`,
-    CREATE: `${API_BASE_URL}/product-service/api/products`,
-    UPDATE: (productId: number) => `${API_BASE_URL}/product-service/api/products/${productId}`,
-    ACTIVATE: (productId: number) => `${API_BASE_URL}/product-service/api/products/${productId}/active`,
-    DEACTIVATE: (productId: number) => `${API_BASE_URL}/product-service/api/products/${productId}/inactive`,
-    DELETE: (productId: number) => `${API_BASE_URL}/product-service/api/products/${productId}`,
-    IMAGE_UPLOAD: `${API_BASE_URL}/product-service/api/images/upload`,
-  },
-
-  // Rental Service
-  RENTAL: {
-    CREATE: `${API_BASE_URL}/rental-service/api/rentals`,
-    CREATE_FROM_CART: `${API_BASE_URL}/rental-service/api/rentals/carts`,
-    LIST: `${API_BASE_URL}/rental-service/api/rentals`,
-    DETAIL: (rentalId: number) => `${API_BASE_URL}/rental-service/api/rentals/${rentalId}`,
-    ACCEPT: (rentalItemId: number) => `${API_BASE_URL}/rental-service/api/rentals/${rentalItemId}/accept`,
-    REJECT: (rentalItemId: number) => `${API_BASE_URL}/rental-service/api/rentals/${rentalItemId}/reject`,
-    PAY: (rentalId: number) => `${API_BASE_URL}/rental-service/api/rentals/${rentalId}/pay`,
-    RETURN: (rentalItemId: number) => `${API_BASE_URL}/rental-service/api/rentals/${rentalItemId}/return`,
-    CANCEL: (rentalItemId: number) => `${API_BASE_URL}/rental-service/api/rentals/${rentalItemId}/cancel`,
-    REFUND: (rentalItemId: number) => `${API_BASE_URL}/rental-service/api/rentals/${rentalItemId}/refund`,
-    EXTEND: (rentalItemId: number) => `${API_BASE_URL}/rental-service/api/rentals/${rentalItemId}/extend`,
-  },
-
-  // Cart
-  CART: {
-    LIST: `${API_BASE_URL}/rental-service/api/carts`,
-    ADD_ITEM: `${API_BASE_URL}/rental-service/api/carts/items`,
-    UPDATE_ITEM: (cartItemId: number) => `${API_BASE_URL}/rental-service/api/carts/me/items/${cartItemId}`,
-    DELETE_ITEM: (cartItemId: number) => `${API_BASE_URL}/rental-service/api/carts/me/items/${cartItemId}`,
-  },
-
-  // Seller Service
-  SELLER: {
-    REGISTER: `${API_BASE_URL}/seller-service/api/sellers`,
-    SELF: `${API_BASE_URL}/seller-service/api/sellers/self`,
-    UPDATE: `${API_BASE_URL}/seller-service/api/sellers/self`,
-    RENTALS: `${API_BASE_URL}/seller-service/api/sellers/self/rentals`,
-    SETTLEMENTS: `${API_BASE_URL}/seller-service/api/settlements/sellers/self`,
-    SETTLEMENT_DETAIL: (settlementId: number) =>
-      `${API_BASE_URL}/seller-service/api/settlements/sellers/self/${settlementId}`,
-    SETTLEMENT_LINES: (settlementId: number) =>
-      `${API_BASE_URL}/seller-service/api/settlements/sellers/self/${settlementId}/lines`,
-    SETTLEMENT_PAY: (settlementId: number) =>
-      `${API_BASE_URL}/seller-service/api/settlements/sellers/self/${settlementId}/pay`,
-    SETTLEMENT_CANCEL: (settlementId: number) =>
-      `${API_BASE_URL}/seller-service/api/settlements/sellers/self/${settlementId}/cancel`,
-  },
-}
-
+// API Response wrapper type
 export interface ApiResponse<T> {
   success: boolean
-  code: string
-  message: string
   data: T
+  message?: string
 }
 
 // Helper function to make API calls with JWT token
-export async function fetchAPI<T>(endpoint: string, options: RequestInit = {}): Promise<ApiResponse<T>> {
+async function fetchAPI<T>(endpoint: string, options: RequestInit = {}): Promise<ApiResponse<T>> {
   const token = typeof window !== "undefined" ? localStorage.getItem("accessToken") : null
 
-  const headers: HeadersInit = {
+  const headers: Record<string, string> = {
     "Content-Type": "application/json",
-    ...(token && { Authorization: `Bearer ${token}` }),
-    ...options.headers,
+    ...((options.headers as Record<string, string>) || {}),
   }
 
-  const response = await fetch(endpoint, {
+  if (token) {
+    headers.Authorization = `Bearer ${token}`
+  }
+
+  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
     ...options,
     headers,
   })
 
   if (!response.ok) {
-    const errorData = await response.json().catch(() => ({ message: response.statusText }))
+    const errorData = await response.json().catch(() => ({}))
     throw new Error(errorData.message || `API Error: ${response.statusText}`)
   }
 
   return response.json()
 }
 
+// Member API (member-service)
 export const memberAPI = {
-  login: (email: string, password: string) =>
-    fetchAPI(API_ENDPOINTS.AUTH.LOGIN, {
-      method: "POST",
-      body: JSON.stringify({ email, password }),
-    }),
-
-  signup: (data: { email: string; password: string; name: string; phone: string }) =>
-    fetchAPI(API_ENDPOINTS.MEMBER.SIGNUP, {
+  signup: (data: { email: string; password: string; name: string; phoneNumber: string }) =>
+    fetchAPI("/member-service/api/members/signup", {
       method: "POST",
       body: JSON.stringify(data),
     }),
 
-  getProfile: () => fetchAPI(API_ENDPOINTS.MEMBER.PROFILE),
+  login: (data: { email: string; password: string }) =>
+    fetchAPI<{ accessToken: string; refreshToken: string }>("/member-service/api/members/login", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
 
-  updateProfile: (data: { name?: string; phone?: string }) =>
-    fetchAPI(API_ENDPOINTS.MEMBER.UPDATE_PROFILE, {
-      method: "PUT",
+  getProfile: () => fetchAPI("/member-service/api/members/me", { method: "GET" }),
+
+  updateProfile: (data: { name: string; phoneNumber: string }) =>
+    fetchAPI("/member-service/api/members/me", {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    }),
+
+  updatePassword: (data: { currentPassword: string; newPassword: string }) =>
+    fetchAPI("/member-service/api/members/me/password", {
+      method: "PATCH",
       body: JSON.stringify(data),
     }),
 
   deleteAccount: () =>
-    fetchAPI(API_ENDPOINTS.MEMBER.DELETE_ACCOUNT, {
+    fetchAPI("/member-service/api/members/me", {
       method: "DELETE",
     }),
 }
 
-export const addressAPI = {
-  list: () => fetchAPI(API_ENDPOINTS.ADDRESS.LIST),
-
-  create: (data: {
-    addressLabel: string
-    recipientName: string
-    recipientPhone: string
-    type: string
-    postcode: string
-    roadAddress: string
-    detailAddress: string
-    isDefault: boolean
-  }) =>
-    fetchAPI(API_ENDPOINTS.ADDRESS.CREATE, {
-      method: "POST",
-      body: JSON.stringify(data),
-    }),
-
-  update: (
-    addressId: number,
-    data: {
-      addressLabel?: string
-      recipientName?: string
-      recipientPhone?: string
-      type?: string
-      postcode?: string
-      roadAddress?: string
-      detailAddress?: string
-      isDefault?: boolean
-    },
-  ) =>
-    fetchAPI(API_ENDPOINTS.ADDRESS.UPDATE(addressId), {
-      method: "PUT",
-      body: JSON.stringify(data),
-    }),
-
-  delete: (addressId: number) =>
-    fetchAPI(API_ENDPOINTS.ADDRESS.DELETE(addressId), {
-      method: "DELETE",
-    }),
-}
-
-export const accountAPI = {
-  getBalance: () => fetchAPI(API_ENDPOINTS.ACCOUNT.BALANCE),
-
-  getTransactions: () => fetchAPI(API_ENDPOINTS.ACCOUNT.TRANSACTIONS),
-
-  requestDeposit: (amount: number) =>
-    fetchAPI(API_ENDPOINTS.ACCOUNT.DEPOSIT_REQUEST, {
-      method: "POST",
-      body: JSON.stringify({ amount }),
-    }),
-
-  approveDeposit: (data: { paymentKey: string; orderId: string; amount: number }) =>
-    fetchAPI(API_ENDPOINTS.ACCOUNT.DEPOSIT_APPROVE, {
-      method: "POST",
-      body: JSON.stringify(data),
-    }),
-
-  getDepositConfig: () => fetchAPI(API_ENDPOINTS.ACCOUNT.DEPOSIT_CONFIG),
-}
-
+// Product API (product-service)
 export const productAPI = {
-  list: (params?: {
-    keyword?: string
-    category?: string
-    minPrice?: number
-    maxPrice?: number
-    sellerId?: number
-    startDate?: string
-    endDate?: string
-    cursor?: string
-    size?: number
-    sortType?: string
-  }) => {
-    const queryParams = new URLSearchParams()
-    if (params) {
-      Object.entries(params).forEach(([key, value]) => {
-        if (value !== undefined) queryParams.append(key, String(value))
-      })
-    }
-    const url = `${API_ENDPOINTS.PRODUCT.LIST}${queryParams.toString() ? `?${queryParams.toString()}` : ""}`
-    return fetchAPI(url)
+  list: (params?: { category?: string; minPrice?: number; maxPrice?: number; page?: number; size?: number }) => {
+    const searchParams = new URLSearchParams()
+    if (params?.category) searchParams.append("category", params.category)
+    if (params?.minPrice) searchParams.append("minPrice", params.minPrice.toString())
+    if (params?.maxPrice) searchParams.append("maxPrice", params.maxPrice.toString())
+    if (params?.page) searchParams.append("page", params.page.toString())
+    if (params?.size) searchParams.append("size", params.size.toString())
+
+    const query = searchParams.toString()
+    return fetchAPI(`/product-service/api/products${query ? `?${query}` : ""}`, { method: "GET" })
   },
 
-  getDetail: (productId: number) => fetchAPI(API_ENDPOINTS.PRODUCT.DETAIL(productId)),
+  getDetail: (id: number) => fetchAPI(`/product-service/api/products/${id}`, { method: "GET" }),
 
-  create: (data: { name: string; description: string; pricePerDay: number; category: string; images?: string[] }) =>
-    fetchAPI(API_ENDPOINTS.PRODUCT.CREATE, {
+  create: (data: FormData) =>
+    fetchAPI("/product-service/api/products", {
       method: "POST",
-      body: JSON.stringify(data),
+      body: data,
+      headers: {}, // Let browser set Content-Type for FormData
     }),
 
-  update: (
-    productId: number,
-    data: {
-      name: string
-      description: string
-      pricePerDay: number
-      category: string
-      images?: Array<{ imageId?: number; url: string; ordering: number }>
-    },
-  ) =>
-    fetchAPI(API_ENDPOINTS.PRODUCT.UPDATE(productId), {
-      method: "PUT",
-      body: JSON.stringify(data),
-    }),
-
-  activate: (productId: number) =>
-    fetchAPI(API_ENDPOINTS.PRODUCT.ACTIVATE(productId), {
+  update: (id: number, data: FormData) =>
+    fetchAPI(`/product-service/api/products/${id}`, {
       method: "PATCH",
+      body: data,
+      headers: {},
     }),
 
-  deactivate: (productId: number) =>
-    fetchAPI(API_ENDPOINTS.PRODUCT.DEACTIVATE(productId), {
-      method: "PATCH",
-    }),
-
-  delete: (productId: number) =>
-    fetchAPI(API_ENDPOINTS.PRODUCT.DELETE(productId), {
+  delete: (id: number) =>
+    fetchAPI(`/product-service/api/products/${id}`, {
       method: "DELETE",
     }),
 }
 
+// Cart API (member-service)
 export const cartAPI = {
-  list: () => fetchAPI(API_ENDPOINTS.CART.LIST),
+  list: () => fetchAPI("/member-service/api/carts/me", { method: "GET" }),
 
   addItem: (data: { productId: number; startDate: string; endDate: string }) =>
-    fetchAPI(API_ENDPOINTS.CART.ADD_ITEM, {
+    fetchAPI("/member-service/api/carts/me/items", {
       method: "POST",
       body: JSON.stringify(data),
     }),
 
-  updateItem: (cartItemId: number, data: { startDate: string; endDate: string }) =>
-    fetchAPI(API_ENDPOINTS.CART.UPDATE_ITEM(cartItemId), {
-      method: "PUT",
+  updateItem: (itemId: number, data: { startDate: string; endDate: string }) =>
+    fetchAPI(`/member-service/api/carts/me/items/${itemId}`, {
+      method: "PATCH",
       body: JSON.stringify(data),
     }),
 
-  deleteItem: (cartItemId: number) =>
-    fetchAPI(API_ENDPOINTS.CART.DELETE_ITEM(cartItemId), {
+  deleteItem: (itemId: number) =>
+    fetchAPI(`/member-service/api/carts/me/items/${itemId}`, {
       method: "DELETE",
     }),
 }
 
+// Rental API (rental-service)
 export const rentalAPI = {
-  create: (data: { productId: number; startDate: string; endDate: string }) =>
-    fetchAPI(API_ENDPOINTS.RENTAL.CREATE, {
+  create: (data: { productId: number; startDate: string; endDate: string; addressId: number }) =>
+    fetchAPI("/rental-service/api/rentals", {
       method: "POST",
       body: JSON.stringify(data),
     }),
 
-  createFromCart: (cartItemIds: number[]) =>
-    fetchAPI(API_ENDPOINTS.RENTAL.CREATE_FROM_CART, {
+  createFromCart: (data: { addressId: number }) =>
+    fetchAPI("/rental-service/api/rentals/from-cart", {
       method: "POST",
-      body: JSON.stringify({ cartItemIds }),
+      body: JSON.stringify(data),
     }),
 
-  list: (params?: { startDate?: string; endDate?: string; rentalStatus?: string }) => {
-    const queryParams = new URLSearchParams()
-    if (params) {
-      Object.entries(params).forEach(([key, value]) => {
-        if (value !== undefined) queryParams.append(key, value)
-      })
-    }
-    const url = `${API_ENDPOINTS.RENTAL.LIST}${queryParams.toString() ? `?${queryParams.toString()}` : ""}`
-    return fetchAPI(url)
+  list: (params?: { role?: "RENTER" | "SELLER" }) => {
+    const query = params?.role ? `?role=${params.role}` : ""
+    return fetchAPI(`/rental-service/api/rentals${query}`, { method: "GET" })
   },
 
-  getDetail: (rentalId: number) => fetchAPI(API_ENDPOINTS.RENTAL.DETAIL(rentalId)),
+  getDetail: (id: number) => fetchAPI(`/rental-service/api/rentals/${id}`, { method: "GET" }),
 
-  accept: (rentalItemId: number) =>
-    fetchAPI(API_ENDPOINTS.RENTAL.ACCEPT(rentalItemId), {
+  accept: (itemId: number) =>
+    fetchAPI(`/rental-service/api/rental-items/${itemId}/accept`, {
       method: "PATCH",
     }),
 
-  reject: (rentalItemId: number) =>
-    fetchAPI(API_ENDPOINTS.RENTAL.REJECT(rentalItemId), {
+  reject: (itemId: number) =>
+    fetchAPI(`/rental-service/api/rental-items/${itemId}/reject`, {
       method: "PATCH",
     }),
 
-  pay: (rentalId: number) =>
-    fetchAPI(API_ENDPOINTS.RENTAL.PAY(rentalId), {
-      method: "POST",
-    }),
-
-  return: (
-    rentalItemId: number,
-    data?: {
-      damageFee?: number
-      damageReason?: string
-      lateFee?: number
-      lateReason?: string
-      memo?: string
-    },
-  ) =>
-    fetchAPI(API_ENDPOINTS.RENTAL.RETURN(rentalItemId), {
-      method: "POST",
-      body: JSON.stringify(data || {}),
-    }),
-
-  cancel: (rentalItemId: number) =>
-    fetchAPI(API_ENDPOINTS.RENTAL.CANCEL(rentalItemId), {
+  pay: (id: number) =>
+    fetchAPI(`/rental-service/api/rentals/${id}/pay`, {
       method: "PATCH",
     }),
 
-  refund: (rentalItemId: number) =>
-    fetchAPI(API_ENDPOINTS.RENTAL.REFUND(rentalItemId), {
-      method: "POST",
+  returnItem: (itemId: number) =>
+    fetchAPI(`/rental-service/api/rental-items/${itemId}/return`, {
+      method: "PATCH",
     }),
 
-  extend: (rentalItemId: number, newEndDate: string) =>
-    fetchAPI(API_ENDPOINTS.RENTAL.EXTEND(rentalItemId), {
-      method: "POST",
-      body: JSON.stringify({ newEndDate }),
+  cancel: (itemId: number) =>
+    fetchAPI(`/rental-service/api/rental-items/${itemId}/cancel`, {
+      method: "PATCH",
+    }),
+
+  refund: (id: number) =>
+    fetchAPI(`/rental-service/api/rentals/${id}/refund`, {
+      method: "PATCH",
+    }),
+
+  extend: (itemId: number, data: { extendDays: number }) =>
+    fetchAPI(`/rental-service/api/rental-items/${itemId}/extend`, {
+      method: "PATCH",
+      body: JSON.stringify(data),
     }),
 }
 
+// Seller API (seller-service)
 export const sellerAPI = {
-  register: (data: { storeName: string; bizRegNo?: string; storePhone?: string }) =>
-    fetchAPI(API_ENDPOINTS.SELLER.REGISTER, {
+  register: (data: { storeName: string; businessNumber?: string; storePhoneNumber?: string; description: string }) =>
+    fetchAPI("/seller-service/api/sellers", {
       method: "POST",
       body: JSON.stringify(data),
     }),
 
-  getSelf: () => fetchAPI(API_ENDPOINTS.SELLER.SELF),
+  getProfile: () => fetchAPI("/seller-service/api/sellers/me", { method: "GET" }),
 
-  update: (data: { storeName: string; bizRegNo?: string; storePhone?: string; status: string }) =>
-    fetchAPI(API_ENDPOINTS.SELLER.UPDATE, {
-      method: "PUT",
+  updateProfile: (data: {
+    storeName: string
+    businessNumber?: string
+    storePhoneNumber?: string
+    description: string
+  }) =>
+    fetchAPI("/seller-service/api/sellers/me", {
+      method: "PATCH",
       body: JSON.stringify(data),
     }),
 
-  getRentals: (params?: {
-    productId?: number
-    status?: string
-    startDate?: string
-    endDate?: string
-    page?: number
-    size?: number
-  }) => {
-    const queryParams = new URLSearchParams()
-    if (params) {
-      Object.entries(params).forEach(([key, value]) => {
-        if (value !== undefined) queryParams.append(key, String(value))
-      })
-    }
-    const url = `${API_ENDPOINTS.SELLER.RENTALS}${queryParams.toString() ? `?${queryParams.toString()}` : ""}`
-    return fetchAPI(url)
-  },
+  getRentals: () => fetchAPI("/seller-service/api/sellers/me/rentals", { method: "GET" }),
 
-  getSettlements: (params?: { periodYm?: string; page?: number; size?: number }) => {
-    const queryParams = new URLSearchParams()
-    if (params) {
-      Object.entries(params).forEach(([key, value]) => {
-        if (value !== undefined) queryParams.append(key, String(value))
-      })
-    }
-    const url = `${API_ENDPOINTS.SELLER.SETTLEMENTS}${queryParams.toString() ? `?${queryParams.toString()}` : ""}`
-    return fetchAPI(url)
-  },
+  getSettlements: () => fetchAPI("/seller-service/api/settlements/sellers/me", { method: "GET" }),
+
+  getSettlementDetail: (id: number) =>
+    fetchAPI(`/seller-service/api/settlements/sellers/me/${id}/lines`, { method: "GET" }),
+}
+
+// Account API (account-service)
+export const accountAPI = {
+  getBalance: () => fetchAPI("/account-service/api/wallets/me", { method: "GET" }),
+
+  getTransactions: () => fetchAPI("/account-service/api/transactions/me", { method: "GET" }),
+
+  confirmDeposit: (data: { amount: number; paymentKey: string; orderId: string }) =>
+    fetchAPI("/account-service/api/deposits/confirm", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+}
+
+// Address API (member-service)
+export const addressAPI = {
+  list: () => fetchAPI("/member-service/api/addresses/me", { method: "GET" }),
+
+  create: (data: {
+    recipientName: string
+    phoneNumber: string
+    address: string
+    detailAddress: string
+    zipCode: string
+    isDefault: boolean
+  }) =>
+    fetchAPI("/member-service/api/addresses/me", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
+  update: (
+    id: number,
+    data: {
+      recipientName: string
+      phoneNumber: string
+      address: string
+      detailAddress: string
+      zipCode: string
+      isDefault: boolean
+    },
+  ) =>
+    fetchAPI(`/member-service/api/addresses/me/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    }),
+
+  delete: (id: number) =>
+    fetchAPI(`/member-service/api/addresses/me/${id}`, {
+      method: "DELETE",
+    }),
 }

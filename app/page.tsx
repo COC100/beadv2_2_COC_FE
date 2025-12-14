@@ -1,9 +1,3 @@
-"use client"
-
-import { useEffect } from "react"
-
-import { useState } from "react"
-
 import Link from "next/link"
 import { Camera, Laptop, Tablet, Headphones, ChevronRight, Package, Shield, Clock } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -13,104 +7,88 @@ import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { productAPI } from "@/lib/api"
 
-const MOCK_PRODUCTS = [
-  {
-    id: 1,
-    name: "MacBook Pro 16인치",
-    category: "LAPTOP",
-    price: 50000,
-    thumbnailUrl: "/macbook-pro-laptop.png",
-    badge: "인기",
-  },
-  {
-    id: 2,
-    name: "Sony A7 IV 미러리스",
-    category: "CAMERA",
-    price: 35000,
-    thumbnailUrl: "/sony-mirrorless-camera.png",
-    badge: "신상품",
-  },
-  {
-    id: 3,
-    name: "iPad Pro 12.9",
-    category: "TABLET",
-    price: 25000,
-    thumbnailUrl: "/ipad-pro-tablet.png",
-  },
-  {
-    id: 4,
-    name: "Canon EOS R6",
-    category: "CAMERA",
-    price: 40000,
-    thumbnailUrl: "/canon-eos-camera.jpg",
-  },
-  {
-    id: 5,
-    name: "DJI Mini 3 Pro",
-    category: "DRONE",
-    price: 30000,
-    thumbnailUrl: "/generic-drone.png",
-    badge: "특가",
-  },
-  {
-    id: 6,
-    name: "Surface Pro 9",
-    category: "TABLET",
-    price: 28000,
-    thumbnailUrl: "/microsoft-surface-tablet.jpg",
-  },
-  {
-    id: 7,
-    name: "MacBook Air M2",
-    category: "LAPTOP",
-    price: 35000,
-    thumbnailUrl: "/macbook-pro-laptop-front.jpg",
-  },
-  {
-    id: 8,
-    name: "MacBook Pro 14인치",
-    category: "LAPTOP",
-    price: 45000,
-    thumbnailUrl: "/macbook-pro-laptop-side.jpg",
-  },
-]
-
-export default function HomePage() {
-  const [products, setProducts] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    const fetchProducts = async () => {
-      try {
-        if (!process.env.NEXT_PUBLIC_API_BASE_URL) {
-          console.log("[v0] API_BASE_URL not configured, using mock data")
-          setProducts(MOCK_PRODUCTS)
-          setLoading(false)
-          return
-        }
-
-        const response = await productAPI.list({ size: 8 })
-        if (response.success && response.data) {
-          setProducts(response.data.content || [])
-        }
-      } catch (error) {
-        console.log("[v0] API call failed, using mock data")
-        setProducts(MOCK_PRODUCTS)
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchProducts()
-  }, [])
-
+export default async function HomePage() {
   const categories = [
     { name: "노트북", icon: Laptop, href: "/products?category=LAPTOP" },
     { name: "카메라", icon: Camera, href: "/products?category=CAMERA" },
     { name: "태블릿", icon: Tablet, href: "/products?category=TABLET" },
     { name: "오디오", icon: Headphones, href: "/products?category=AUDIO" },
-    { name: "드론", icon: Laptop, href: "/products?category=DRONE" }, // Added new category for DRONE
   ]
+
+  let products = []
+  try {
+    const response = await productAPI.list({ size: 8 })
+    products = response.data.content || response.data || []
+  } catch (error) {
+    console.info("[v0] Using fallback product data")
+    // Fallback data
+    products = [
+      {
+        id: 1,
+        name: 'MacBook Pro 16" M3',
+        category: "노트북",
+        pricePerDay: 25000,
+        image: "/macbook-pro-laptop.png",
+        badge: "인기",
+      },
+      {
+        id: 2,
+        name: "Sony A7 IV 미러리스",
+        category: "카메라",
+        pricePerDay: 35000,
+        image: "/sony-mirrorless-camera.png",
+        badge: "신규",
+      },
+      {
+        id: 3,
+        name: 'iPad Pro 12.9"',
+        category: "태블릿",
+        pricePerDay: 15000,
+        image: "/ipad-pro-tablet.png",
+        badge: "",
+      },
+      {
+        id: 4,
+        name: "Canon EOS R5",
+        category: "카메라",
+        pricePerDay: 40000,
+        image: "/canon-eos-camera.jpg",
+        badge: "인기",
+      },
+      {
+        id: 5,
+        name: "DJI Mavic 3 드론",
+        category: "드론",
+        pricePerDay: 30000,
+        image: "/generic-drone.png",
+        badge: "",
+      },
+      {
+        id: 6,
+        name: "Surface Pro 9",
+        category: "노트북",
+        pricePerDay: 18000,
+        image: "/microsoft-surface-tablet.jpg",
+        badge: "",
+      },
+      {
+        id: 7,
+        name: "후지필름 X-T5",
+        category: "카메라",
+        pricePerDay: 28000,
+        image: "/fujifilm-camera.jpg",
+        badge: "",
+      },
+      {
+        id: 8,
+        name: "삼성 갤럭시 탭 S9",
+        category: "태블릿",
+        pricePerDay: 12000,
+        image: "/samsung-tablet.png",
+        badge: "",
+      },
+    ]
+  }
 
   return (
     <div className="min-h-screen bg-white">
@@ -161,7 +139,7 @@ export default function HomePage() {
                 className="flex flex-col items-center gap-2 group hover:text-primary transition-colors"
               >
                 <div className="w-14 h-14 rounded-full bg-blue-50 flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-colors">
-                  {category.icon && <category.icon className="h-6 w-6" />}
+                  <category.icon className="h-6 w-6" />
                 </div>
                 <span className="text-sm font-medium">{category.name}</span>
               </Link>
@@ -180,42 +158,36 @@ export default function HomePage() {
             </Link>
           </div>
 
-          {loading ? (
-            <div className="text-center py-12">
-              <p className="text-muted-foreground">상품을 불러오는 중...</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
-              {products.map((product) => (
-                <Link key={product.id} href={`/products/${product.id}`}>
-                  <Card className="overflow-hidden hover:shadow-lg transition-shadow group border-gray-200">
-                    <div className="aspect-square overflow-hidden bg-gray-50 relative">
-                      {product.badge && (
-                        <Badge className="absolute top-2 left-2 z-10 bg-primary text-white text-xs">
-                          {product.badge}
-                        </Badge>
-                      )}
-                      <img
-                        src={product.thumbnailUrl || "/placeholder.svg"}
-                        alt={product.name}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                      />
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
+            {products.map((product: any) => (
+              <Link key={product.id} href={`/products/${product.id}`}>
+                <Card className="overflow-hidden hover:shadow-lg transition-shadow group border-gray-200">
+                  <div className="aspect-square overflow-hidden bg-gray-50 relative">
+                    {product.badge && (
+                      <Badge className="absolute top-2 left-2 z-10 bg-primary text-white text-xs">
+                        {product.badge}
+                      </Badge>
+                    )}
+                    <img
+                      src={product.image || product.imageUrls?.[0] || "/placeholder.svg"}
+                      alt={product.name}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    />
+                  </div>
+                  <CardContent className="p-3">
+                    <p className="text-xs text-muted-foreground mb-1">{product.category}</p>
+                    <h3 className="font-medium text-sm mb-2 line-clamp-2 leading-tight">{product.name}</h3>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="secondary" className="bg-accent text-white hover:bg-accent text-xs font-bold">
+                        ₩{product.pricePerDay?.toLocaleString()}
+                      </Badge>
+                      <span className="text-xs text-muted-foreground">/일</span>
                     </div>
-                    <CardContent className="p-3">
-                      <p className="text-xs text-muted-foreground mb-1">{product.category}</p>
-                      <h3 className="font-medium text-sm mb-2 line-clamp-2 leading-tight">{product.name}</h3>
-                      <div className="flex items-center gap-2">
-                        <Badge variant="secondary" className="bg-accent text-white hover:bg-accent text-xs font-bold">
-                          ₩{product.price?.toLocaleString()}
-                        </Badge>
-                        <span className="text-xs text-muted-foreground">/일</span>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </Link>
-              ))}
-            </div>
-          )}
+                  </CardContent>
+                </Card>
+              </Link>
+            ))}
+          </div>
         </div>
       </section>
 

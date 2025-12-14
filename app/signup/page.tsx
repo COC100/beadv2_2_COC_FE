@@ -3,19 +3,14 @@
 import type React from "react"
 
 import { useState } from "react"
-import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
-import { memberAPI } from "@/lib/api"
-import { useToast } from "@/hooks/use-toast"
 
 export default function SignupPage() {
-  const router = useRouter()
-  const { toast } = useToast()
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -24,62 +19,15 @@ export default function SignupPage() {
     phone: "",
   })
   const [agreed, setAgreed] = useState(false)
-  const [loading, setLoading] = useState(false)
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault()
-
     if (formData.password !== formData.confirmPassword) {
-      toast({
-        variant: "destructive",
-        title: "비밀번호 불일치",
-        description: "비밀번호가 일치하지 않습니다.",
-      })
+      alert("비밀번호가 일치하지 않습니다.")
       return
     }
-
-    if (!agreed) {
-      toast({
-        variant: "destructive",
-        title: "약관 동의 필요",
-        description: "이용약관에 동의해주세요.",
-      })
-      return
-    }
-
-    setLoading(true)
-
-    try {
-      const response = await memberAPI.signup({
-        email: formData.email,
-        password: formData.password,
-        name: formData.name,
-        phone: formData.phone,
-      })
-
-      if (response.success) {
-        toast({
-          title: "회원가입 완료!",
-          description: "로그인 페이지로 이동합니다.",
-        })
-        router.push("/login")
-      } else {
-        toast({
-          variant: "destructive",
-          title: "회원가입 실패",
-          description: "회원가입에 실패했습니다.",
-        })
-      }
-    } catch (error) {
-      console.error("[v0] Signup error:", error)
-      toast({
-        variant: "destructive",
-        title: "오류 발생",
-        description: "회원가입 중 오류가 발생했습니다.",
-      })
-    } finally {
-      setLoading(false)
-    }
+    // TODO: API call to member-service:8085/api/members/signup
+    console.log("Signup:", formData)
   }
 
   return (
@@ -178,8 +126,8 @@ export default function SignupPage() {
                   에 동의합니다
                 </label>
               </div>
-              <Button type="submit" className="w-full" size="lg" disabled={!agreed || loading}>
-                {loading ? "가입 중..." : "회원가입"}
+              <Button type="submit" className="w-full" size="lg" disabled={!agreed}>
+                회원가입
               </Button>
             </form>
           </CardContent>

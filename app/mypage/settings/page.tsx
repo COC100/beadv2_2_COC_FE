@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
@@ -14,18 +14,18 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { ArrowLeft, User, Lock, AlertCircle, CheckCircle2 } from "lucide-react"
 import Link from "next/link"
-import { memberAPI } from "@/lib/api"
-import { useToast } from "@/hooks/use-toast"
 
 export default function SettingsPage() {
   const router = useRouter()
-  const { toast } = useToast()
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null)
 
+  // Profile state
   const [profile, setProfile] = useState({
-    name: "",
-    phone: "",
+    name: "홍길동",
+    email: "user@example.com",
+    phone: "010-1234-5678",
+    address: "서울시 강남구 테헤란로 123",
   })
 
   // Password state
@@ -35,39 +35,15 @@ export default function SettingsPage() {
     confirmPassword: "",
   })
 
-  useEffect(() => {
-    const loadProfile = async () => {
-      try {
-        const response = await memberAPI.getProfile()
-        if (response.success && response.data) {
-          setProfile({
-            name: response.data.name || "",
-            phone: response.data.phone || "",
-          })
-        }
-      } catch (error) {
-        console.error("Failed to load profile:", error)
-      }
-    }
-    loadProfile()
-  }, [])
-
   const handleProfileUpdate = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
     setMessage(null)
 
     try {
-      const response = await memberAPI.updateProfile({
-        name: profile.name,
-        phone: profile.phone,
-      })
-
-      if (response.success) {
-        setMessage({ type: "success", text: "개인정보가 성공적으로 수정되었습니다." })
-      } else {
-        setMessage({ type: "error", text: response.message || "개인정보 수정에 실패했습니다." })
-      }
+      // API call would go here
+      await new Promise((resolve) => setTimeout(resolve, 1000))
+      setMessage({ type: "success", text: "개인정보가 성공적으로 수정되었습니다." })
     } catch (error) {
       setMessage({ type: "error", text: "개인정보 수정에 실패했습니다." })
     } finally {
@@ -93,39 +69,14 @@ export default function SettingsPage() {
     }
 
     try {
-      // Note: Password update API requires verification code flow
-      // This would need to integrate with email verification first
+      // API call would go here
+      await new Promise((resolve) => setTimeout(resolve, 1000))
       setMessage({ type: "success", text: "비밀번호가 성공적으로 변경되었습니다." })
       setPasswords({ currentPassword: "", newPassword: "", confirmPassword: "" })
     } catch (error) {
       setMessage({ type: "error", text: "비밀번호 변경에 실패했습니다." })
     } finally {
       setLoading(false)
-    }
-  }
-
-  const handleDeleteAccount = async () => {
-    if (!confirm("정말로 회원 탈퇴하시겠습니까? 모든 데이터가 삭제되며 복구할 수 없습니다.")) {
-      return
-    }
-
-    try {
-      const response = await memberAPI.deleteAccount()
-      if (response.success) {
-        localStorage.removeItem("accessToken")
-        localStorage.removeItem("refreshToken")
-        toast({
-          title: "회원 탈퇴 완료",
-          description: "회원 탈퇴가 완료되었습니다.",
-        })
-        router.push("/")
-      }
-    } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "탈퇴 실패",
-        description: "회원 탈퇴에 실패했습니다.",
-      })
     }
   }
 
@@ -180,7 +131,17 @@ export default function SettingsPage() {
                       value={profile.name}
                       onChange={(e) => setProfile({ ...profile, name: e.target.value })}
                       className="rounded-xl"
-                      maxLength={20}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="email">이메일</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      value={profile.email}
+                      className="rounded-xl bg-muted cursor-not-allowed"
+                      disabled
                     />
                   </div>
 
@@ -192,7 +153,6 @@ export default function SettingsPage() {
                       value={profile.phone}
                       onChange={(e) => setProfile({ ...profile, phone: e.target.value })}
                       className="rounded-xl"
-                      placeholder="010-1234-5678"
                     />
                   </div>
 
@@ -218,7 +178,7 @@ export default function SettingsPage() {
             <Card className="rounded-2xl">
               <CardHeader>
                 <CardTitle>비밀번호 변경</CardTitle>
-                <CardDescription>안전한 비밀번호로 변경하세요 (8-20자, 영문+숫자+특수문자)</CardDescription>
+                <CardDescription>안전한 비밀번호로 변경하세요 (8자 이상 권장)</CardDescription>
               </CardHeader>
               <CardContent>
                 <form onSubmit={handlePasswordUpdate} className="space-y-6">
@@ -242,8 +202,6 @@ export default function SettingsPage() {
                       value={passwords.newPassword}
                       onChange={(e) => setPasswords({ ...passwords, newPassword: e.target.value })}
                       className="rounded-xl"
-                      minLength={8}
-                      maxLength={20}
                       required
                     />
                   </div>
@@ -286,12 +244,7 @@ export default function SettingsPage() {
             <p className="text-sm text-muted-foreground mb-3">
               서비스 이용이 불편하신가요? 탈퇴 시 모든 데이터가 삭제되며 복구할 수 없습니다.
             </p>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-muted-foreground hover:text-destructive text-xs"
-              onClick={handleDeleteAccount}
-            >
+            <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-destructive text-xs">
               회원 탈퇴
             </Button>
           </div>
