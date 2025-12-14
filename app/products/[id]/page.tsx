@@ -14,19 +14,7 @@ import { useRouter } from "next/navigation"
 import { useToast } from "@/hooks/use-toast"
 import { productAPI, cartAPI, sellerAPI } from "@/lib/api"
 
-export default function ProductDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const [resolvedParams, setResolvedParams] = useState<{ id: string } | null>(null)
-
-  useEffect(() => {
-    params.then((p) => setResolvedParams(p))
-  }, [params])
-
-  if (!resolvedParams) return <div>Loading...</div>
-
-  return <ProductDetailContent id={resolvedParams.id} />
-}
-
-function ProductDetailContent({ id }: { id: string }) {
+export default function ProductDetailPage({ params }: { params: { id: string } }) {
   const router = useRouter()
   const { toast } = useToast()
   const [startDate, setStartDate] = useState("")
@@ -47,7 +35,7 @@ function ProductDetailContent({ id }: { id: string }) {
       }
 
       try {
-        const productData = await productAPI.getDetail(Number(id))
+        const productData = await productAPI.getDetail(Number(params.id))
         setProduct(productData)
 
         try {
@@ -69,7 +57,7 @@ function ProductDetailContent({ id }: { id: string }) {
     }
 
     loadProduct()
-  }, [id, router, toast])
+  }, [params.id, router, toast])
 
   const calculateTotal = () => {
     if (!startDate || !endDate || !product) return 0
@@ -97,7 +85,7 @@ function ProductDetailContent({ id }: { id: string }) {
 
     try {
       await cartAPI.addItem({
-        productId: Number(id),
+        productId: Number(params.id),
         startDate,
         endDate,
       })
@@ -124,23 +112,21 @@ function ProductDetailContent({ id }: { id: string }) {
       return
     }
 
-    // Navigate to new rental application page with params
-    router.push(`/rental-application?productId=${id}&startDate=${startDate}&endDate=${endDate}`)
+    router.push(`/rental-application?productId=${params.id}&startDate=${startDate}&endDate=${endDate}`)
   }
 
   const handleStatusChange = async (status: "ACTIVE" | "INACTIVE") => {
     try {
       if (status === "ACTIVE") {
-        await productAPI.activate(Number(id))
+        await productAPI.activate(Number(params.id))
       } else {
-        await productAPI.deactivate(Number(id))
+        await productAPI.deactivate(Number(params.id))
       }
       toast({
         title: "상태 변경 완료",
         description: `상품이 ${status === "ACTIVE" ? "활성화" : "비활성화"}되었습니다`,
       })
-      // Reload product
-      const updated = await productAPI.getDetail(Number(id))
+      const updated = await productAPI.getDetail(Number(params.id))
       setProduct(updated)
     } catch (error: any) {
       toast({
@@ -155,7 +141,7 @@ function ProductDetailContent({ id }: { id: string }) {
     if (!confirm("정말 이 상품을 삭제하시겠습니까?")) return
 
     try {
-      await productAPI.delete(Number(id))
+      await productAPI.delete(Number(params.id))
       toast({
         title: "상품 삭제 완료",
         description: "상품이 삭제되었습니다",
@@ -214,7 +200,7 @@ function ProductDetailContent({ id }: { id: string }) {
 
         {isOwner && (
           <div className="flex gap-2 mb-6">
-            <Link href={`/seller/product/${id}/edit`}>
+            <Link href={`/seller/product/${params.id}/edit`}>
               <Button variant="outline" className="rounded-lg bg-transparent">
                 <Edit className="h-4 w-4 mr-2" />
                 상품 수정
