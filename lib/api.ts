@@ -42,6 +42,10 @@ async function fetchAPI<T>(endpoint: string, options: RequestInit = {}, requires
     headers.Authorization = `Bearer ${token}`
   }
 
+  if (API_BASE_URL.includes("ngrok")) {
+    headers["ngrok-skip-browser-warning"] = "true"
+  }
+
   try {
     const response = await fetch(url, {
       ...options,
@@ -49,6 +53,9 @@ async function fetchAPI<T>(endpoint: string, options: RequestInit = {}, requires
     })
 
     console.log("[v0] API Response:", response.status, response.statusText)
+
+    const contentType = response.headers.get("content-type")
+    console.log("[v0] Content-Type:", contentType)
 
     if (response.status === 401) {
       console.error("[v0] 401 Unauthorized, clearing token and redirecting")
@@ -62,8 +69,30 @@ async function fetchAPI<T>(endpoint: string, options: RequestInit = {}, requires
     }
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}))
-      throw new Error(errorData.message || `API Error: ${response.statusText}`)
+      let errorMessage = `API Error: ${response.statusText}`
+      try {
+        const errorData = await response.json()
+        errorMessage = errorData.message || errorMessage
+      } catch {
+        const errorText = await response.text()
+        if (errorText.startsWith("<!DOCTYPE") || errorText.startsWith("<html")) {
+          errorMessage = "Server returned HTML instead of JSON. This might be an ngrok warning page or server error."
+        }
+      }
+      throw new Error(errorMessage)
+    }
+
+    if (contentType && !contentType.includes("application/json")) {
+      const responseText = await response.text()
+      console.error("[v0] Non-JSON response:", responseText.substring(0, 200))
+
+      if (responseText.startsWith("<!DOCTYPE") || responseText.startsWith("<html")) {
+        throw new Error(
+          "Server returned HTML instead of JSON. If using ngrok, make sure to disable the warning page by adding 'ngrok-skip-browser-warning' header or visit the ngrok URL in a browser first to bypass the warning.",
+        )
+      }
+
+      throw new Error("Server returned non-JSON response")
     }
 
     const data: ApiResponse<T> = await response.json()

@@ -1,12 +1,14 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { ShoppingCart, Menu, X, User, Bell } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Separator } from "@/components/ui/separator"
+import { sellerAPI } from "@/lib/api"
 
 interface Notification {
   id: number
@@ -18,36 +20,27 @@ interface Notification {
 }
 
 export function Header() {
+  const router = useRouter()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-  const [notifications, setNotifications] = useState<Notification[]>([
-    {
-      id: 1,
-      title: "렌탈 신청 승인",
-      message: "MacBook Pro 16' M3 렌탈이 승인되었습니다.",
-      time: "5분 전",
-      isRead: false,
-      type: "rental",
-    },
-    {
-      id: 2,
-      title: "예치금 충전 완료",
-      message: "50,000원이 충전되었습니다.",
-      time: "1시간 전",
-      isRead: false,
-      type: "payment",
-    },
-    {
-      id: 3,
-      title: "반납 기한 안내",
-      message: "Sony A7 IV 미러리스 반납 기한이 3일 남았습니다.",
-      time: "2시간 전",
-      isRead: true,
-      type: "rental",
-    },
-  ])
+  const [isLoggedIn, setIsLoggedIn] = useState(false)
+  const [isSeller, setIsSeller] = useState(false)
+  const [notifications, setNotifications] = useState<Notification[]>([])
 
-  const isLoggedIn = true
-  const isSeller = false
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const token = localStorage.getItem("accessToken")
+      setIsLoggedIn(!!token)
+
+      // Check seller status via API
+      if (token) {
+        sellerAPI
+          .getSelf()
+          .then(() => setIsSeller(true))
+          .catch(() => setIsSeller(false))
+      }
+    }
+  }, [])
+
   const unreadCount = notifications.filter((n) => !n.isRead).length
 
   const markAsRead = (id: number) => {

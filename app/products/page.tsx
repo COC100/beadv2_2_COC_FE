@@ -1,6 +1,9 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useMemo } from "react"
+
+import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
@@ -15,6 +18,8 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Search, SlidersHorizontal, CalendarIcon } from "lucide-react"
 import { format } from "date-fns"
 import { ko } from "date-fns/locale"
+import { productAPI } from "@/lib/api"
+import { useToast } from "@/hooks/use-toast"
 
 const CATEGORIES = [
   { value: "ALL", label: "전체" },
@@ -31,125 +36,63 @@ const CATEGORIES = [
 ]
 
 export default function ProductsPage() {
+  const router = useRouter()
+  const { toast } = useToast()
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedCategory, setSelectedCategory] = useState("ALL")
-  const [sortBy, setSortBy] = useState("latest")
+  const [sortBy, setSortBy] = useState("LATEST")
   const [minPrice, setMinPrice] = useState("")
   const [maxPrice, setMaxPrice] = useState("")
   const [startDate, setStartDate] = useState<Date>()
   const [endDate, setEndDate] = useState<Date>()
   const [showFilters, setShowFilters] = useState(false)
+  const [products, setProducts] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
 
-  const [products, setProducts] = useState([
-    {
-      id: 1,
-      name: 'MacBook Pro 16" M3',
-      category: "LAPTOP",
-      pricePerDay: 25000,
-      image: "/macbook-pro-laptop.png",
-      badge: "인기",
-      createdAt: new Date("2024-01-15"),
-    },
-    {
-      id: 2,
-      name: "Sony A7 IV 미러리스",
-      category: "CAMERA",
-      pricePerDay: 35000,
-      image: "/sony-mirrorless-camera.png",
-      badge: "신규",
-      createdAt: new Date("2024-03-10"),
-    },
-    {
-      id: 3,
-      name: 'iPad Pro 12.9"',
-      category: "TABLET",
-      pricePerDay: 15000,
-      image: "/ipad-pro-tablet.png",
-      badge: "",
-      createdAt: new Date("2024-02-20"),
-    },
-    {
-      id: 4,
-      name: "Canon EOS R5",
-      category: "CAMERA",
-      pricePerDay: 40000,
-      image: "/canon-eos-camera.jpg",
-      badge: "인기",
-      createdAt: new Date("2024-01-05"),
-    },
-    {
-      id: 5,
-      name: "DJI Mavic 3 드론",
-      category: "DRONE",
-      pricePerDay: 30000,
-      image: "/generic-drone.png",
-      badge: "",
-      createdAt: new Date("2024-02-28"),
-    },
-    {
-      id: 6,
-      name: "Surface Pro 9",
-      category: "LAPTOP",
-      pricePerDay: 18000,
-      image: "/microsoft-surface-tablet.jpg",
-      badge: "",
-      createdAt: new Date("2024-01-25"),
-    },
-    {
-      id: 7,
-      name: "후지필름 X-T5",
-      category: "CAMERA",
-      pricePerDay: 28000,
-      image: "/fujifilm-camera.jpg",
-      badge: "",
-      createdAt: new Date("2024-02-15"),
-    },
-    {
-      id: 8,
-      name: "삼성 갤럭시 탭 S9",
-      category: "TABLET",
-      pricePerDay: 12000,
-      image: "/samsung-tablet.png",
-      badge: "",
-      createdAt: new Date("2024-03-01"),
-    },
-    {
-      id: 9,
-      name: 'Dell XPS 15"',
-      category: "LAPTOP",
-      pricePerDay: 22000,
-      image: "/placeholder.svg?height=400&width=400",
-      badge: "",
-      createdAt: new Date("2024-01-30"),
-    },
-    {
-      id: 10,
-      name: "GoPro Hero 12",
-      category: "CAMERA",
-      pricePerDay: 15000,
-      image: "/placeholder.svg?height=400&width=400",
-      badge: "신규",
-      createdAt: new Date("2024-03-05"),
-    },
-    {
-      id: 11,
-      name: "Microsoft Surface Laptop",
-      category: "LAPTOP",
-      pricePerDay: 20000,
-      image: "/placeholder.svg?height=400&width=400",
-      badge: "",
-      createdAt: new Date("2024-02-10"),
-    },
-    {
-      id: 12,
-      name: "Nikon Z6 III",
-      category: "CAMERA",
-      pricePerDay: 38000,
-      image: "/placeholder.svg?height=400&width=400",
-      badge: "",
-      createdAt: new Date("2024-02-05"),
-    },
-  ])
+  useEffect(() => {
+    const checkAuth = () => {
+      if (typeof window !== "undefined") {
+        const token = localStorage.getItem("accessToken")
+        if (!token) {
+          router.push("/intro")
+          return false
+        }
+      }
+      return true
+    }
+
+    const fetchProducts = async () => {
+      if (!checkAuth()) return
+
+      try {
+        setLoading(true)
+        const params: any = {
+          sortType: sortBy,
+          size: 100,
+        }
+
+        if (searchQuery) params.keyword = searchQuery
+        if (selectedCategory !== "ALL") params.category = selectedCategory
+        if (minPrice) params.minPrice = Number(minPrice)
+        if (maxPrice) params.maxPrice = Number(maxPrice)
+        if (startDate) params.startDate = format(startDate, "yyyy-MM-dd")
+        if (endDate) params.endDate = format(endDate, "yyyy-MM-dd")
+
+        const response = await productAPI.list(params)
+        setProducts(response.products || [])
+      } catch (error) {
+        console.error("[v0] Failed to fetch products:", error)
+        toast({
+          title: "상품 로딩 실패",
+          description: "상품 목록을 불러올 수 없습니다.",
+        })
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchProducts()
+  }, [searchQuery, selectedCategory, sortBy, minPrice, maxPrice, startDate, endDate, router, toast])
 
   const filteredProducts = useMemo(() => {
     let filtered = products
@@ -175,16 +118,16 @@ export default function ProductsPage() {
     // Sort
     const sorted = [...filtered]
     switch (sortBy) {
-      case "latest":
+      case "LATEST":
         sorted.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
         break
-      case "oldest":
+      case "OLDEST":
         sorted.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())
         break
-      case "price-high":
+      case "PRICE-HIGH":
         sorted.sort((a, b) => b.pricePerDay - a.pricePerDay)
         break
-      case "price-low":
+      case "PRICE-LOW":
         sorted.sort((a, b) => a.pricePerDay - b.pricePerDay)
         break
     }
@@ -195,7 +138,7 @@ export default function ProductsPage() {
   const handleResetFilters = () => {
     setSearchQuery("")
     setSelectedCategory("ALL")
-    setSortBy("latest")
+    setSortBy("LATEST")
     setMinPrice("")
     setMaxPrice("")
     setStartDate(undefined)
@@ -247,10 +190,10 @@ export default function ProductsPage() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="latest">최신순</SelectItem>
-                        <SelectItem value="oldest">오래된순</SelectItem>
-                        <SelectItem value="price-high">가격 높은순</SelectItem>
-                        <SelectItem value="price-low">가격 낮은순</SelectItem>
+                        <SelectItem value="LATEST">최신순</SelectItem>
+                        <SelectItem value="OLDEST">오래된순</SelectItem>
+                        <SelectItem value="PRICE-HIGH">가격 높은순</SelectItem>
+                        <SelectItem value="PRICE-LOW">가격 낮은순</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
