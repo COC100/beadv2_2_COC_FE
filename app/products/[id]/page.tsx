@@ -1,8 +1,8 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
-import { ArrowLeft, ShoppingCart, Calendar, Star, MapPin, Edit } from "lucide-react"
+import { ArrowLeft, ShoppingCart, Calendar, Edit, Eye, EyeOff, Trash2 } from "lucide-react"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { Button } from "@/components/ui/button"
@@ -10,44 +10,57 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { useRouter } from "next/navigation"
+import { useToast } from "@/hooks/use-toast"
+import { productAPI, cartAPI, sellerAPI } from "@/lib/api"
 
-export default async function ProductDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params
-  return <ProductDetailContent id={id} />
-}
-
-function ProductDetailContent({ id }: { id: string }) {
+export default function ProductDetailPage({ params }: { params: { id: string } }) {
+  const router = useRouter()
+  const { toast } = useToast()
   const [startDate, setStartDate] = useState("")
   const [endDate, setEndDate] = useState("")
-  const isOwner = false // Mock seller check - replace with actual logic
+  const [product, setProduct] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+  const [isOwner, setIsOwner] = useState(false)
+  const [currentImageIndex, setCurrentImageIndex] = useState(0)
 
-  const product = {
-    id: Number.parseInt(id),
-    name: 'MacBook Pro 16" M3',
-    category: "노트북",
-    pricePerDay: 25000,
-    description:
-      "최신 M3 칩이 탑재된 MacBook Pro 16인치 모델입니다. 영상 편집, 개발, 디자인 작업에 완벽한 성능을 제공합니다.",
-    specs: [
-      "M3 Pro 12코어 CPU",
-      "18코어 GPU",
-      "36GB 통합 메모리",
-      "512GB SSD 저장공간",
-      "16.2인치 Liquid Retina XDR 디스플레이",
-    ],
-    images: ["/macbook-pro-laptop.png", "/macbook-pro-laptop.png", "/macbook-pro-laptop.png"],
-    seller: {
-      name: "테크렌탈샵",
-      rating: 4.9,
-      reviews: 127,
-      location: "서울 강남구",
-    },
-    status: "ACTIVE",
-  }
+  useEffect(() => {
+    const loadProduct = async () => {
+      if (typeof window !== "undefined") {
+        const token = localStorage.getItem("accessToken")
+        if (!token) {
+          router.push("/intro")
+          return
+        }
+      }
+
+      try {
+        const productData = await productAPI.getDetail(Number(params.id))
+        setProduct(productData)
+
+        try {
+          const seller = await sellerAPI.getSelf()
+          setIsOwner(seller.id === productData.sellerId)
+        } catch (error) {
+          setIsOwner(false)
+        }
+      } catch (error: any) {
+        console.error("[v0] Failed to load product:", error)
+        toast({
+          title: "상품 로딩 실패",
+          description: error.message || "상품 정보를 불러올 수 없습니다",
+          variant: "destructive",
+        })
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadProduct()
+  }, [params.id, router, toast])
 
   const calculateTotal = () => {
-    if (!startDate || !endDate) return 0
+    if (!startDate || !endDate || !product) return 0
     const start = new Date(startDate)
     const end = new Date(endDate)
     const days = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24))
@@ -60,14 +73,126 @@ function ProductDetailContent({ id }: { id: string }) {
       ? Math.ceil((new Date(endDate).getTime() - new Date(startDate).getTime()) / (1000 * 60 * 60 * 24))
       : 0
 
-  const getStatusText = (status: string) => {
-    const statusMap: { [key: string]: { text: string; color: string } } = {
-      ACTIVE: { text: "활성화", color: "bg-green-100 text-green-800" },
-      INACTIVE: { text: "비활성화", color: "bg-gray-100 text-gray-800" },
-      DELETED: { text: "삭제됨", color: "bg-red-100 text-red-800" },
+  const handleAddToCart = async () => {
+    if (!startDate || !endDate) {
+      toast({
+        title: "날짜를 선택해주세요",
+        description: "대여 시작일과 종료일을 선택해주세요",
+        variant: "destructive",
+      })
+      return
     }
-    return statusMap[status] || { text: status, color: "" }
+
+    const requestData = {
+      productId: Number(params.id),
+      startDate,
+      endDate,
+    }
+    console.log("[v0] Cart add request:", requestData)
+
+    try {
+      await cartAPI.addItem(requestData)
+      toast({
+        title: "장바구니에 추가되었습니다",
+        description: "장바구니에서 확인하실 수 있습니다",
+      })
+    } catch (error: any) {
+      console.error("[v0] Failed to add to cart:", error)
+      const errorMessage =
+        error.message?.includes("Service Unavailable") || error.message?.includes("503")
+          ? "대여 서비스가 일시적으로 사용할 수 없습니다. 잠시 후 다시 시도해주세요."
+          : error.message || "장바구니에 추가할 수 없습니다"
+
+      toast({
+        title: "장바구니 추가 실패",
+        description: errorMessage,
+        variant: "destructive",
+      })
+    }
   }
+
+  const handleRentalApplication = () => {
+    if (!startDate || !endDate) {
+      toast({
+        title: "날짜를 선택해주세요",
+        description: "대여 시작일과 종료일을 선택해주세요",
+        variant: "destructive",
+      })
+      return
+    }
+
+    router.push(`/rental-application?productId=${params.id}&startDate=${startDate}&endDate=${endDate}`)
+  }
+
+  const handleStatusChange = async (status: "ACTIVE" | "INACTIVE") => {
+    try {
+      if (status === "ACTIVE") {
+        await productAPI.activate(Number(params.id))
+      } else {
+        await productAPI.deactivate(Number(params.id))
+      }
+      toast({
+        title: "상태 변경 완료",
+        description: `상품이 ${status === "ACTIVE" ? "활성화" : "비활성화"}되었습니다`,
+      })
+      const updated = await productAPI.getDetail(Number(params.id))
+      setProduct(updated)
+    } catch (error: any) {
+      toast({
+        title: "상태 변경 실패",
+        description: error.message,
+        variant: "destructive",
+      })
+    }
+  }
+
+  const handleDelete = async () => {
+    if (!confirm("정말 이 상품을 삭제하시겠습니까?")) return
+
+    try {
+      await productAPI.delete(Number(params.id))
+      toast({
+        title: "상품 삭제 완료",
+        description: "상품이 삭제되었습니다",
+      })
+      router.push("/seller")
+    } catch (error: any) {
+      toast({
+        title: "삭제 실패",
+        description: error.message,
+        variant: "destructive",
+      })
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-white">
+        <Header />
+        <div className="container mx-auto px-4 py-12 text-center">
+          <p>로딩 중...</p>
+        </div>
+        <Footer />
+      </div>
+    )
+  }
+
+  if (!product) {
+    return (
+      <div className="min-h-screen bg-white">
+        <Header />
+        <div className="container mx-auto px-4 py-12 text-center">
+          <p>상품을 찾을 수 없습니다</p>
+        </div>
+        <Footer />
+      </div>
+    )
+  }
+
+  const images =
+    product.images && product.images.length > 0
+      ? product.images.map((img: any) => img.url)
+      : ["/abstract-geometric-shapes.png"]
 
   return (
     <div className="min-h-screen bg-white">
@@ -84,22 +209,35 @@ function ProductDetailContent({ id }: { id: string }) {
 
         {isOwner && (
           <div className="flex gap-2 mb-6">
-            <Link href={`/seller/product/${id}/edit`}>
+            <Link href={`/seller/product/${params.id}/edit`}>
               <Button variant="outline" className="rounded-lg bg-transparent">
                 <Edit className="h-4 w-4 mr-2" />
                 상품 수정
               </Button>
             </Link>
-            <Select defaultValue={product.status}>
-              <SelectTrigger className="w-40 rounded-lg">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ACTIVE">활성화</SelectItem>
-                <SelectItem value="INACTIVE">비활성화</SelectItem>
-                <SelectItem value="DELETED">삭제</SelectItem>
-              </SelectContent>
-            </Select>
+            {product.status === "ACTIVE" ? (
+              <Button
+                variant="outline"
+                className="rounded-lg bg-transparent"
+                onClick={() => handleStatusChange("INACTIVE")}
+              >
+                <EyeOff className="h-4 w-4 mr-2" />
+                숨김
+              </Button>
+            ) : (
+              <Button
+                variant="outline"
+                className="rounded-lg bg-transparent"
+                onClick={() => handleStatusChange("ACTIVE")}
+              >
+                <Eye className="h-4 w-4 mr-2" />
+                활성화
+              </Button>
+            )}
+            <Button variant="destructive" className="rounded-lg" onClick={handleDelete}>
+              <Trash2 className="h-4 w-4 mr-2" />
+              삭제
+            </Button>
           </div>
         )}
 
@@ -107,42 +245,36 @@ function ProductDetailContent({ id }: { id: string }) {
           <div className="space-y-4">
             <div className="aspect-square bg-gray-50 rounded-lg overflow-hidden">
               <img
-                src={product.images[0] || "/placeholder.svg"}
+                src={images[currentImageIndex] || "/placeholder.svg"}
                 alt={product.name}
                 className="w-full h-full object-cover"
               />
             </div>
-            <div className="grid grid-cols-4 gap-3">
-              {product.images.slice(0, 4).map((image, index) => (
-                <div
-                  key={index}
-                  className="aspect-square bg-gray-50 rounded-lg overflow-hidden cursor-pointer hover:opacity-70 transition-opacity border border-gray-200"
-                >
-                  <img
-                    src={image || "/placeholder.svg"}
-                    alt={`${product.name} ${index + 2}`}
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-              ))}
-            </div>
+            {images.length > 1 && (
+              <div className="grid grid-cols-4 gap-3">
+                {images.slice(0, 4).map((image: string, index: number) => (
+                  <div
+                    key={index}
+                    className={`aspect-square bg-gray-50 rounded-lg overflow-hidden cursor-pointer hover:opacity-70 transition-opacity border-2 ${
+                      currentImageIndex === index ? "border-primary" : "border-gray-200"
+                    }`}
+                    onClick={() => setCurrentImageIndex(index)}
+                  >
+                    <img
+                      src={image || "/placeholder.svg"}
+                      alt={`${product.name} ${index + 1}`}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="space-y-6">
             <div>
               <Badge className="mb-3 bg-blue-100 text-primary hover:bg-blue-100">{product.category}</Badge>
               <h1 className="text-3xl font-bold mb-3 leading-tight">{product.name}</h1>
-              <div className="flex items-center gap-4 mb-4 text-sm">
-                <div className="flex items-center gap-1">
-                  <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                  <span className="font-medium">{product.seller.rating}</span>
-                  <span className="text-muted-foreground">({product.seller.reviews})</span>
-                </div>
-                <div className="flex items-center gap-1 text-muted-foreground">
-                  <MapPin className="h-4 w-4" />
-                  <span>{product.seller.location}</span>
-                </div>
-              </div>
               <div className="flex items-baseline gap-2 mb-6">
                 <Badge className="bg-accent text-white hover:bg-accent text-lg font-bold px-3 py-1">
                   ₩{product.pricePerDay.toLocaleString()}
@@ -202,32 +334,21 @@ function ProductDetailContent({ id }: { id: string }) {
                 )}
 
                 <div className="flex gap-2 pt-2">
-                  <Button className="flex-1 rounded-lg h-11" disabled={!startDate || !endDate}>
+                  <Button
+                    className="flex-1 rounded-lg h-11"
+                    disabled={!startDate || !endDate}
+                    onClick={handleRentalApplication}
+                  >
                     렌탈 신청
                   </Button>
                   <Button
                     variant="outline"
                     disabled={!startDate || !endDate}
                     className="rounded-lg h-11 px-4 bg-transparent"
+                    onClick={handleAddToCart}
                   >
                     <ShoppingCart className="h-5 w-5" />
                   </Button>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-blue-50 border-blue-100">
-              <CardContent className="p-5">
-                <h3 className="font-semibold mb-3">판매자 정보</h3>
-                <div className="space-y-2">
-                  <p className="font-medium text-lg">{product.seller.name}</p>
-                  <div className="flex items-center gap-3 text-sm">
-                    <div className="flex items-center gap-1">
-                      <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                      <span className="font-medium">{product.seller.rating}</span>
-                    </div>
-                    <span className="text-muted-foreground">리뷰 {product.seller.reviews}개</span>
-                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -238,21 +359,7 @@ function ProductDetailContent({ id }: { id: string }) {
           <Card>
             <CardContent className="p-6">
               <h2 className="text-xl font-bold mb-4">상품 설명</h2>
-              <p className="text-muted-foreground leading-relaxed">{product.description}</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-6">
-              <h2 className="text-xl font-bold mb-4">상세 사양</h2>
-              <ul className="space-y-2">
-                {product.specs.map((spec, index) => (
-                  <li key={index} className="flex items-start gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-primary mt-2 flex-shrink-0" />
-                    <span className="text-sm">{spec}</span>
-                  </li>
-                ))}
-              </ul>
+              <p className="text-muted-foreground leading-relaxed whitespace-pre-wrap">{product.description}</p>
             </CardContent>
           </Card>
         </div>

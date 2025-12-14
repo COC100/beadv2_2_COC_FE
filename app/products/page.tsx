@@ -1,8 +1,6 @@
 "use client"
 
-import { useMemo } from "react"
-
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { Header } from "@/components/header"
@@ -47,30 +45,32 @@ export default function ProductsPage() {
   const [endDate, setEndDate] = useState<Date>()
   const [showFilters, setShowFilters] = useState(false)
   const [products, setProducts] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(false)
+  const [nextCursor, setNextCursor] = useState<string | null>(null)
+  const [hasNext, setHasNext] = useState(true)
+  const observerRef = useRef<IntersectionObserver | null>(null)
+  const loadMoreRef = useRef<HTMLDivElement>(null)
 
-  useEffect(() => {
-    const checkAuth = () => {
+  const fetchProducts = useCallback(
+    async (cursor?: string) => {
       if (typeof window !== "undefined") {
         const token = localStorage.getItem("accessToken")
         if (!token) {
           router.push("/intro")
-          return false
+          return
         }
       }
-      return true
-    }
 
-    const fetchProducts = async () => {
-      if (!checkAuth()) return
+      if (loading) return
 
       try {
         setLoading(true)
         const params: any = {
           sortType: sortBy,
-          size: 100,
+          size: 20,
         }
 
+        if (cursor) params.cursor = cursor
         if (searchQuery) params.keyword = searchQuery
         if (selectedCategory !== "ALL") params.category = selectedCategory
         if (minPrice) params.minPrice = Number(minPrice)
@@ -79,61 +79,53 @@ export default function ProductsPage() {
         if (endDate) params.endDate = format(endDate, "yyyy-MM-dd")
 
         const response = await productAPI.list(params)
-        setProducts(response.products || [])
-      } catch (error) {
+
+        if (cursor) {
+          setProducts((prev) => [...prev, ...(response.products || [])])
+        } else {
+          setProducts(response.products || [])
+        }
+
+        setNextCursor(response.nextCursor)
+        setHasNext(response.hasNext)
+      } catch (error: any) {
         console.error("[v0] Failed to fetch products:", error)
         toast({
           title: "상품 로딩 실패",
-          description: "상품 목록을 불러올 수 없습니다.",
+          description: error.message || "상품 목록을 불러올 수 없습니다",
+          variant: "destructive",
         })
       } finally {
         setLoading(false)
       }
-    }
+    },
+    [searchQuery, selectedCategory, sortBy, minPrice, maxPrice, startDate, endDate, router, toast, loading],
+  )
 
+  useEffect(() => {
     fetchProducts()
-  }, [searchQuery, selectedCategory, sortBy, minPrice, maxPrice, startDate, endDate, router, toast])
+  }, [searchQuery, selectedCategory, sortBy, minPrice, maxPrice, startDate, endDate])
 
-  const filteredProducts = useMemo(() => {
-    let filtered = products
+  useEffect(() => {
+    if (observerRef.current) observerRef.current.disconnect()
 
-    // Search filter
-    if (searchQuery) {
-      filtered = filtered.filter((product) => product.name.toLowerCase().includes(searchQuery.toLowerCase()))
+    observerRef.current = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasNext && !loading && nextCursor) {
+          fetchProducts(nextCursor)
+        }
+      },
+      { threshold: 0.1 },
+    )
+
+    if (loadMoreRef.current) {
+      observerRef.current.observe(loadMoreRef.current)
     }
 
-    // Category filter
-    if (selectedCategory !== "ALL") {
-      filtered = filtered.filter((product) => product.category === selectedCategory)
+    return () => {
+      if (observerRef.current) observerRef.current.disconnect()
     }
-
-    // Price filter
-    if (minPrice) {
-      filtered = filtered.filter((product) => product.pricePerDay >= Number(minPrice))
-    }
-    if (maxPrice) {
-      filtered = filtered.filter((product) => product.pricePerDay <= Number(maxPrice))
-    }
-
-    // Sort
-    const sorted = [...filtered]
-    switch (sortBy) {
-      case "LATEST":
-        sorted.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
-        break
-      case "OLDEST":
-        sorted.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())
-        break
-      case "PRICE-HIGH":
-        sorted.sort((a, b) => b.pricePerDay - a.pricePerDay)
-        break
-      case "PRICE-LOW":
-        sorted.sort((a, b) => a.pricePerDay - b.pricePerDay)
-        break
-    }
-
-    return sorted
-  }, [searchQuery, selectedCategory, minPrice, maxPrice, sortBy])
+  }, [hasNext, loading, nextCursor, fetchProducts])
 
   const handleResetFilters = () => {
     setSearchQuery("")
@@ -289,7 +281,9 @@ export default function ProductsPage() {
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between mb-8">
             <div>
-              <p className="text-sm text-muted-foreground">총 {filteredProducts.length}개의 상품</p>
+              <p className="text-sm text-muted-foreground">
+                총 {products.length}개의 상품{hasNext && " (더 보기 가능)"}
+              </p>
             </div>
             <div className="flex items-center gap-2">
               <span className="text-sm text-muted-foreground">카테고리:</span>
@@ -297,43 +291,46 @@ export default function ProductsPage() {
             </div>
           </div>
 
-          {filteredProducts.length === 0 ? (
+          {products.length === 0 && !loading ? (
             <div className="text-center py-12">
               <p className="text-muted-foreground">검색 결과가 없습니다.</p>
             </div>
           ) : (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
-              {filteredProducts.map((product) => (
-                <Link key={product.id} href={`/products/${product.id}`}>
-                  <Card className="overflow-hidden hover:shadow-lg transition-shadow group border-gray-200">
-                    <div className="aspect-square overflow-hidden bg-gray-50 relative">
-                      {product.badge && (
-                        <Badge className="absolute top-2 left-2 z-10 bg-primary text-white text-xs">
-                          {product.badge}
-                        </Badge>
-                      )}
-                      <img
-                        src={product.image || "/placeholder.svg"}
-                        alt={product.name}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                      />
-                    </div>
-                    <CardContent className="p-3">
-                      <p className="text-xs text-muted-foreground mb-1">
-                        {CATEGORIES.find((c) => c.value === product.category)?.label}
-                      </p>
-                      <h3 className="font-medium text-sm mb-2 line-clamp-2 leading-tight">{product.name}</h3>
-                      <div className="flex items-center gap-2">
-                        <Badge variant="secondary" className="bg-accent text-white hover:bg-accent text-xs font-bold">
-                          ₩{product.pricePerDay.toLocaleString()}
-                        </Badge>
-                        <span className="text-xs text-muted-foreground">/일</span>
+            <>
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
+                {products.map((product) => (
+                  <Link key={product.productId} href={`/products/${product.productId}`}>
+                    <Card className="overflow-hidden hover:shadow-lg transition-shadow group border-gray-200">
+                      <div className="aspect-square overflow-hidden bg-gray-50 relative">
+                        <img
+                          src={product.thumbnailUrl || "/placeholder.svg?height=300&width=300&query=no+image"}
+                          alt={product.name}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        />
                       </div>
-                    </CardContent>
-                  </Card>
-                </Link>
-              ))}
-            </div>
+                      <CardContent className="p-3">
+                        <p className="text-xs text-muted-foreground mb-1">
+                          {CATEGORIES.find((c) => c.value === product.category)?.label || product.category}
+                        </p>
+                        <h3 className="font-medium text-sm mb-2 line-clamp-2 leading-tight">{product.name}</h3>
+                        <div className="flex items-center gap-2">
+                          <Badge variant="secondary" className="bg-accent text-white hover:bg-accent text-xs font-bold">
+                            ₩{product.pricePerDay.toLocaleString()}
+                          </Badge>
+                          <span className="text-xs text-muted-foreground">/일</span>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </Link>
+                ))}
+              </div>
+
+              {hasNext && (
+                <div ref={loadMoreRef} className="text-center py-8">
+                  {loading && <p className="text-muted-foreground">로딩 중...</p>}
+                </div>
+              )}
+            </>
           )}
         </div>
       </section>
