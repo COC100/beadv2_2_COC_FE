@@ -83,20 +83,29 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
       return
     }
 
+    const requestData = {
+      productId: Number(params.id),
+      startDate,
+      endDate,
+    }
+    console.log("[v0] Cart add request:", requestData)
+
     try {
-      await cartAPI.addItem({
-        productId: Number(params.id),
-        startDate,
-        endDate,
-      })
+      await cartAPI.addItem(requestData)
       toast({
         title: "장바구니에 추가되었습니다",
         description: "장바구니에서 확인하실 수 있습니다",
       })
     } catch (error: any) {
+      console.error("[v0] Failed to add to cart:", error)
+      const errorMessage =
+        error.message?.includes("Service Unavailable") || error.message?.includes("503")
+          ? "대여 서비스가 일시적으로 사용할 수 없습니다. 잠시 후 다시 시도해주세요."
+          : error.message || "장바구니에 추가할 수 없습니다"
+
       toast({
         title: "장바구니 추가 실패",
-        description: error.message || "장바구니에 추가할 수 없습니다",
+        description: errorMessage,
         variant: "destructive",
       })
     }
