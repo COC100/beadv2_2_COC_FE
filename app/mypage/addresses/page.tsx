@@ -72,9 +72,19 @@ export default function AddressesPage() {
 
       try {
         const response = await memberAPI.getAddresses()
-        const mappedAddresses = response.addressList.map((addr: any) => ({
-          id: addr.addressId,
-          addressId: addr.addressId,
+        console.log("[v0] Address API response:", response)
+
+        const addressList = response?.addressList || response?.addresses || response || []
+
+        if (!Array.isArray(addressList)) {
+          console.error("[v0] Invalid address list format:", addressList)
+          setAddresses([])
+          return
+        }
+
+        const mappedAddresses = addressList.map((addr: any) => ({
+          id: addr.addressId || 0,
+          addressId: addr.addressId || 0,
           name: addr.addressLabel || "",
           recipient: addr.recipientName || "",
           phone: addr.recipientPhone || "",
@@ -96,6 +106,7 @@ export default function AddressesPage() {
             variant: "destructive",
           })
         }
+        setAddresses([])
       } finally {
         setIsLoading(false)
       }
@@ -167,18 +178,22 @@ export default function AddressesPage() {
       }
 
       const response = await memberAPI.getAddresses()
-      const mappedAddresses = response.addressList.map((addr: any) => ({
-        id: addr.addressId,
-        addressId: addr.addressId,
-        name: addr.addressLabel || "",
-        recipient: addr.recipientName || "",
-        phone: addr.recipientPhone || "",
-        address: addr.roadAddress || "",
-        detailAddress: addr.detailAddress || "",
-        zipCode: addr.postcode || "",
-        isDefault: addr.isDefault || false,
-      }))
-      setAddresses(mappedAddresses)
+      const addressList = response?.addressList || response?.addresses || response || []
+
+      if (Array.isArray(addressList)) {
+        const mappedAddresses = addressList.map((addr: any) => ({
+          id: addr.addressId || 0,
+          addressId: addr.addressId || 0,
+          name: addr.addressLabel || "",
+          recipient: addr.recipientName || "",
+          phone: addr.recipientPhone || "",
+          address: addr.roadAddress || "",
+          detailAddress: addr.detailAddress || "",
+          zipCode: addr.postcode || "",
+          isDefault: addr.isDefault || false,
+        }))
+        setAddresses(mappedAddresses)
+      }
       setIsDialogOpen(false)
     } catch (error: any) {
       console.error("[v0] Failed to save address:", error)
@@ -194,18 +209,22 @@ export default function AddressesPage() {
     try {
       await memberAPI.deleteAddress(addressId)
       const response = await memberAPI.getAddresses()
-      const mappedAddresses = response.addressList.map((addr: any) => ({
-        id: addr.addressId,
-        addressId: addr.addressId,
-        name: addr.addressLabel || "",
-        recipient: addr.recipientName || "",
-        phone: addr.recipientPhone || "",
-        address: addr.roadAddress || "",
-        detailAddress: addr.detailAddress || "",
-        zipCode: addr.postcode || "",
-        isDefault: addr.isDefault || false,
-      }))
-      setAddresses(mappedAddresses)
+      const addressList = response?.addressList || response?.addresses || response || []
+
+      if (Array.isArray(addressList)) {
+        const mappedAddresses = addressList.map((addr: any) => ({
+          id: addr.addressId || 0,
+          addressId: addr.addressId || 0,
+          name: addr.addressLabel || "",
+          recipient: addr.recipientName || "",
+          phone: addr.recipientPhone || "",
+          address: addr.roadAddress || "",
+          detailAddress: addr.detailAddress || "",
+          zipCode: addr.postcode || "",
+          isDefault: addr.isDefault || false,
+        }))
+        setAddresses(mappedAddresses)
+      }
       toast({
         title: "주소 삭제 완료",
         description: "주소가 성공적으로 삭제되었습니다",
@@ -240,18 +259,22 @@ export default function AddressesPage() {
       })
 
       const response = await memberAPI.getAddresses()
-      const mappedAddresses = response.addressList.map((addr: any) => ({
-        id: addr.addressId,
-        addressId: addr.addressId,
-        name: addr.addressLabel || "",
-        recipient: addr.recipientName || "",
-        phone: addr.recipientPhone || "",
-        address: addr.roadAddress || "",
-        detailAddress: addr.detailAddress || "",
-        zipCode: addr.postcode || "",
-        isDefault: addr.isDefault || false,
-      }))
-      setAddresses(mappedAddresses)
+      const addressList = response?.addressList || response?.addresses || response || []
+
+      if (Array.isArray(addressList)) {
+        const mappedAddresses = addressList.map((addr: any) => ({
+          id: addr.addressId || 0,
+          addressId: addr.addressId || 0,
+          name: addr.addressLabel || "",
+          recipient: addr.recipientName || "",
+          phone: addr.recipientPhone || "",
+          address: addr.roadAddress || "",
+          detailAddress: addr.detailAddress || "",
+          zipCode: addr.postcode || "",
+          isDefault: addr.isDefault || false,
+        }))
+        setAddresses(mappedAddresses)
+      }
       toast({
         title: "대표 주소 설정 완료",
         description: "대표 주소지가 변경되었습니다",
