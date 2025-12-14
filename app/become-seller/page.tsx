@@ -3,6 +3,7 @@
 import type React from "react"
 
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { Button } from "@/components/ui/button"
@@ -12,6 +13,8 @@ import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Store, DollarSign, Shield, TrendingUp } from "lucide-react"
+import { useToast } from "@/hooks/use-toast"
+import { sellerAPI } from "@/lib/api"
 
 export default function BecomeSellerPage() {
   const [formData, setFormData] = useState({
@@ -22,11 +25,46 @@ export default function BecomeSellerPage() {
     description: "",
   })
   const [agreed, setAgreed] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
+  const router = useRouter()
+  const { toast } = useToast()
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    // TODO: API call to seller-service:8084/api/sellers
-    console.log("[v0] Seller application:", formData)
+
+    if (!agreed) {
+      toast({
+        title: "약관 동의 필요",
+        description: "판매자 약관에 동의해주세요",
+        variant: "destructive",
+      })
+      return
+    }
+
+    setIsLoading(true)
+    try {
+      await sellerAPI.register({
+        storeName: formData.businessName,
+        bizRegNo: formData.businessNumber || undefined,
+        storePhone: formData.phone || undefined,
+      })
+
+      toast({
+        title: "판매자 신청 완료",
+        description: "판매자 등록이 완료되었습니다",
+      })
+
+      router.push("/seller")
+    } catch (error: any) {
+      console.error("[v0] Seller registration failed:", error)
+      toast({
+        title: "판매자 신청 실패",
+        description: error.message || "판매자 등록에 실패했습니다",
+        variant: "destructive",
+      })
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   const benefits = [
@@ -169,8 +207,8 @@ export default function BecomeSellerPage() {
                     판매자 약관 및 수수료 정책에 동의합니다
                   </label>
                 </div>
-                <Button type="submit" className="w-full h-12 text-lg rounded-xl" disabled={!agreed}>
-                  판매자 신청하기
+                <Button type="submit" className="w-full h-12 text-lg rounded-xl" disabled={!agreed || isLoading}>
+                  {isLoading ? "신청 중..." : "판매자 신청하기"}
                 </Button>
               </form>
             </CardContent>

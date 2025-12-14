@@ -1,6 +1,7 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { Trash2, ShoppingBag, Settings } from "lucide-react"
 import { Header } from "@/components/header"
@@ -10,9 +11,12 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { useToast } from "@/hooks/use-toast"
+import { cartAPI } from "@/lib/api"
 
 interface CartItem {
   id: number
+  cartItemId: number
   productId: number
   productName: string
   productImage: string
@@ -23,30 +27,52 @@ interface CartItem {
 }
 
 export default function CartPage() {
-  const [cartItems, setCartItems] = useState<CartItem[]>([
-    {
-      id: 1,
-      productId: 1,
-      productName: 'MacBook Pro 16" M3',
-      productImage: "/macbook-pro-laptop.png",
-      pricePerDay: 25000,
-      startDate: "2025-01-15",
-      endDate: "2025-01-20",
-      quantity: 1,
-    },
-    {
-      id: 2,
-      productId: 2,
-      productName: "Sony A7 IV 미러리스",
-      productImage: "/sony-mirrorless-camera.png",
-      pricePerDay: 35000,
-      startDate: "2025-01-18",
-      endDate: "2025-01-22",
-      quantity: 1,
-    },
-  ])
-
+  const router = useRouter()
+  const { toast } = useToast()
+  const [cartItems, setCartItems] = useState<CartItem[]>([])
+  const [loading, setLoading] = useState(true)
   const [editingItemId, setEditingItemId] = useState<number | null>(null)
+  const [editingData, setEditingData] = useState<{ startDate: string; endDate: string }>({
+    startDate: "",
+    endDate: "",
+  })
+
+  useEffect(() => {
+    const loadCart = async () => {
+      const token = localStorage.getItem("accessToken")
+      if (!token) {
+        router.push("/intro")
+        return
+      }
+
+      try {
+        const response = await cartAPI.list()
+        const items = response.items || []
+        setCartItems(
+          items.map((item: any) => ({
+            id: item.cartItemId,
+            cartItemId: item.cartItemId,
+            productId: item.productId,
+            productName: item.productName || `상품 #${item.productId}`,
+            productImage: item.productImage || "",
+            pricePerDay: item.pricePerDay || 0,
+            startDate: item.startDate,
+            endDate: item.endDate,
+            quantity: 1,
+          })),
+        )
+      } catch (error: any) {
+        console.error("[v0] Failed to load cart:", error)
+        if (error.message.includes("401")) {
+          router.push("/intro")
+        }
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadCart()
+  }, [router])
 
   const calculateDays = (start: string, end: string) => {
     const startDate = new Date(start)
@@ -63,13 +89,53 @@ export default function CartPage() {
     return cartItems.reduce((total, item) => total + calculateItemTotal(item), 0)
   }
 
-  const removeItem = (id: number) => {
-    setCartItems(cartItems.filter((item) => item.id !== id))
+  const removeItem = async (cartItemId: number) => {
+    try {
+      await cartAPI.deleteItem(cartItemId)
+      setCartItems(cartItems.filter((item) => item.cartItemId !== cartItemId))
+      toast({
+        title: "상품 삭제 완료",
+        description: "장바구니에서 상품이 삭제되었습니다",
+      })
+    } catch (error: any) {
+      console.error("[v0] Failed to remove item:", error)
+      toast({
+        title: "삭제 실패",
+        description: error.message || "상품 삭제에 실패했습니다",
+        variant: "destructive",
+      })
+    }
   }
 
-  const updateRentalPeriod = (id: number, startDate: string, endDate: string) => {
-    setCartItems(cartItems.map((item) => (item.id === id ? { ...item, startDate, endDate } : item)))
-    setEditingItemId(null)
+  const updateRentalPeriod = async (cartItemId: number, startDate: string, endDate: string) => {
+    try {
+      await cartAPI.updateItem(cartItemId, { startDate, endDate })
+      setCartItems(cartItems.map((item) => (item.cartItemId === cartItemId ? { ...item, startDate, endDate } : item)))
+      setEditingItemId(null)
+      toast({
+        title: "옵션 변경 완료",
+        description: "렌탈 기간이 변경되었습니다",
+      })
+    } catch (error: any) {
+      console.error("[v0] Failed to update item:", error)
+      toast({
+        title: "변경 실패",
+        description: error.message || "옵션 변경에 실패했습니다",
+        variant: "destructive",
+      })
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-white">
+        <Header />
+        <div className="container mx-auto px-4 py-12 text-center">
+          <p className="text-muted-foreground">로딩 중...</p>
+        </div>
+        <Footer />
+      </div>
+    )
   }
 
   return (
@@ -98,7 +164,7 @@ export default function CartPage() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="lg:col-span-2 space-y-4">
               {cartItems.map((item) => (
-                <Card key={item.id} className="overflow-hidden border-gray-200">
+                <Card key={item.cartItemId} className="overflow-hidden border-gray-200">
                   <CardContent className="p-5">
                     <div className="flex gap-4">
                       <div className="w-24 h-24 bg-gray-50 rounded-lg overflow-hidden flex-shrink-0">
@@ -118,7 +184,7 @@ export default function CartPage() {
                               {item.productName}
                             </Link>
 
-                            {editingItemId === item.id ? (
+                            {editingItemId === item.cartItemId ? (
                               <div className="mt-3 space-y-2">
                                 <div className="grid grid-cols-2 gap-2">
                                   <div>
@@ -126,12 +192,7 @@ export default function CartPage() {
                                     <Input
                                       type="date"
                                       defaultValue={item.startDate}
-                                      onChange={(e) => {
-                                        const newItem = cartItems.find((i) => i.id === item.id)
-                                        if (newItem) {
-                                          newItem.startDate = e.target.value
-                                        }
-                                      }}
+                                      onChange={(e) => setEditingData({ ...editingData, startDate: e.target.value })}
                                       className="h-8 text-xs"
                                     />
                                   </div>
@@ -140,12 +201,7 @@ export default function CartPage() {
                                     <Input
                                       type="date"
                                       defaultValue={item.endDate}
-                                      onChange={(e) => {
-                                        const newItem = cartItems.find((i) => i.id === item.id)
-                                        if (newItem) {
-                                          newItem.endDate = e.target.value
-                                        }
-                                      }}
+                                      onChange={(e) => setEditingData({ ...editingData, endDate: e.target.value })}
                                       className="h-8 text-xs"
                                     />
                                   </div>
@@ -162,12 +218,13 @@ export default function CartPage() {
                                   <Button
                                     size="sm"
                                     className="h-7 text-xs"
-                                    onClick={() => {
-                                      const newItem = cartItems.find((i) => i.id === item.id)
-                                      if (newItem) {
-                                        updateRentalPeriod(item.id, newItem.startDate, newItem.endDate)
-                                      }
-                                    }}
+                                    onClick={() =>
+                                      updateRentalPeriod(
+                                        item.cartItemId,
+                                        editingData.startDate || item.startDate,
+                                        editingData.endDate || item.endDate,
+                                      )
+                                    }
                                   >
                                     저장
                                   </Button>
@@ -182,7 +239,10 @@ export default function CartPage() {
                                   variant="ghost"
                                   size="sm"
                                   className="h-6 px-2 text-xs hover:text-primary"
-                                  onClick={() => setEditingItemId(item.id)}
+                                  onClick={() => {
+                                    setEditingItemId(item.cartItemId)
+                                    setEditingData({ startDate: item.startDate, endDate: item.endDate })
+                                  }}
                                 >
                                   <Settings className="h-3 w-3 mr-1" />
                                   옵션 변경
@@ -190,7 +250,12 @@ export default function CartPage() {
                               </div>
                             )}
                           </div>
-                          <Button variant="ghost" size="icon" onClick={() => removeItem(item.id)} className="h-8 w-8">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => removeItem(item.cartItemId)}
+                            className="h-8 w-8"
+                          >
                             <Trash2 className="h-4 w-4 text-muted-foreground" />
                           </Button>
                         </div>
@@ -213,7 +278,7 @@ export default function CartPage() {
                   <h2 className="text-lg font-bold mb-4">주문 요약</h2>
                   <div className="space-y-2 mb-4">
                     {cartItems.map((item) => (
-                      <div key={item.id} className="flex justify-between text-sm">
+                      <div key={item.cartItemId} className="flex justify-between text-sm">
                         <span className="text-muted-foreground truncate mr-2">{item.productName}</span>
                         <span className="font-medium">₩{calculateItemTotal(item).toLocaleString()}</span>
                       </div>

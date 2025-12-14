@@ -1,7 +1,8 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { ArrowLeft } from "lucide-react"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
@@ -9,11 +10,99 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { useToast } from "@/hooks/use-toast"
+import { sellerAPI } from "@/lib/api"
 
 export default function SellerSettingsPage() {
-  const [storeName, setStoreName] = useState("테크렌탈샵")
-  const [businessNumber, setBusinessNumber] = useState("123-45-67890")
-  const [storePhone, setStorePhone] = useState("02-1234-5678")
+  const router = useRouter()
+  const { toast } = useToast()
+  const [isLoading, setIsLoading] = useState(true)
+  const [isSaving, setIsSaving] = useState(false)
+  const [storeName, setStoreName] = useState("")
+  const [businessNumber, setBusinessNumber] = useState("")
+  const [storePhone, setStorePhone] = useState("")
+  const [currentStatus, setCurrentStatus] = useState("ACTIVE")
+
+  useEffect(() => {
+    const loadSellerInfo = async () => {
+      const token = localStorage.getItem("accessToken")
+      if (!token) {
+        router.push("/intro")
+        return
+      }
+
+      try {
+        const seller = await sellerAPI.getSelf()
+        setStoreName(seller.storeName || "")
+        setBusinessNumber(seller.bizRegNo || "")
+        setStorePhone(seller.storePhone || "")
+        setCurrentStatus(seller.status || "ACTIVE")
+      } catch (error: any) {
+        console.error("[v0] Failed to load seller info:", error)
+        toast({
+          title: "로딩 실패",
+          description: "판매자 정보를 불러오는데 실패했습니다",
+          variant: "destructive",
+        })
+        if (error.message.includes("404")) {
+          router.push("/become-seller")
+        }
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    loadSellerInfo()
+  }, [router, toast])
+
+  const handleSave = async () => {
+    if (!storeName.trim()) {
+      toast({
+        title: "입력 오류",
+        description: "스토어명을 입력해주세요",
+        variant: "destructive",
+      })
+      return
+    }
+
+    setIsSaving(true)
+    try {
+      await sellerAPI.updateSelf({
+        storeName: storeName.trim(),
+        bizRegNo: businessNumber.trim() || undefined,
+        storePhone: storePhone.trim() || undefined,
+        status: currentStatus,
+      })
+
+      toast({
+        title: "저장 완료",
+        description: "판매자 정보가 수정되었습니다",
+      })
+
+      router.push("/seller")
+    } catch (error: any) {
+      console.error("[v0] Failed to update seller info:", error)
+      toast({
+        title: "저장 실패",
+        description: error.message || "판매자 정보 수정에 실패했습니다",
+        variant: "destructive",
+      })
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-white">
+        <Header />
+        <div className="container mx-auto px-4 py-12 text-center">
+          <p className="text-muted-foreground">로딩 중...</p>
+        </div>
+        <Footer />
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-white">
@@ -72,8 +161,8 @@ export default function SellerSettingsPage() {
               </div>
 
               <div className="flex gap-3 pt-4">
-                <Button className="flex-1 rounded-lg h-11" size="lg">
-                  저장하기
+                <Button className="flex-1 rounded-lg h-11" size="lg" onClick={handleSave} disabled={isSaving}>
+                  {isSaving ? "저장 중..." : "저장하기"}
                 </Button>
                 <Link href="/seller" className="flex-1">
                   <Button variant="outline" className="w-full rounded-lg h-11 bg-transparent" size="lg">

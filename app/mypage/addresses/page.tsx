@@ -74,7 +74,7 @@ export default function AddressesPage() {
         const response = await memberAPI.getAddresses()
         console.log("[v0] Address API response:", response)
 
-        const addressList = response?.data || []
+        const addressList = Array.isArray(response) ? response : []
 
         if (!Array.isArray(addressList)) {
           console.error("[v0] Invalid address list format:", addressList)
@@ -97,12 +97,12 @@ export default function AddressesPage() {
         setAddresses(mappedAddresses)
       } catch (error: any) {
         console.error("[v0] Failed to load addresses:", error)
-        if (error.message.includes("401") || error.message.includes("Unauthorized")) {
+        if (error.message.includes("401") || error.message.includes("인증")) {
           router.push("/intro")
         } else {
           toast({
             title: "주소 로딩 실패",
-            description: "주소 목록을 불러오는데 실패했습니다",
+            description: error.message || "주소 목록을 불러오는데 실패했습니다",
             variant: "destructive",
           })
         }
@@ -178,7 +178,7 @@ export default function AddressesPage() {
       }
 
       const response = await memberAPI.getAddresses()
-      const addressList = response?.data || []
+      const addressList = Array.isArray(response) ? response : []
 
       if (Array.isArray(addressList)) {
         const mappedAddresses = addressList.map((addr: any) => ({
@@ -209,7 +209,7 @@ export default function AddressesPage() {
     try {
       await memberAPI.deleteAddress(addressId)
       const response = await memberAPI.getAddresses()
-      const addressList = response?.data || []
+      const addressList = Array.isArray(response) ? response : []
 
       if (Array.isArray(addressList)) {
         const mappedAddresses = addressList.map((addr: any) => ({
@@ -259,7 +259,7 @@ export default function AddressesPage() {
       })
 
       const response = await memberAPI.getAddresses()
-      const addressList = response?.data || []
+      const addressList = Array.isArray(response) ? response : []
 
       if (Array.isArray(addressList)) {
         const mappedAddresses = addressList.map((addr: any) => ({
