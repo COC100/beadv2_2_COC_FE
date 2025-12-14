@@ -32,6 +32,7 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null)
   const [product, setProduct] = useState<any>(null)
   const [loading, setLoading] = useState(true)
+  const [productId, setProductId] = useState<number | null>(null)
   const [formData, setFormData] = useState({
     name: "",
     category: "",
@@ -53,14 +54,38 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
   ]
 
   useEffect(() => {
-    const loadProduct = async () => {
+    const resolveParams = async () => {
       try {
-        const productId = Number(params.id)
-        console.log("[v0 DEBUG] Loading product for edit, ID:", productId)
+        const resolvedParams = await Promise.resolve(params)
+        const id = Number(resolvedParams.id)
 
-        if (isNaN(productId)) {
+        console.log("[v0 DEBUG] Resolved product ID for edit:", id)
+
+        if (isNaN(id)) {
           throw new Error("잘못된 상품 ID입니다")
         }
+
+        setProductId(id)
+      } catch (error) {
+        console.error("[v0 DEBUG] Failed to resolve params:", error)
+        toast({
+          title: "페이지 로딩 실패",
+          description: "상품 정보를 불러올 수 없습니다",
+          variant: "destructive",
+        })
+        setLoading(false)
+      }
+    }
+
+    resolveParams()
+  }, [params, toast])
+
+  useEffect(() => {
+    if (productId === null) return
+
+    const loadProduct = async () => {
+      try {
+        console.log("[v0 DEBUG] Loading product for edit, ID:", productId)
 
         const productData = await productAPI.getDetail(productId)
         console.log("[v0 DEBUG] Raw product data for edit:", JSON.stringify(productData, null, 2))
@@ -102,7 +127,7 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
     }
 
     loadProduct()
-  }, [params.id, router, toast])
+  }, [productId, router, toast])
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files
@@ -175,10 +200,20 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+
+    if (!productId) {
+      toast({
+        title: "오류",
+        description: "상품 ID를 확인할 수 없습니다",
+        variant: "destructive",
+      })
+      return
+    }
+
     setIsSubmitting(true)
 
     try {
-      await productAPI.update(Number(params.id), {
+      await productAPI.update(productId, {
         name: formData.name,
         description: formData.description,
         pricePerDay: Number(formData.pricePerDay),
@@ -225,7 +260,6 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
         <Header />
         <div className="container mx-auto px-4 py-12 text-center">
           <p>상품을 찾을 수 없습니다</p>
-          <p className="text-sm text-muted-foreground mt-2">브라우저 콘솔(F12)에서 자세한 오류를 확인하세요</p>
           <Link href="/seller">
             <Button className="mt-4">판매자 페이지로 돌아가기</Button>
           </Link>
