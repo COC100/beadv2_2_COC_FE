@@ -43,6 +43,7 @@ export default function SellerPage() {
         const seller = await sellerAPI.getSelf()
         setSellerInfo(seller)
 
+        // Load products (non-critical)
         try {
           const productsResponse = await productAPI.list({
             size: 100,
@@ -56,6 +57,7 @@ export default function SellerPage() {
           setProducts([])
         }
 
+        // Load rentals (non-critical)
         try {
           const rentals = await sellerAPI.getRentals({
             status: "REQUESTED",
@@ -68,22 +70,26 @@ export default function SellerPage() {
           setReservations([])
         }
 
+        // Successfully loaded seller data, set loading to false
         setIsLoading(false)
       } catch (error: any) {
         console.error("[v0] Failed to load seller data:", error)
+        // Only redirect if it's a critical error (seller not found or unauthorized)
         if (error.message.includes("404") || error.message.includes("Not Found")) {
           router.push("/become-seller")
         } else if (error.message.includes("401") || error.message.includes("Unauthorized")) {
           router.push("/intro")
         } else {
+          // For other errors, still show the page but with empty data
           setIsLoading(false)
-          console.error("[v0] Non-critical seller data error:", error.message)
+          setProducts([])
+          setReservations([])
         }
       }
     }
 
     loadSellerData()
-  }, [router, toast])
+  }, [router])
 
   const handleAcceptRental = async (rentalItemId: number) => {
     try {
