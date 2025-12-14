@@ -1,59 +1,50 @@
 "use client"
 
 import type React from "react"
-
 import { useState } from "react"
-import { useRouter } from "next/navigation"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { authAPI } from "@/lib/api"
 import { useToast } from "@/hooks/use-toast"
+import { memberAPI } from "@/lib/api"
 
 export default function LoginPage() {
-  const router = useRouter()
-  const { toast } = useToast()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
-  const [loading, setLoading] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
+  const router = useRouter()
+  const { toast } = useToast()
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
-    setLoading(true)
-
-    console.log("[v0] Login attempt with email:", email)
+    setIsLoading(true)
 
     try {
-      const response = await authAPI.login({ email, password })
+      const response = await memberAPI.login({ email, password })
 
-      console.log("[v0] Login response:", {
-        hasAccessToken: !!response.data.accessToken,
-        hasRefreshToken: !!response.data.refreshToken,
-        memberInfo: response.data.member,
-      })
-
-      localStorage.setItem("accessToken", response.data.accessToken)
-      localStorage.setItem("refreshToken", response.data.refreshToken)
-      localStorage.setItem("userInfo", JSON.stringify(response.data.member))
+      // Store auth tokens
+      localStorage.setItem("accessToken", response.accessToken)
+      localStorage.setItem("refreshToken", response.refreshToken)
+      localStorage.setItem("user", JSON.stringify(response.member))
 
       toast({
         title: "로그인 성공",
-        description: `${response.data.member.name}님, 환영합니다!`,
+        description: `${response.member.name}님, 환영합니다!`,
       })
 
       router.push("/")
     } catch (error: any) {
       console.error("[v0] Login failed:", error)
-      const errorMessage = error.message || "이메일 또는 비밀번호를 확인해주세요."
       toast({
-        variant: "destructive",
         title: "로그인 실패",
-        description: errorMessage,
+        description: error.message || "이메일 또는 비밀번호를 확인해주세요",
+        variant: "destructive",
       })
     } finally {
-      setLoading(false)
+      setIsLoading(false)
     }
   }
 
@@ -83,7 +74,6 @@ export default function LoginPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  disabled={loading}
                 />
               </div>
               <div className="space-y-2">
@@ -99,11 +89,10 @@ export default function LoginPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  disabled={loading}
                 />
               </div>
-              <Button type="submit" className="w-full" size="lg" disabled={loading}>
-                {loading ? "로그인 중..." : "로그인"}
+              <Button type="submit" className="w-full" size="lg" disabled={isLoading}>
+                {isLoading ? "로그인 중..." : "로그인"}
               </Button>
             </form>
           </CardContent>

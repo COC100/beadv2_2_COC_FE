@@ -1,8 +1,7 @@
 "use client"
 
-import { useState, useEffect, useMemo } from "react"
+import { useState, useMemo } from "react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { Card, CardContent } from "@/components/ui/card"
@@ -16,8 +15,6 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Search, SlidersHorizontal, CalendarIcon } from "lucide-react"
 import { format } from "date-fns"
 import { ko } from "date-fns/locale"
-import { productAPI } from "@/lib/api"
-import { useToast } from "@/hooks/use-toast"
 
 const CATEGORIES = [
   { value: "ALL", label: "전체" },
@@ -34,8 +31,6 @@ const CATEGORIES = [
 ]
 
 export default function ProductsPage() {
-  const router = useRouter()
-  const { toast } = useToast()
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedCategory, setSelectedCategory] = useState("ALL")
   const [sortBy, setSortBy] = useState("latest")
@@ -44,47 +39,117 @@ export default function ProductsPage() {
   const [startDate, setStartDate] = useState<Date>()
   const [endDate, setEndDate] = useState<Date>()
   const [showFilters, setShowFilters] = useState(false)
-  const [products, setProducts] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    const token = localStorage.getItem("accessToken")
-    if (!token) {
-      router.push("/intro")
-      return
-    }
-  }, [router])
-
-  useEffect(() => {
-    fetchProducts()
-  }, [])
-
-  const fetchProducts = async () => {
-    try {
-      setLoading(true)
-      const params: any = {}
-      if (selectedCategory !== "ALL") params.category = selectedCategory
-      if (minPrice) params.minPrice = Number(minPrice)
-      if (maxPrice) params.maxPrice = Number(maxPrice)
-
-      const response = await productAPI.list(params)
-      setProducts(response.data.content || response.data || [])
-    } catch (error) {
-      console.error("[v0] Failed to fetch products:", error)
-      toast({
-        variant: "destructive",
-        title: "상품 조회 실패",
-        description: "상품 목록을 불러올 수 없습니다.",
-      })
-      setProducts([])
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  useEffect(() => {
-    fetchProducts()
-  }, [selectedCategory, minPrice, maxPrice])
+  const [products, setProducts] = useState([
+    {
+      id: 1,
+      name: 'MacBook Pro 16" M3',
+      category: "LAPTOP",
+      pricePerDay: 25000,
+      image: "/macbook-pro-laptop.png",
+      badge: "인기",
+      createdAt: new Date("2024-01-15"),
+    },
+    {
+      id: 2,
+      name: "Sony A7 IV 미러리스",
+      category: "CAMERA",
+      pricePerDay: 35000,
+      image: "/sony-mirrorless-camera.png",
+      badge: "신규",
+      createdAt: new Date("2024-03-10"),
+    },
+    {
+      id: 3,
+      name: 'iPad Pro 12.9"',
+      category: "TABLET",
+      pricePerDay: 15000,
+      image: "/ipad-pro-tablet.png",
+      badge: "",
+      createdAt: new Date("2024-02-20"),
+    },
+    {
+      id: 4,
+      name: "Canon EOS R5",
+      category: "CAMERA",
+      pricePerDay: 40000,
+      image: "/canon-eos-camera.jpg",
+      badge: "인기",
+      createdAt: new Date("2024-01-05"),
+    },
+    {
+      id: 5,
+      name: "DJI Mavic 3 드론",
+      category: "DRONE",
+      pricePerDay: 30000,
+      image: "/generic-drone.png",
+      badge: "",
+      createdAt: new Date("2024-02-28"),
+    },
+    {
+      id: 6,
+      name: "Surface Pro 9",
+      category: "LAPTOP",
+      pricePerDay: 18000,
+      image: "/microsoft-surface-tablet.jpg",
+      badge: "",
+      createdAt: new Date("2024-01-25"),
+    },
+    {
+      id: 7,
+      name: "후지필름 X-T5",
+      category: "CAMERA",
+      pricePerDay: 28000,
+      image: "/fujifilm-camera.jpg",
+      badge: "",
+      createdAt: new Date("2024-02-15"),
+    },
+    {
+      id: 8,
+      name: "삼성 갤럭시 탭 S9",
+      category: "TABLET",
+      pricePerDay: 12000,
+      image: "/samsung-tablet.png",
+      badge: "",
+      createdAt: new Date("2024-03-01"),
+    },
+    {
+      id: 9,
+      name: 'Dell XPS 15"',
+      category: "LAPTOP",
+      pricePerDay: 22000,
+      image: "/placeholder.svg?height=400&width=400",
+      badge: "",
+      createdAt: new Date("2024-01-30"),
+    },
+    {
+      id: 10,
+      name: "GoPro Hero 12",
+      category: "CAMERA",
+      pricePerDay: 15000,
+      image: "/placeholder.svg?height=400&width=400",
+      badge: "신규",
+      createdAt: new Date("2024-03-05"),
+    },
+    {
+      id: 11,
+      name: "Microsoft Surface Laptop",
+      category: "LAPTOP",
+      pricePerDay: 20000,
+      image: "/placeholder.svg?height=400&width=400",
+      badge: "",
+      createdAt: new Date("2024-02-10"),
+    },
+    {
+      id: 12,
+      name: "Nikon Z6 III",
+      category: "CAMERA",
+      pricePerDay: 38000,
+      image: "/placeholder.svg?height=400&width=400",
+      badge: "",
+      createdAt: new Date("2024-02-05"),
+    },
+  ])
 
   const filteredProducts = useMemo(() => {
     let filtered = products
@@ -289,11 +354,7 @@ export default function ProductsPage() {
             </div>
           </div>
 
-          {loading ? (
-            <div className="text-center py-12">
-              <p className="text-muted-foreground">상품을 불러오는 중...</p>
-            </div>
-          ) : filteredProducts.length === 0 ? (
+          {filteredProducts.length === 0 ? (
             <div className="text-center py-12">
               <p className="text-muted-foreground">검색 결과가 없습니다.</p>
             </div>
