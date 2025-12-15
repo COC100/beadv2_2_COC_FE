@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { ArrowLeft, Wallet } from "lucide-react"
 import { Header } from "@/components/header"
@@ -24,6 +25,7 @@ export default function DepositPage() {
   const [loading, setLoading] = useState(false)
   const [tossPayments, setTossPayments] = useState<any>(null)
   const { toast } = useToast()
+  const router = useRouter()
 
   const presetAmounts = [50000, 100000, 200000, 500000]
 
@@ -99,39 +101,27 @@ export default function DepositPage() {
 
     try {
       const order = await accountAPI.requestDeposit(Number.parseInt(amount))
-      console.log("[v0] Payment order created:", order)
 
-      const config = await accountAPI.getDepositConfig()
-      console.log("[v0] Toss config:", config)
+      const baseUrl = typeof window !== "undefined" ? window.location.origin : ""
+      const successUrl = `${baseUrl}/deposit/success`
+      const failUrl = `${baseUrl}/deposit/fail`
 
-      if (!config.successUrl || !config.failUrl) {
-        throw new Error("결제 URL이 설정되지 않았습니다.")
-      }
-
-      console.log("[v0] Requesting Toss payment with:", {
-        amount: order.amount,
-        orderId: order.orderId,
-        successUrl: config.successUrl,
-        failUrl: config.failUrl,
-      })
-
-      // Request Toss payment
       await tossPayments.requestPayment("간편결제", {
         amount: order.amount,
         orderId: order.orderId,
         orderName: "예치금 충전",
-        successUrl: config.successUrl,
-        failUrl: config.failUrl,
+        successUrl: successUrl,
+        failUrl: failUrl,
       })
 
-      console.log("[v0] Payment request completed (this shouldn't appear if redirect works)")
+      router.push(`/deposit/success?orderId=${order.orderId}&amount=${order.amount}`)
     } catch (error: any) {
       console.error("[v0] Payment request failed:", error)
-      toast({
-        title: "결제 요청 실패",
-        description: error.message || "결제 요청 중 오류가 발생했습니다.",
-        variant: "destructive",
-      })
+
+      const errorMessage = error.message || "결제 요청 중 오류가 발생했습니다."
+      const errorCode = error.code || "UNKNOWN_ERROR"
+
+      router.push(`/deposit/fail?message=${encodeURIComponent(errorMessage)}&code=${errorCode}`)
       setLoading(false)
     }
   }
