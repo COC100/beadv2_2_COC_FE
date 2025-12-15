@@ -98,10 +98,22 @@ export default function DepositPage() {
     setLoading(true)
 
     try {
-      // Request payment to backend
       const order = await accountAPI.requestDeposit(Number.parseInt(amount))
+      console.log("[v0] Payment order created:", order)
 
       const config = await accountAPI.getDepositConfig()
+      console.log("[v0] Toss config:", config)
+
+      if (!config.successUrl || !config.failUrl) {
+        throw new Error("결제 URL이 설정되지 않았습니다.")
+      }
+
+      console.log("[v0] Requesting Toss payment with:", {
+        amount: order.amount,
+        orderId: order.orderId,
+        successUrl: config.successUrl,
+        failUrl: config.failUrl,
+      })
 
       // Request Toss payment
       await tossPayments.requestPayment("간편결제", {
@@ -111,6 +123,8 @@ export default function DepositPage() {
         successUrl: config.successUrl,
         failUrl: config.failUrl,
       })
+
+      console.log("[v0] Payment request completed (this shouldn't appear if redirect works)")
     } catch (error: any) {
       console.error("[v0] Payment request failed:", error)
       toast({

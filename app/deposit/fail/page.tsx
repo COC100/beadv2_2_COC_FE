@@ -18,6 +18,13 @@ export default function DepositFailPage() {
     const message = searchParams.get("message")
     const orderId = searchParams.get("orderId")
 
+    console.log("[v0] Fail page - URL params:", {
+      code,
+      message,
+      orderId,
+      fullURL: typeof window !== "undefined" ? window.location.href : "N/A",
+    })
+
     setFailureInfo({
       code,
       message,

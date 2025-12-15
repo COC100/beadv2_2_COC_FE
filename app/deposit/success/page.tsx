@@ -27,17 +27,26 @@ export default function DepositSuccessPage() {
       const orderId = searchParams.get("orderId")
       const amount = searchParams.get("amount")
 
+      console.log("[v0] Success page - URL params:", {
+        paymentKey,
+        orderId,
+        amount,
+        fullURL: typeof window !== "undefined" ? window.location.href : "N/A",
+      })
+
       if (!paymentKey || !orderId || !amount) {
         throw new Error("결제 정보가 올바르지 않습니다.")
       }
 
-      console.log("[v0] Confirming payment:", { paymentKey, orderId, amount })
+      console.log("[v0] Confirming payment with backend...")
 
       const result = await accountAPI.approveDeposit({
         paymentKey,
         orderId,
         amount: Number(amount),
       })
+
+      console.log("[v0] Payment approved successfully:", result)
 
       setDepositInfo(result)
       setStatus("success")
