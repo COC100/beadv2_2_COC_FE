@@ -62,9 +62,15 @@ export default function HomePage() {
 
   const categories = [
     { name: "노트북", icon: Laptop, href: "/products?category=LAPTOP" },
+    { name: "데스크탑", icon: Package, href: "/products?category=DESKTOP" },
     { name: "카메라", icon: Camera, href: "/products?category=CAMERA" },
     { name: "태블릿", icon: Tablet, href: "/products?category=TABLET" },
+    { name: "모바일", icon: Shield, href: "/products?category=MOBILE" },
+    { name: "모니터", icon: Package, href: "/products?category=MONITOR" },
+    { name: "액세서리", icon: Package, href: "/products?category=ACCESSORY" },
+    { name: "드론", icon: Package, href: "/products?category=DRONE" },
     { name: "오디오", icon: Headphones, href: "/products?category=AUDIO" },
+    { name: "프로젝터", icon: Package, href: "/products?category=PROJECTOR" },
   ]
 
   if (loading) {
@@ -128,7 +134,7 @@ export default function HomePage() {
 
       <section className="py-8 border-b">
         <div className="container mx-auto px-4">
-          <div className="flex justify-center gap-8 md:gap-16">
+          <div className="grid grid-cols-5 md:grid-cols-10 gap-4 md:gap-6">
             {categories.map((category) => {
               const Icon = category.icon
               return (
@@ -137,10 +143,10 @@ export default function HomePage() {
                   href={category.href}
                   className="flex flex-col items-center gap-2 group hover:text-primary transition-colors"
                 >
-                  <div className="w-14 h-14 rounded-full bg-blue-50 flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-colors">
-                    <Icon className="h-6 w-6" />
+                  <div className="w-12 h-12 md:w-14 md:h-14 rounded-full bg-blue-50 flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-colors">
+                    <Icon className="h-5 w-5 md:h-6 md:w-6" />
                   </div>
-                  <span className="text-sm font-medium">{category.name}</span>
+                  <span className="text-xs md:text-sm font-medium text-center">{category.name}</span>
                 </Link>
               )
             })}

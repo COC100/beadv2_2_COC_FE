@@ -52,10 +52,19 @@ export default function ProductsPage() {
   const observerRef = useRef<IntersectionObserver | null>(null)
   const loadMoreRef = useRef<HTMLDivElement>(null)
 
+  const [tempSearchQuery, setTempSearchQuery] = useState("")
+  const [tempSelectedCategory, setTempSelectedCategory] = useState("ALL")
+  const [tempSortBy, setTempSortBy] = useState("LATEST")
+  const [tempMinPrice, setTempMinPrice] = useState("")
+  const [tempMaxPrice, setTempMaxPrice] = useState("")
+  const [tempStartDate, setTempStartDate] = useState<Date>()
+  const [tempEndDate, setTempEndDate] = useState<Date>()
+
   useEffect(() => {
     const categoryParam = searchParams.get("category")
     if (categoryParam && CATEGORIES.some((c) => c.value === categoryParam)) {
       setSelectedCategory(categoryParam)
+      setTempSelectedCategory(categoryParam)
     }
   }, [searchParams])
 
@@ -113,10 +122,6 @@ export default function ProductsPage() {
   )
 
   useEffect(() => {
-    fetchProducts()
-  }, [searchQuery, selectedCategory, sortBy, minPrice, maxPrice, startDate, endDate])
-
-  useEffect(() => {
     if (observerRef.current) observerRef.current.disconnect()
 
     observerRef.current = new IntersectionObserver(
@@ -137,7 +142,28 @@ export default function ProductsPage() {
     }
   }, [hasNext, loading, nextCursor, fetchProducts])
 
+  const handleSearch = () => {
+    setSearchQuery(tempSearchQuery)
+    setSelectedCategory(tempSelectedCategory)
+    setSortBy(tempSortBy)
+    setMinPrice(tempMinPrice)
+    setMaxPrice(tempMaxPrice)
+    setStartDate(tempStartDate)
+    setEndDate(tempEndDate)
+    setProducts([])
+    setNextCursor(null)
+    setHasNext(true)
+  }
+
   const handleResetFilters = () => {
+    setTempSearchQuery("")
+    setTempSelectedCategory("ALL")
+    setTempSortBy("LATEST")
+    setTempMinPrice("")
+    setTempMaxPrice("")
+    setTempStartDate(undefined)
+    setTempEndDate(undefined)
+
     setSearchQuery("")
     setSelectedCategory("ALL")
     setSortBy("LATEST")
@@ -170,10 +196,15 @@ export default function ProductsPage() {
                 <Input
                   placeholder="상품명을 검색하세요"
                   className="pl-10 bg-white"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                  value={tempSearchQuery}
+                  onChange={(e) => setTempSearchQuery(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleSearch()}
                 />
               </div>
+              <Button onClick={handleSearch} className="gap-2">
+                <Search className="h-4 w-4" />
+                검색
+              </Button>
               <Button variant="outline" className="gap-2 bg-transparent" onClick={() => setShowFilters(!showFilters)}>
                 <SlidersHorizontal className="h-4 w-4" />
                 필터
@@ -183,19 +214,16 @@ export default function ProductsPage() {
             {/* Filter Panel */}
             {showFilters && (
               <div className="bg-white rounded-lg border p-4 space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                  {/* Sort */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   <div className="space-y-2">
                     <Label>정렬</Label>
-                    <Select value={sortBy} onValueChange={setSortBy}>
+                    <Select value={tempSortBy} onValueChange={setTempSortBy}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="LATEST">최신순</SelectItem>
                         <SelectItem value="OLDEST">오래된순</SelectItem>
-                        <SelectItem value="PRICE-HIGH">가격 높은순</SelectItem>
-                        <SelectItem value="PRICE-LOW">가격 낮은순</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -203,7 +231,7 @@ export default function ProductsPage() {
                   {/* Category */}
                   <div className="space-y-2">
                     <Label>카테고리</Label>
-                    <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                    <Select value={tempSelectedCategory} onValueChange={setTempSelectedCategory}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
@@ -216,26 +244,6 @@ export default function ProductsPage() {
                       </SelectContent>
                     </Select>
                   </div>
-
-                  {/* Price Range */}
-                  <div className="space-y-2">
-                    <Label>최소 가격</Label>
-                    <Input
-                      type="number"
-                      placeholder="최소 금액"
-                      value={minPrice}
-                      onChange={(e) => setMinPrice(e.target.value)}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>최대 가격</Label>
-                    <Input
-                      type="number"
-                      placeholder="최대 금액"
-                      value={maxPrice}
-                      onChange={(e) => setMaxPrice(e.target.value)}
-                    />
-                  </div>
                 </div>
 
                 {/* Rental Date Range */}
@@ -246,11 +254,11 @@ export default function ProductsPage() {
                       <PopoverTrigger asChild>
                         <Button variant="outline" className="w-full justify-start text-left font-normal bg-transparent">
                           <CalendarIcon className="mr-2 h-4 w-4" />
-                          {startDate ? format(startDate, "PPP", { locale: ko }) : "날짜 선택"}
+                          {tempStartDate ? format(tempStartDate, "PPP", { locale: ko }) : "날짜 선택"}
                         </Button>
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-0">
-                        <Calendar mode="single" selected={startDate} onSelect={setStartDate} initialFocus />
+                        <Calendar mode="single" selected={tempStartDate} onSelect={setTempStartDate} initialFocus />
                       </PopoverContent>
                     </Popover>
                   </div>
@@ -260,16 +268,16 @@ export default function ProductsPage() {
                       <PopoverTrigger asChild>
                         <Button variant="outline" className="w-full justify-start text-left font-normal bg-transparent">
                           <CalendarIcon className="mr-2 h-4 w-4" />
-                          {endDate ? format(endDate, "PPP", { locale: ko }) : "날짜 선택"}
+                          {tempEndDate ? format(tempEndDate, "PPP", { locale: ko }) : "날짜 선택"}
                         </Button>
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-0">
                         <Calendar
                           mode="single"
-                          selected={endDate}
-                          onSelect={setEndDate}
+                          selected={tempEndDate}
+                          onSelect={setTempEndDate}
                           initialFocus
-                          disabled={(date) => (startDate ? date < startDate : false)}
+                          disabled={(date) => (tempStartDate ? date < tempStartDate : false)}
                         />
                       </PopoverContent>
                     </Popover>
@@ -280,6 +288,7 @@ export default function ProductsPage() {
                   <Button variant="outline" onClick={handleResetFilters}>
                     초기화
                   </Button>
+                  <Button onClick={handleSearch}>검색</Button>
                 </div>
               </div>
             )}
