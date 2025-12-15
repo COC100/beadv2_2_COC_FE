@@ -17,32 +17,40 @@ export default function HomePage() {
   const { toast } = useToast()
   const [products, setProducts] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
 
   useEffect(() => {
     const checkAuth = () => {
       if (typeof window !== "undefined") {
         const token = localStorage.getItem("accessToken")
-        if (!token) {
-          router.push("/intro")
-          return false
-        }
+        setIsAuthenticated(!!token)
+        return !!token
       }
-      return true
+      return false
     }
 
     const fetchProducts = async () => {
       try {
         setLoading(true)
+        const authenticated = checkAuth()
+
+        // Try to fetch products
         const response = await productAPI.list({ size: 8, sortType: "LATEST" })
         setProducts(response.products || [])
       } catch (error: any) {
         console.error("[v0] Failed to fetch products:", error)
-        toast({
-          title: "상품 로딩 실패",
-          description: error.message || "상품 목록을 불러올 수 없습니다. 백엔드 설정을 확인해주세요.",
-          variant: "destructive",
-        })
-        if (!checkAuth()) return
+
+        if (error.message?.includes("인증")) {
+          console.log("[v0] Product list requires authentication, showing empty state")
+          setProducts([])
+        } else {
+          // Only show toast for non-auth errors
+          toast({
+            title: "상품 로딩 실패",
+            description: "상품 목록을 불러올 수 없습니다.",
+            variant: "destructive",
+          })
+        }
       } finally {
         setLoading(false)
       }
@@ -90,11 +98,19 @@ export default function HomePage() {
                 원하는 기간만큼 이용하세요
               </p>
               <div className="flex gap-3">
-                <Link href="/products">
-                  <Button size="lg" className="rounded-lg">
-                    상품 둘러보기
-                  </Button>
-                </Link>
+                {isAuthenticated ? (
+                  <Link href="/products">
+                    <Button size="lg" className="rounded-lg">
+                      상품 둘러보기
+                    </Button>
+                  </Link>
+                ) : (
+                  <Link href="/intro">
+                    <Button size="lg" className="rounded-lg">
+                      시작하기
+                    </Button>
+                  </Link>
+                )}
                 <Link href="/become-seller">
                   <Button size="lg" variant="outline" className="rounded-lg bg-transparent">
                     판매자 되기
@@ -112,18 +128,21 @@ export default function HomePage() {
       <section className="py-8 border-b">
         <div className="container mx-auto px-4">
           <div className="flex justify-center gap-8 md:gap-16">
-            {categories.map((category) => (
-              <Link
-                key={category.name}
-                href={category.href}
-                className="flex flex-col items-center gap-2 group hover:text-primary transition-colors"
-              >
-                <div className="w-14 h-14 rounded-full bg-blue-50 flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-colors">
-                  <category.icon className="h-6 w-6" />
-                </div>
-                <span className="text-sm font-medium">{category.name}</span>
-              </Link>
-            ))}
+            {categories.map((category) => {
+              const Icon = category.icon
+              return (
+                <Link
+                  key={category.name}
+                  href={category.href}
+                  className="flex flex-col items-center gap-2 group hover:text-primary transition-colors"
+                >
+                  <div className="w-14 h-14 rounded-full bg-blue-50 flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-colors">
+                    <Icon className="h-6 w-6" />
+                  </div>
+                  <span className="text-sm font-medium">{category.name}</span>
+                </Link>
+              )
+            })}
           </div>
         </div>
       </section>
@@ -138,30 +157,42 @@ export default function HomePage() {
             </Link>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
-            {products.map((product) => (
-              <Link key={product.productId} href={`/products/${product.productId}`}>
-                <Card className="overflow-hidden hover:shadow-lg transition-shadow group border-gray-200">
-                  <div className="aspect-square overflow-hidden bg-gray-50 relative">
-                    <img
-                      src={product.thumbnailUrl || "/placeholder.svg"}
-                      alt={product.name}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                    />
-                  </div>
-                  <CardContent className="p-3">
-                    <h3 className="font-medium text-sm mb-2 line-clamp-2 leading-tight">{product.name}</h3>
-                    <div className="flex items-center gap-2">
-                      <Badge variant="secondary" className="bg-accent text-white hover:bg-accent text-xs font-bold">
-                        ₩{product.pricePerDay?.toLocaleString()}
-                      </Badge>
-                      <span className="text-xs text-muted-foreground">/일</span>
+          {products.length === 0 ? (
+            <div className="text-center py-12">
+              <Package className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <p className="text-muted-foreground mb-4">상품을 불러올 수 없습니다</p>
+              {!isAuthenticated && (
+                <Link href="/intro">
+                  <Button>로그인하여 상품 보기</Button>
+                </Link>
+              )}
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
+              {products.map((product) => (
+                <Link key={product.productId} href={`/products/${product.productId}`}>
+                  <Card className="overflow-hidden hover:shadow-lg transition-shadow group border-gray-200">
+                    <div className="aspect-square overflow-hidden bg-gray-50 relative">
+                      <img
+                        src={product.thumbnailUrl || "/placeholder.svg"}
+                        alt={product.name}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      />
                     </div>
-                  </CardContent>
-                </Card>
-              </Link>
-            ))}
-          </div>
+                    <CardContent className="p-3">
+                      <h3 className="font-medium text-sm mb-2 line-clamp-2 leading-tight">{product.name}</h3>
+                      <div className="flex items-center gap-2">
+                        <Badge variant="secondary" className="bg-accent text-white hover:bg-accent text-xs font-bold">
+                          ₩{product.pricePerDay?.toLocaleString()}
+                        </Badge>
+                        <span className="text-xs text-muted-foreground">/일</span>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </Link>
+              ))}
+            </div>
+          )}
         </div>
       </section>
 

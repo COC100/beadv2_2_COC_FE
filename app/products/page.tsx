@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback, useRef } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
@@ -35,6 +35,7 @@ const CATEGORIES = [
 
 export default function ProductsPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { toast } = useToast()
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedCategory, setSelectedCategory] = useState("ALL")
@@ -50,6 +51,13 @@ export default function ProductsPage() {
   const [hasNext, setHasNext] = useState(true)
   const observerRef = useRef<IntersectionObserver | null>(null)
   const loadMoreRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const categoryParam = searchParams.get("category")
+    if (categoryParam && CATEGORIES.some((c) => c.value === categoryParam)) {
+      setSelectedCategory(categoryParam)
+    }
+  }, [searchParams])
 
   const fetchProducts = useCallback(
     async (cursor?: string) => {

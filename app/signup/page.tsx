@@ -13,6 +13,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { memberAPI } from "@/lib/api"
 import { useToast } from "@/hooks/use-toast"
 import { handlePhoneInput } from "@/lib/utils"
+import { Check, X } from "lucide-react"
 
 export default function SignupPage() {
   const router = useRouter()
@@ -27,22 +28,47 @@ export default function SignupPage() {
   const [agreed, setAgreed] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
 
+  const passwordValidation = {
+    hasSpecial: /[!@#$%^&*(),.?":{}|<>]/.test(formData.password),
+    hasNumber: /\d/.test(formData.password),
+    hasLetter: /[a-zA-Z]/.test(formData.password),
+    hasLength: formData.password.length >= 8,
+  }
+
+  const allPasswordValid =
+    passwordValidation.hasSpecial &&
+    passwordValidation.hasNumber &&
+    passwordValidation.hasLetter &&
+    passwordValidation.hasLength
+
+  const passwordsMatch = formData.password && formData.confirmPassword && formData.password === formData.confirmPassword
+
+  const isFormValid =
+    formData.email &&
+    formData.name &&
+    formData.phone &&
+    formData.password &&
+    formData.confirmPassword &&
+    allPasswordValid &&
+    passwordsMatch &&
+    agreed
+
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (formData.password !== formData.confirmPassword) {
+    if (!allPasswordValid) {
       toast({
-        title: "비밀번호 불일치",
-        description: "비밀번호가 일치하지 않습니다.",
+        title: "비밀번호 오류",
+        description: "비밀번호는 특수문자, 숫자, 영문을 포함하고 8자 이상이어야 합니다.",
         variant: "destructive",
       })
       return
     }
 
-    if (!agreed) {
+    if (formData.password !== formData.confirmPassword) {
       toast({
-        title: "약관 동의 필요",
-        description: "이용약관 및 개인정보처리방침에 동의해주세요.",
+        title: "비밀번호 불일치",
+        description: "비밀번호가 일치하지 않습니다.",
         variant: "destructive",
       })
       return
@@ -167,6 +193,20 @@ export default function SignupPage() {
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                   required
                 />
+                {formData.password && !allPasswordValid && (
+                  <div className="text-sm space-y-1 text-destructive">
+                    {!passwordValidation.hasSpecial && <p>• 특수문자 필요</p>}
+                    {!passwordValidation.hasNumber && <p>• 숫자 필요</p>}
+                    {!passwordValidation.hasLetter && <p>• 영문 필요</p>}
+                    {!passwordValidation.hasLength && <p>• 8자 이상 필요</p>}
+                  </div>
+                )}
+                {formData.password && allPasswordValid && (
+                  <p className="text-sm text-blue-600 flex items-center gap-1">
+                    <Check className="h-4 w-4" />
+                    비밀번호 등록 가능
+                  </p>
+                )}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="confirmPassword">
@@ -179,6 +219,18 @@ export default function SignupPage() {
                   onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
                   required
                 />
+                {formData.confirmPassword && !passwordsMatch && (
+                  <p className="text-sm text-destructive flex items-center gap-1">
+                    <X className="h-4 w-4" />
+                    동일하지 않은 비밀번호
+                  </p>
+                )}
+                {formData.confirmPassword && passwordsMatch && (
+                  <p className="text-sm text-blue-600 flex items-center gap-1">
+                    <Check className="h-4 w-4" />
+                    동일한 비밀번호
+                  </p>
+                )}
               </div>
               <div className="flex items-center space-x-2">
                 <Checkbox id="terms" checked={agreed} onCheckedChange={(checked) => setAgreed(checked as boolean)} />
@@ -196,7 +248,7 @@ export default function SignupPage() {
                   에 동의합니다
                 </label>
               </div>
-              <Button type="submit" className="w-full" size="lg" disabled={!agreed || isLoading}>
+              <Button type="submit" className="w-full" size="lg" disabled={!isFormValid || isLoading}>
                 {isLoading ? "회원가입 중..." : "회원가입"}
               </Button>
             </form>
