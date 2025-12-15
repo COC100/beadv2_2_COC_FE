@@ -9,16 +9,56 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+import { memberAPI } from "@/lib/api"
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("")
   const [submitted, setSubmitted] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
+  const [errorDialog, setErrorDialog] = useState<{ open: boolean; title: string; message: string }>({
+    open: false,
+    title: "",
+    message: "",
+  })
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    // TODO: API call to member-service:8085/api/auth/reset-password
-    console.log("[v0] Password reset request:", email)
-    setSubmitted(true)
+
+    if (!email) {
+      setErrorDialog({
+        open: true,
+        title: "입력 오류",
+        message: "이메일 주소를 입력해주세요.",
+      })
+      return
+    }
+
+    setIsLoading(true)
+
+    try {
+      console.log("[v0] Requesting password reset for:", email)
+      await memberAPI.requestPasswordReset(email)
+      console.log("[v0] Password reset email sent successfully")
+      setSubmitted(true)
+    } catch (error: any) {
+      console.error("[v0] Password reset request failed:", error)
+      setErrorDialog({
+        open: true,
+        title: "요청 실패",
+        message: error.message || "비밀번호 재설정 요청에 실패했습니다. 이메일 주소를 확인해주세요.",
+      })
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -69,8 +109,8 @@ export default function ForgotPasswordPage() {
                     className="rounded-xl"
                   />
                 </div>
-                <Button type="submit" className="w-full h-12 rounded-xl">
-                  재설정 링크 보내기
+                <Button type="submit" className="w-full h-12 rounded-xl" disabled={isLoading}>
+                  {isLoading ? "요청 중..." : "재설정 링크 보내기"}
                 </Button>
               </form>
             )}
@@ -87,6 +127,18 @@ export default function ForgotPasswordPage() {
           </Link>
         </div>
       </div>
+
+      <AlertDialog open={errorDialog.open} onOpenChange={(open) => setErrorDialog({ ...errorDialog, open })}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{errorDialog.title}</AlertDialogTitle>
+            <AlertDialogDescription>{errorDialog.message}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction>확인</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

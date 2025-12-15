@@ -173,6 +173,26 @@ export const memberAPI = {
       true,
     ),
 
+  requestPasswordReset: (email: string) =>
+    fetchAPI(
+      "/member-service/api/auth/password/reset/send",
+      {
+        method: "POST",
+        body: JSON.stringify({ email }),
+      },
+      false,
+    ),
+
+  confirmPasswordReset: (data: { email: string; code: string; newPassword: string }) =>
+    fetchAPI(
+      "/member-service/api/auth/password/reset/confirm",
+      {
+        method: "POST",
+        body: JSON.stringify(data),
+      },
+      false,
+    ),
+
   // Address APIs
   getAddresses: () => fetchAPI<{ addressList: any[] }>("/member-service/api/addresses/profile", {}, true),
 
