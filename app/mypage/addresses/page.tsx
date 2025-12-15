@@ -33,6 +33,7 @@ import {
 import { ArrowLeft, MapPin, Plus, Edit2, Trash2 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { memberAPI } from "@/lib/api"
+import { handlePhoneInput } from "@/lib/utils"
 
 interface Address {
   id: number
@@ -289,6 +290,18 @@ export default function AddressesPage() {
     }
   }
 
+  const handlePostcodeSearch = () => {
+    ;new (window as any).daum.Postcode({
+      oncomplete: (data: any) => {
+        setFormData({
+          ...formData,
+          zipCode: data.zonecode,
+          address: data.roadAddress,
+        })
+      },
+    }).open()
+  }
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background">
@@ -361,7 +374,7 @@ export default function AddressesPage() {
                       type="tel"
                       placeholder="010-0000-0000"
                       value={formData.phone}
-                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                      onChange={(e) => setFormData({ ...formData, phone: handlePhoneInput(e.target.value) })}
                       className="rounded-xl"
                       required
                     />
@@ -376,8 +389,14 @@ export default function AddressesPage() {
                         onChange={(e) => setFormData({ ...formData, zipCode: e.target.value })}
                         className="rounded-xl"
                         required
+                        readOnly
                       />
-                      <Button type="button" variant="outline" className="rounded-xl bg-transparent">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="rounded-xl bg-transparent"
+                        onClick={handlePostcodeSearch}
+                      >
                         우편번호 찾기
                       </Button>
                     </div>

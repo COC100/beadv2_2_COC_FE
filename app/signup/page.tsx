@@ -12,6 +12,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Checkbox } from "@/components/ui/checkbox"
 import { memberAPI } from "@/lib/api"
 import { useToast } from "@/hooks/use-toast"
+import { handlePhoneInput } from "@/lib/utils"
 
 export default function SignupPage() {
   const router = useRouter()
@@ -117,7 +118,7 @@ export default function SignupPage() {
                   type="tel"
                   placeholder="010-1234-5678"
                   value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  onChange={(e) => setFormData({ ...formData, phone: handlePhoneInput(e.target.value) })}
                   required
                 />
               </div>

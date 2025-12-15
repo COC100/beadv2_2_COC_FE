@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useToast } from "@/hooks/use-toast"
 import { sellerAPI } from "@/lib/api"
+import { handlePhoneInput } from "@/lib/utils"
 
 export default function SellerSettingsPage() {
   const router = useRouter()
@@ -153,7 +154,7 @@ export default function SellerSettingsPage() {
                 <Input
                   id="storePhone"
                   value={storePhone}
-                  onChange={(e) => setStorePhone(e.target.value)}
+                  onChange={(e) => setStorePhone(handlePhoneInput(e.target.value))}
                   placeholder="02-1234-5678"
                   className="rounded-lg"
                 />

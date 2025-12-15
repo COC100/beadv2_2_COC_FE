@@ -24,6 +24,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { useToast } from "@/hooks/use-toast"
 import { memberAPI, rentalAPI, cartAPI } from "@/lib/api"
+import { handlePhoneInput } from "@/lib/utils"
 
 export default function ReservationPage() {
   const router = useRouter()
@@ -148,6 +149,18 @@ export default function ReservationPage() {
 
   const totalAmount = cartItems.reduce((sum, item) => sum + (item.price || 0), 0)
 
+  const handlePostcodeSearch = () => {
+    ;new (window as any).daum.Postcode({
+      oncomplete: (data: any) => {
+        setFormData({
+          ...formData,
+          zipCode: data.zonecode,
+          address: data.roadAddress,
+        })
+      },
+    }).open()
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-white">
@@ -226,21 +239,32 @@ export default function ReservationPage() {
                             type="tel"
                             placeholder="010-0000-0000"
                             value={formData.phone}
-                            onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                            onChange={(e) => setFormData({ ...formData, phone: handlePhoneInput(e) })}
                             className="rounded-xl"
                             required
                           />
                         </div>
                         <div className="space-y-2">
                           <Label htmlFor="zipCode">우편번호</Label>
-                          <Input
-                            id="zipCode"
-                            placeholder="12345"
-                            value={formData.zipCode}
-                            onChange={(e) => setFormData({ ...formData, zipCode: e.target.value })}
-                            className="rounded-xl"
-                            required
-                          />
+                          <div className="flex gap-2">
+                            <Input
+                              id="zipCode"
+                              placeholder="12345"
+                              value={formData.zipCode}
+                              onChange={(e) => setFormData({ ...formData, zipCode: e.target.value })}
+                              className="rounded-xl"
+                              required
+                              readOnly
+                            />
+                            <Button
+                              type="button"
+                              variant="outline"
+                              className="rounded-xl bg-transparent"
+                              onClick={handlePostcodeSearch}
+                            >
+                              우편번호 찾기
+                            </Button>
+                          </div>
                         </div>
                         <div className="space-y-2">
                           <Label htmlFor="address">주소</Label>

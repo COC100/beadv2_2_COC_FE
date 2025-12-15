@@ -15,6 +15,7 @@ import { ArrowLeft, User, Lock } from "lucide-react"
 import Link from "next/link"
 import { useToast } from "@/hooks/use-toast"
 import { memberAPI } from "@/lib/api"
+import { handlePhoneInput } from "@/lib/utils"
 
 export default function SettingsPage() {
   const router = useRouter()
@@ -241,7 +242,7 @@ export default function SettingsPage() {
                       id="phone"
                       type="tel"
                       value={profile.phone}
-                      onChange={(e) => setProfile({ ...profile, phone: e.target.value })}
+                      onChange={(e) => setProfile({ ...profile, phone: handlePhoneInput(e.target.value) })}
                       className="rounded-xl"
                       required
                     />
