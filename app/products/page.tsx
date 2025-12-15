@@ -66,7 +66,8 @@ export default function ProductsPage() {
       setSelectedCategory(categoryParam)
       setTempSelectedCategory(categoryParam)
     }
-  }, [searchParams])
+    fetchProducts()
+  }, [])
 
   const fetchProducts = useCallback(
     async (cursor?: string) => {
@@ -118,7 +119,7 @@ export default function ProductsPage() {
         setLoading(false)
       }
     },
-    [searchQuery, selectedCategory, sortBy, minPrice, maxPrice, startDate, endDate, router, toast, loading],
+    [searchQuery, selectedCategory, sortBy, minPrice, maxPrice, startDate, endDate, router, toast],
   )
 
   useEffect(() => {
@@ -153,6 +154,10 @@ export default function ProductsPage() {
     setProducts([])
     setNextCursor(null)
     setHasNext(true)
+
+    setTimeout(() => {
+      fetchProducts()
+    }, 0)
   }
 
   const handleResetFilters = () => {
@@ -171,6 +176,10 @@ export default function ProductsPage() {
     setMaxPrice("")
     setStartDate(undefined)
     setEndDate(undefined)
+
+    setTimeout(() => {
+      fetchProducts()
+    }, 0)
   }
 
   return (
@@ -246,7 +255,6 @@ export default function ProductsPage() {
                   </div>
                 </div>
 
-                {/* Rental Date Range */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>대여 시작일</Label>
