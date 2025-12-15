@@ -47,6 +47,8 @@ export default function CartPage() {
 
       try {
         const response = await cartAPI.list()
+        console.log("[v0] Cart response:", response)
+
         const items = response.items || []
         setCartItems(
           items.map((item: any) => ({
@@ -54,16 +56,26 @@ export default function CartPage() {
             cartItemId: item.cartItemId,
             productId: item.productId,
             productName: item.productName || `상품 #${item.productId}`,
-            productImage: item.productImage || "",
-            pricePerDay: item.pricePerDay || 0,
+            productImage: item.productImage || "/abstract-geometric-shapes.png",
+            pricePerDay: item.price || 0,
             startDate: item.startDate,
             endDate: item.endDate,
             quantity: 1,
           })),
         )
+
+        toast({
+          title: "장바구니 조회 완료",
+          description: `${items.length}개의 상품이 있습니다`,
+        })
       } catch (error: any) {
         console.error("[v0] Failed to load cart:", error)
-        if (error.message.includes("401")) {
+        toast({
+          title: "장바구니 조회 실패",
+          description: error.message || "장바구니를 불러올 수 없습니다",
+          variant: "destructive",
+        })
+        if (error.message.includes("401") || error.message.includes("인증")) {
           router.push("/intro")
         }
       } finally {
@@ -72,7 +84,7 @@ export default function CartPage() {
     }
 
     loadCart()
-  }, [router])
+  }, [router, toast])
 
   const calculateDays = (start: string, end: string) => {
     const startDate = new Date(start)
