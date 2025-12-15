@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
-import { ArrowLeft, ShoppingCart, Calendar, Edit, Eye, EyeOff, Trash2 } from "lucide-react"
+import { ArrowLeft, ShoppingCart, Calendar, Edit, Eye, EyeOff, Trash2, AlertCircle } from "lucide-react"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { Button } from "@/components/ui/button"
@@ -33,6 +33,11 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
   const [productId, setProductId] = useState<number | null>(null)
   const [showCartDialog, setShowCartDialog] = useState(false)
+  const [errorDialog, setErrorDialog] = useState<{ open: boolean; title: string; message: string }>({
+    open: false,
+    title: "",
+    message: "",
+  })
 
   useEffect(() => {
     const resolveParams = async () => {
@@ -148,22 +153,31 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
       startDate,
       endDate,
     }
-    console.log("[v0] Cart add request:", requestData)
 
     try {
       await cartAPI.addItem(requestData)
       setShowCartDialog(true)
     } catch (error: any) {
       console.error("[v0] Failed to add to cart:", error)
-      const errorMessage =
-        error.message?.includes("Service Unavailable") || error.message?.includes("503")
-          ? "대여 서비스가 일시적으로 사용할 수 없습니다. 잠시 후 다시 시도해주세요."
-          : error.message || "장바구니에 추가할 수 없습니다"
 
-      toast({
-        title: "장바구니 추가 실패",
-        description: errorMessage,
-        variant: "destructive",
+      let errorTitle = "장바구니 추가 실패"
+      let errorMessage = error.message || "장바구니에 추가할 수 없습니다"
+
+      if (errorMessage.includes("Service Unavailable") || errorMessage.includes("503")) {
+        errorTitle = "서비스 일시 중단"
+        errorMessage = "대여 서비스가 일시적으로 사용할 수 없습니다. 잠시 후 다시 시도해주세요."
+      } else if (errorMessage.includes("겹치") || errorMessage.includes("예약 불가") || errorMessage.includes("기간")) {
+        errorTitle = "날짜 중복"
+        errorMessage = "선택하신 기간에 이미 예약이 있어 장바구니에 추가할 수 없습니다. 다른 날짜를 선택해주세요."
+      } else if (errorMessage.includes("재고") || errorMessage.includes("수량")) {
+        errorTitle = "재고 부족"
+        errorMessage = "현재 재고가 부족하여 장바구니에 추가할 수 없습니다."
+      }
+
+      setErrorDialog({
+        open: true,
+        title: errorTitle,
+        message: errorMessage,
       })
     }
   }
@@ -444,6 +458,21 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
               계속 쇼핑하기
             </Button>
             <Button onClick={() => router.push("/cart")}>장바구니로 이동</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={errorDialog.open} onOpenChange={(open) => setErrorDialog({ ...errorDialog, open })}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertCircle className="h-5 w-5 text-destructive" />
+              {errorDialog.title}
+            </DialogTitle>
+            <DialogDescription className="text-base pt-2">{errorDialog.message}</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button onClick={() => setErrorDialog({ ...errorDialog, open: false })}>확인</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

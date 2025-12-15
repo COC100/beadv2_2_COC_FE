@@ -10,7 +10,15 @@ import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { useToast } from "@/hooks/use-toast"
 import { productAPI, memberAPI, rentalAPI } from "@/lib/api"
-import { MapPin, Calendar, CreditCard } from "lucide-react"
+import { MapPin, Calendar, CreditCard, AlertCircle } from "lucide-react"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 
 export default function RentalApplicationPage() {
   const router = useRouter()
@@ -22,6 +30,11 @@ export default function RentalApplicationPage() {
   const [selectedAddressId, setSelectedAddressId] = useState<string>("")
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
+  const [errorDialog, setErrorDialog] = useState<{ open: boolean; title: string; message: string }>({
+    open: false,
+    title: "",
+    message: "",
+  })
 
   const productId = searchParams.get("productId")
   const startDate = searchParams.get("startDate")
@@ -107,21 +120,32 @@ export default function RentalApplicationPage() {
 
       router.push("/mypage/rentals")
     } catch (error: any) {
+      let errorTitle = "렌탈 신청 실패"
       let errorMessage = error.message || "렌탈 신청에 실패했습니다"
 
-      // Parse common error scenarios
-      if (errorMessage.includes("예약 불가")) {
-        errorMessage = "해당 기간에는 상품을 렌탈할 수 없습니다. 다른 날짜를 선택해주세요."
-      } else if (errorMessage.includes("재고")) {
-        errorMessage = "재고가 부족합니다. 다른 상품을 선택해주세요."
-      } else if (errorMessage.includes("예치금")) {
-        errorMessage = "예치금이 부족합니다. 예치금을 충전해주세요."
+      // Parse specific error scenarios
+      if (errorMessage.includes("겹치") || errorMessage.includes("예약 불가") || errorMessage.includes("기간")) {
+        errorTitle = "날짜 중복"
+        errorMessage = "선택하신 기간에 이미 예약이 있어 렌탈이 불가능합니다. 다른 날짜를 선택해주세요."
+      } else if (errorMessage.includes("재고") || errorMessage.includes("수량")) {
+        errorTitle = "재고 부족"
+        errorMessage = "현재 재고가 부족하여 렌탈이 불가능합니다. 다른 상품을 선택해주세요."
+      } else if (errorMessage.includes("예치금") || errorMessage.includes("잔액")) {
+        errorTitle = "예치금 부족"
+        errorMessage = "예치금이 부족합니다. 예치금을 충전한 후 다시 시도해주세요."
+      } else if (errorMessage.includes("상품") && errorMessage.includes("없")) {
+        errorTitle = "상품 없음"
+        errorMessage = "해당 상품을 찾을 수 없습니다. 상품이 삭제되었거나 판매가 중단되었을 수 있습니다."
+      } else if (errorMessage.includes("권한") || errorMessage.includes("허용")) {
+        errorTitle = "권한 없음"
+        errorMessage = "렌탈 신청 권한이 없습니다. 로그인 상태를 확인해주세요."
       }
 
-      toast({
-        title: "렌탈 신청 실패",
-        description: errorMessage,
-        variant: "destructive",
+      // Show error dialog
+      setErrorDialog({
+        open: true,
+        title: errorTitle,
+        message: errorMessage,
       })
     } finally {
       setSubmitting(false)
@@ -241,6 +265,21 @@ export default function RentalApplicationPage() {
           </div>
         </div>
       </div>
+
+      <Dialog open={errorDialog.open} onOpenChange={(open) => setErrorDialog({ ...errorDialog, open })}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertCircle className="h-5 w-5 text-destructive" />
+              {errorDialog.title}
+            </DialogTitle>
+            <DialogDescription className="text-base pt-2">{errorDialog.message}</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button onClick={() => setErrorDialog({ ...errorDialog, open: false })}>확인</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Footer />
     </div>
