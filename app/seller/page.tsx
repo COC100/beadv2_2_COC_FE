@@ -1,6 +1,6 @@
 "use client"
 import Link from "next/link"
-import { Plus, Package, Clock, DollarSign, Edit, Check, X } from "lucide-react"
+import { Plus, Package, Clock, DollarSign, Edit, Check, X, ChevronLeft, ChevronRight } from "lucide-react"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { Button } from "@/components/ui/button"
@@ -29,8 +29,34 @@ export default function SellerPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [sellerInfo, setSellerInfo] = useState<any>(null)
   const [products, setProducts] = useState<any[]>([])
+  const [currentPage, setCurrentPage] = useState(0)
+  const [totalProducts, setTotalProducts] = useState(0)
+  const [totalPages, setTotalPages] = useState(0)
+  const [isLastPage, setIsLastPage] = useState(false)
   const [reservations, setReservations] = useState<any[]>([])
   const [statusChanging, setStatusChanging] = useState<{ [key: number]: boolean }>({})
+
+  const handleAcceptRental = async (reservationId: number) => {
+    try {
+      await sellerAPI.acceptRental(reservationId)
+      toast({
+        title: "예약 승인 완료",
+        description: "예약이 승인되었습니다",
+      })
+      const rentals = await sellerAPI.getRentals({
+        status: "REQUESTED",
+        startDate: new Date().toISOString().split("T")[0],
+        endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
+      })
+      setReservations(rentals || [])
+    } catch (error: any) {
+      toast({
+        title: "예약 승인 실패",
+        description: error.message || "예약 승인에 실패했습니다",
+        variant: "destructive",
+      })
+    }
+  }
 
   useEffect(() => {
     const loadSellerData = async () => {
@@ -44,21 +70,22 @@ export default function SellerPage() {
         const seller = await sellerAPI.getSelf()
         setSellerInfo(seller)
 
-        // Load products (non-critical)
         try {
-          const productsResponse = await productAPI.list({
-            size: 100,
+          const productsResponse = await productAPI.getSellerProducts({
+            page: currentPage,
+            size: 20,
+            sort: "createdAt,desc",
           })
-          const myProducts = (productsResponse.products || []).filter(
-            (p: any) => p.sellerId === seller.sellerId && (p.status === "ACTIVE" || p.status === "INACTIVE"),
-          )
-          setProducts(myProducts)
+          setProducts(productsResponse.content || [])
+          setTotalProducts(productsResponse.totalElements || 0)
+          setTotalPages(productsResponse.totalPages || 0)
+          setIsLastPage(productsResponse.last || false)
         } catch (productError) {
           console.error("[v0] Failed to load products (non-critical):", productError)
           setProducts([])
+          setTotalProducts(0)
         }
 
-        // Load rentals (non-critical)
         try {
           const rentals = await sellerAPI.getRentals({
             status: "REQUESTED",
@@ -71,17 +98,14 @@ export default function SellerPage() {
           setReservations([])
         }
 
-        // Successfully loaded seller data, set loading to false
         setIsLoading(false)
       } catch (error: any) {
         console.error("[v0] Failed to load seller data:", error)
-        // Only redirect if it's a critical error (seller not found or unauthorized)
         if (error.message.includes("404") || error.message.includes("Not Found")) {
           router.push("/become-seller")
         } else if (error.message.includes("401") || error.message.includes("Unauthorized")) {
           router.push("/intro")
         } else {
-          // For other errors, still show the page but with empty data
           setIsLoading(false)
           setProducts([])
           setReservations([])
@@ -90,27 +114,17 @@ export default function SellerPage() {
     }
 
     loadSellerData()
-  }, [router])
+  }, [router, currentPage])
 
-  const handleAcceptRental = async (rentalItemId: number) => {
-    try {
-      await sellerAPI.getRentals()
-      toast({
-        title: "예약 승인 완료",
-        description: "예약이 승인되었습니다",
-      })
-      const rentals = await sellerAPI.getRentals({
-        status: "REQUESTED",
-        startDate: new Date().toISOString().split("T")[0],
-        endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
-      })
-      setReservations(rentals || [])
-    } catch (error: any) {
-      toast({
-        title: "승인 실패",
-        description: error.message || "예약 승인에 실패했습니다",
-        variant: "destructive",
-      })
+  const handlePreviousPage = () => {
+    if (currentPage > 0) {
+      setCurrentPage(currentPage - 1)
+    }
+  }
+
+  const handleNextPage = () => {
+    if (!isLastPage) {
+      setCurrentPage(currentPage + 1)
     }
   }
 
@@ -131,14 +145,13 @@ export default function SellerPage() {
         })
       }
 
-      // Reload products
-      const productsResponse = await productAPI.list({
-        size: 100,
+      const productsResponse = await productAPI.getSellerProducts({
+        page: currentPage,
+        size: 20,
+        sort: "createdAt,desc",
       })
-      const myProducts = (productsResponse.products || []).filter(
-        (p: any) => p.sellerId === sellerInfo.sellerId && (p.status === "ACTIVE" || p.status === "INACTIVE"),
-      )
-      setProducts(myProducts)
+      setProducts(productsResponse.content || [])
+      setTotalProducts(productsResponse.totalElements || 0)
     } catch (error: any) {
       toast({
         title: "상태 변경 실패",
@@ -203,7 +216,7 @@ export default function SellerPage() {
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">판매 상품</p>
-                  <p className="text-2xl font-bold">{products.length}개</p>
+                  <p className="text-2xl font-bold">{totalProducts}개</p>
                 </div>
               </div>
             </CardContent>
@@ -259,63 +272,93 @@ export default function SellerPage() {
                 </CardContent>
               </Card>
             ) : (
-              products.map((product) => (
-                <Card key={product.productId}>
-                  <CardContent className="p-5">
-                    <div className="flex gap-4">
-                      <div className="w-24 h-24 bg-gray-50 rounded-lg overflow-hidden flex-shrink-0">
-                        <img
-                          src={product.thumbnailUrl || "/placeholder.svg"}
-                          alt={product.name}
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex items-start justify-between mb-2">
-                          <div>
-                            <h3 className="font-semibold mb-1">{product.name}</h3>
-                            <p className="text-sm text-muted-foreground mb-2">{product.category}</p>
-                            <div className="flex items-center gap-2">
-                              <Badge className="bg-accent text-white hover:bg-accent">
-                                ₩{product.pricePerDay?.toLocaleString()}/일
-                              </Badge>
-                              <Badge variant={product.status === "ACTIVE" ? "default" : "secondary"}>
-                                {product.status === "ACTIVE" ? "예약 가능" : "예약 불가"}
-                              </Badge>
+              <>
+                {products.map((product) => (
+                  <Card key={product.productId}>
+                    <CardContent className="p-5">
+                      <div className="flex gap-4">
+                        <div className="w-24 h-24 bg-gray-50 rounded-lg overflow-hidden flex-shrink-0">
+                          <img
+                            src={product.thumbnailUrl || "/placeholder.svg"}
+                            alt={product.name}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-start justify-between mb-2">
+                            <div>
+                              <h3 className="font-semibold mb-1">{product.name}</h3>
+                              <p className="text-sm text-muted-foreground mb-2">{product.category}</p>
+                              <div className="flex items-center gap-2">
+                                <Badge className="bg-accent text-white hover:bg-accent">
+                                  ₩{product.pricePerDay?.toLocaleString()}/일
+                                </Badge>
+                                <Badge variant={product.status === "ACTIVE" ? "default" : "secondary"}>
+                                  {product.status === "ACTIVE" ? "예약 가능" : "예약 불가"}
+                                </Badge>
+                              </div>
                             </div>
-                          </div>
-                          <div className="flex gap-2">
-                            <Button
-                              variant={product.status === "ACTIVE" ? "outline" : "default"}
-                              size="sm"
-                              className="rounded-lg"
-                              onClick={() => handleToggleStatus(product.productId, product.status)}
-                              disabled={statusChanging[product.productId]}
-                            >
-                              {statusChanging[product.productId]
-                                ? "변경 중..."
-                                : product.status === "ACTIVE"
-                                  ? "예약 불가로 변경"
-                                  : "예약 가능으로 변경"}
-                            </Button>
-                            <Link href={`/seller/product/${product.productId}/edit`}>
-                              <Button variant="outline" size="sm" className="rounded-lg bg-transparent">
-                                <Edit className="h-4 w-4 mr-1" />
-                                수정
+                            <div className="flex gap-2">
+                              <Button
+                                variant={product.status === "ACTIVE" ? "outline" : "default"}
+                                size="sm"
+                                className="rounded-lg"
+                                onClick={() => handleToggleStatus(product.productId, product.status)}
+                                disabled={statusChanging[product.productId]}
+                              >
+                                {statusChanging[product.productId]
+                                  ? "변경 중..."
+                                  : product.status === "ACTIVE"
+                                    ? "예약 불가로 변경"
+                                    : "예약 가능으로 변경"}
                               </Button>
-                            </Link>
-                            <Link href={`/products/${product.productId}`}>
-                              <Button variant="outline" size="sm" className="rounded-lg bg-transparent">
-                                보기
-                              </Button>
-                            </Link>
+                              <Link href={`/seller/product/${product.productId}/edit`}>
+                                <Button variant="outline" size="sm" className="rounded-lg bg-transparent">
+                                  <Edit className="h-4 w-4 mr-1" />
+                                  수정
+                                </Button>
+                              </Link>
+                              <Link href={`/products/${product.productId}`}>
+                                <Button variant="outline" size="sm" className="rounded-lg bg-transparent">
+                                  보기
+                                </Button>
+                              </Link>
+                            </div>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))
+                    </CardContent>
+                  </Card>
+                ))}
+
+                {totalPages > 1 && (
+                  <div className="flex items-center justify-center gap-2 pt-4">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handlePreviousPage}
+                      disabled={currentPage === 0}
+                      className="rounded-lg bg-transparent"
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                      이전
+                    </Button>
+                    <span className="text-sm text-muted-foreground">
+                      {currentPage + 1} / {totalPages}
+                    </span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleNextPage}
+                      disabled={isLastPage}
+                      className="rounded-lg bg-transparent"
+                    >
+                      다음
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
+              </>
             )}
           </TabsContent>
 

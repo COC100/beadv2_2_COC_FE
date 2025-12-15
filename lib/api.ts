@@ -373,6 +373,25 @@ export const productAPI = {
         throw error
       })
   },
+
+  getSellerProducts: (params?: { page?: number; size?: number; sort?: string }) => {
+    const queryParams = new URLSearchParams()
+    if (params) {
+      if (params.page !== undefined) queryParams.append("page", params.page.toString())
+      if (params.size !== undefined) queryParams.append("size", params.size.toString())
+      if (params.sort) queryParams.append("sort", params.sort)
+    }
+    const endpoint = `/product-service/api/products/seller${queryParams.toString() ? `?${queryParams.toString()}` : ""}`
+    return fetchAPI<{
+      content: any[]
+      totalElements: number
+      totalPages: number
+      number: number
+      size: number
+      first: boolean
+      last: boolean
+    }>(endpoint, {}, true)
+  },
 }
 
 // Rental Service APIs
