@@ -88,10 +88,12 @@ export default function ProductsPage() {
 
         const response = await productAPI.list(params)
 
+        const activeProducts = (response.products || []).filter((product: any) => product.status === "ACTIVE")
+
         if (cursor) {
-          setProducts((prev) => [...prev, ...(response.products || [])])
+          setProducts((prev) => [...prev, ...activeProducts])
         } else {
-          setProducts(response.products || [])
+          setProducts(activeProducts)
         }
 
         setNextCursor(response.nextCursor)
