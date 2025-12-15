@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
-import { rentalAPI } from "@/lib/api"
+import { rentalAPI, productAPI } from "@/lib/api"
 
 interface RentalDetail {
   id: number
@@ -23,7 +23,8 @@ interface RentalDetail {
   pricePerDay: number
   totalDays: number
   totalAmount: number
-  status: "PENDING" | "APPROVED" | "RENTING" | "RETURNED" | "REJECTED"
+  status: "PENDING" | "APPROVED" | "RENTING" | "RETURNED" | "REJECTED" | "REQUESTED" | "ACCEPTED" | "PAID"
+  createdAt: string
 }
 
 interface Order {
@@ -32,6 +33,7 @@ interface Order {
   totalAmount: number
   status: string
   details: RentalDetail[]
+  rentalId: number
 }
 
 export default function RentalsPage() {
@@ -52,16 +54,35 @@ export default function RentalsPage() {
 
         const rentals = await rentalAPI.list()
 
+        const productIds = Array.from(
+          new Set(rentals.flatMap((rental: any) => rental.items.map((item: any) => item.productId))),
+        )
+        const productDetailsMap = new Map()
+
+        await Promise.all(
+          productIds.map(async (productId: number) => {
+            try {
+              const product = await productAPI.getDetail(productId)
+              productDetailsMap.set(productId, product)
+            } catch (error) {
+              console.error(`[v0] Failed to fetch product ${productId}:`, error)
+            }
+          }),
+        )
+
         const orderMap = new Map<number, Order>()
 
         for (const rental of rentals) {
+          const orderDate = rental.paidAt || rental.items[0]?.startDate || ""
+
           if (!orderMap.has(rental.rentalId)) {
             orderMap.set(rental.rentalId, {
               orderId: `ORD-${rental.rentalId}`,
-              orderDate: rental.items[0]?.startDate || "",
+              orderDate: orderDate.split("T")[0],
               totalAmount: 0,
               status: rental.items[0]?.status || "PENDING",
               details: [],
+              rentalId: rental.rentalId,
             })
           }
 
@@ -73,17 +94,20 @@ export default function RentalsPage() {
             )
             const totalAmount = item.unitPrice * days
 
+            const product = productDetailsMap.get(item.productId)
+
             order.details.push({
               id: item.rentalItemId,
               productId: item.productId,
-              productName: `Product ${item.productId}`,
-              productImage: "/placeholder.svg",
+              productName: product?.name || `상품 ${item.productId}`,
+              productImage: product?.images?.[0]?.url || "/abstract-geometric-shapes.png",
               startDate: item.startDate,
               endDate: item.endDate,
               pricePerDay: item.unitPrice,
               totalDays: days,
               totalAmount,
               status: item.status,
+              createdAt: orderDate,
             })
 
             order.totalAmount += totalAmount
@@ -123,6 +147,9 @@ export default function RentalsPage() {
       RENTING: { text: "렌탈 중", color: "bg-green-100 text-green-800" },
       RETURNED: { text: "반납 완료", color: "bg-gray-100 text-gray-800" },
       REJECTED: { text: "거절됨", color: "bg-red-100 text-red-800" },
+      REQUESTED: { text: "신청됨", color: "bg-purple-100 text-purple-800" },
+      ACCEPTED: { text: "승인됨", color: "bg-teal-100 text-teal-800" },
+      PAID: { text: "결제 완료", color: "bg-green-100 text-green-800" },
     }
     return statusMap[status] || { text: status, color: "" }
   }
@@ -158,6 +185,42 @@ export default function RentalsPage() {
     } catch (error: any) {
       toast({
         title: "반납 신청 실패",
+        description: error.message,
+        variant: "destructive",
+      })
+    }
+  }
+
+  const handlePayment = async (rentalId: number) => {
+    try {
+      await rentalAPI.pay(rentalId)
+      toast({
+        title: "결제 완료",
+        description: "렌탈 결제가 완료되었습니다",
+      })
+      window.location.reload()
+    } catch (error: any) {
+      toast({
+        title: "결제 실패",
+        description: error.message,
+        variant: "destructive",
+      })
+    }
+  }
+
+  const handleCancel = async (rentalItemId: number) => {
+    if (!confirm("정말 렌탈을 취소하시겠습니까?")) return
+
+    try {
+      await rentalAPI.cancel(rentalItemId)
+      toast({
+        title: "렌탈 취소 완료",
+        description: "렌탈이 취소되었습니다",
+      })
+      window.location.reload()
+    } catch (error: any) {
+      toast({
+        title: "취소 실패",
         description: error.message,
         variant: "destructive",
       })
@@ -281,6 +344,25 @@ export default function RentalsPage() {
                                 <p className="font-bold text-primary">₩{detail.totalAmount.toLocaleString()}</p>
                               </div>
                               <div className="flex gap-2 mt-3">
+                                {detail.status === "ACCEPTED" && (
+                                  <Button
+                                    size="sm"
+                                    className="rounded-lg"
+                                    onClick={() => handlePayment(order.rentalId)}
+                                  >
+                                    결제하기
+                                  </Button>
+                                )}
+                                {(detail.status === "REQUESTED" || detail.status === "ACCEPTED") && (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="rounded-lg bg-transparent"
+                                    onClick={() => handleCancel(detail.id)}
+                                  >
+                                    렌탈 취소하기
+                                  </Button>
+                                )}
                                 {detail.status === "RENTING" && (
                                   <>
                                     <Button

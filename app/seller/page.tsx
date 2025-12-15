@@ -92,6 +92,7 @@ export default function SellerPage() {
             startDate: new Date().toISOString().split("T")[0],
             endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
           })
+          console.log("[v0] Seller rentals loaded:", rentals)
           setReservations(rentals || [])
         } catch (rentalError) {
           console.error("[v0] Failed to load rentals (non-critical):", rentalError)
@@ -230,7 +231,7 @@ export default function SellerPage() {
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">대기 중인 예약</p>
-                  <p className="text-2xl font-bold">{reservations.filter((r) => r.status === "PENDING").length}건</p>
+                  <p className="text-2xl font-bold">{reservations.length}건</p>
                 </div>
               </div>
             </CardContent>

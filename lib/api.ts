@@ -628,4 +628,13 @@ export const sellerAPI = {
       },
       true,
     ),
+
+  acceptRental: (rentalItemId: number) =>
+    fetchAPI(
+      `/rental-service/api/rentals/${rentalItemId}/accept`,
+      {
+        method: "PATCH",
+      },
+      true,
+    ),
 }

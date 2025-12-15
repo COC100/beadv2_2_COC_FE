@@ -107,9 +107,20 @@ export default function RentalApplicationPage() {
 
       router.push("/mypage/rentals")
     } catch (error: any) {
+      let errorMessage = error.message || "렌탈 신청에 실패했습니다"
+
+      // Parse common error scenarios
+      if (errorMessage.includes("예약 불가")) {
+        errorMessage = "해당 기간에는 상품을 렌탈할 수 없습니다. 다른 날짜를 선택해주세요."
+      } else if (errorMessage.includes("재고")) {
+        errorMessage = "재고가 부족합니다. 다른 상품을 선택해주세요."
+      } else if (errorMessage.includes("예치금")) {
+        errorMessage = "예치금이 부족합니다. 예치금을 충전해주세요."
+      }
+
       toast({
         title: "렌탈 신청 실패",
-        description: error.message,
+        description: errorMessage,
         variant: "destructive",
       })
     } finally {

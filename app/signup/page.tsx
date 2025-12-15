@@ -149,7 +149,10 @@ export default function SignupPage() {
                   type="tel"
                   placeholder="010-1234-5678"
                   value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: handlePhoneInput(e.target.value) })}
+                  onChange={(e) => {
+                    const formatted = handlePhoneInput(e.target.value)
+                    setFormData({ ...formData, phone: formatted })
+                  }}
                   required
                 />
               </div>
