@@ -39,6 +39,15 @@ export default function SignupPage() {
       return
     }
 
+    if (!agreed) {
+      toast({
+        title: "약관 동의 필요",
+        description: "이용약관 및 개인정보처리방침에 동의해주세요.",
+        variant: "destructive",
+      })
+      return
+    }
+
     setIsLoading(true)
     try {
       await memberAPI.signup({
@@ -54,11 +63,33 @@ export default function SignupPage() {
       })
 
       router.push("/login")
-    } catch (error) {
+    } catch (error: any) {
       console.error("[v0] Signup failed:", error)
+      let errorMessage = "회원가입에 실패했습니다"
+
+      if (error.message) {
+        if (error.message.includes("이미") || error.message.includes("중복") || error.message.includes("duplicate")) {
+          errorMessage = "이미 사용 중인 이메일입니다"
+        } else if (
+          error.message.includes("형식") ||
+          error.message.includes("format") ||
+          error.message.includes("invalid")
+        ) {
+          errorMessage = "입력 형식이 올바르지 않습니다"
+        } else if (error.message.includes("비밀번호") || error.message.includes("password")) {
+          errorMessage = "비밀번호는 8자 이상이어야 합니다"
+        } else if (error.message.includes("500") || error.message.includes("서버")) {
+          errorMessage = "서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요"
+        } else if (error.message.includes("Network") || error.message.includes("Failed to fetch")) {
+          errorMessage = "네트워크 연결을 확인해주세요"
+        } else {
+          errorMessage = error.message
+        }
+      }
+
       toast({
         title: "회원가입 실패",
-        description: error instanceof Error ? error.message : "회원가입에 실패했습니다.",
+        description: errorMessage,
         variant: "destructive",
       })
     } finally {

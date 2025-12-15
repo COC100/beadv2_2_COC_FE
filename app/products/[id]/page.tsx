@@ -13,6 +13,14 @@ import { Label } from "@/components/ui/label"
 import { useRouter } from "next/navigation"
 import { useToast } from "@/hooks/use-toast"
 import { productAPI, cartAPI, sellerAPI } from "@/lib/api"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 
 export default function ProductDetailPage({ params }: { params: { id: string } }) {
   const router = useRouter()
@@ -24,6 +32,7 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
   const [isOwner, setIsOwner] = useState(false)
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
   const [productId, setProductId] = useState<number | null>(null)
+  const [showCartDialog, setShowCartDialog] = useState(false)
 
   useEffect(() => {
     const resolveParams = async () => {
@@ -143,10 +152,7 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
 
     try {
       await cartAPI.addItem(requestData)
-      toast({
-        title: "장바구니에 추가되었습니다",
-        description: "장바구니에서 확인하실 수 있습니다",
-      })
+      setShowCartDialog(true)
     } catch (error: any) {
       console.error("[v0] Failed to add to cart:", error)
       const errorMessage =
@@ -426,6 +432,21 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
           </Card>
         </div>
       </div>
+
+      <Dialog open={showCartDialog} onOpenChange={setShowCartDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>장바구니에 추가되었습니다</DialogTitle>
+            <DialogDescription>상품이 장바구니에 추가되었습니다. 장바구니로 이동하시겠습니까?</DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex gap-2">
+            <Button variant="outline" onClick={() => setShowCartDialog(false)}>
+              계속 쇼핑하기
+            </Button>
+            <Button onClick={() => router.push("/cart")}>장바구니로 이동</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Footer />
     </div>

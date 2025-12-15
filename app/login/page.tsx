@@ -38,9 +38,25 @@ export default function LoginPage() {
       router.push("/")
     } catch (error: any) {
       console.error("[v0] Login failed:", error)
+      let errorMessage = "이메일 또는 비밀번호를 확인해주세요"
+
+      if (error.message) {
+        if (error.message.includes("401") || error.message.includes("Unauthorized")) {
+          errorMessage = "이메일 또는 비밀번호가 일치하지 않습니다"
+        } else if (error.message.includes("404") || error.message.includes("Not Found")) {
+          errorMessage = "존재하지 않는 계정입니다"
+        } else if (error.message.includes("500") || error.message.includes("서버")) {
+          errorMessage = "서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요"
+        } else if (error.message.includes("Network") || error.message.includes("Failed to fetch")) {
+          errorMessage = "네트워크 연결을 확인해주세요"
+        } else {
+          errorMessage = error.message
+        }
+      }
+
       toast({
         title: "로그인 실패",
-        description: error.message || "이메일 또는 비밀번호를 확인해주세요",
+        description: errorMessage,
         variant: "destructive",
       })
     } finally {
