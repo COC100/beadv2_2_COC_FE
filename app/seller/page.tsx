@@ -1,6 +1,6 @@
 "use client"
 import Link from "next/link"
-import { Plus, Package, Clock, DollarSign, Edit, Check, X, ChevronLeft, ChevronRight } from "lucide-react"
+import { Plus, Package, Clock, DollarSign, Edit, Check, X, ChevronLeft, ChevronRight, Receipt } from "lucide-react"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { Button } from "@/components/ui/button"
@@ -197,12 +197,20 @@ export default function SellerPage() {
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between">
             <h1 className="text-3xl font-bold">판매자 페이지</h1>
-            <Link href="/seller/product/new">
-              <Button className="rounded-lg">
-                <Plus className="h-4 w-4 mr-2" />
-                상품 등록
-              </Button>
-            </Link>
+            <div className="flex gap-2">
+              <Link href="/seller/settlements">
+                <Button variant="outline" className="rounded-lg bg-transparent">
+                  <Receipt className="h-4 w-4 mr-2" />
+                  정산
+                </Button>
+              </Link>
+              <Link href="/seller/product/new">
+                <Button className="rounded-lg">
+                  <Plus className="h-4 w-4 mr-2" />
+                  상품 등록
+                </Button>
+              </Link>
+            </div>
           </div>
         </div>
       </section>
