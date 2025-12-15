@@ -48,7 +48,7 @@ export default function ForgotPasswordPage() {
       console.log("[v0] Requesting password reset for:", email)
       await memberAPI.requestPasswordReset(email)
       console.log("[v0] Password reset email sent successfully")
-      setSubmitted(true)
+      window.location.href = `/forgot-password/reset?email=${encodeURIComponent(email)}`
     } catch (error: any) {
       console.error("[v0] Password reset request failed:", error)
       setErrorDialog({
