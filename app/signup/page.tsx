@@ -14,6 +14,15 @@ import { memberAPI } from "@/lib/api"
 import { useToast } from "@/hooks/use-toast"
 import { handlePhoneInput } from "@/lib/utils"
 import { Check, X } from "lucide-react"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 
 export default function SignupPage() {
   const router = useRouter()
@@ -27,6 +36,11 @@ export default function SignupPage() {
   })
   const [agreed, setAgreed] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  const [errorDialog, setErrorDialog] = useState<{ open: boolean; title: string; message: string }>({
+    open: false,
+    title: "",
+    message: "",
+  })
 
   const passwordValidation = {
     hasSpecial: /[!@#$%^&*(),.?":{}|<>]/.test(formData.password),
@@ -57,19 +71,19 @@ export default function SignupPage() {
     e.preventDefault()
 
     if (!allPasswordValid) {
-      toast({
+      setErrorDialog({
+        open: true,
         title: "비밀번호 오류",
-        description: "비밀번호는 특수문자, 숫자, 영문을 포함하고 8자 이상이어야 합니다.",
-        variant: "destructive",
+        message: "비밀번호는 특수문자, 숫자, 영문을 포함하고 8자 이상이어야 합니다.",
       })
       return
     }
 
     if (formData.password !== formData.confirmPassword) {
-      toast({
+      setErrorDialog({
+        open: true,
         title: "비밀번호 불일치",
-        description: "비밀번호가 일치하지 않습니다.",
-        variant: "destructive",
+        message: "비밀번호가 일치하지 않습니다.",
       })
       return
     }
@@ -91,6 +105,7 @@ export default function SignupPage() {
       router.push("/login")
     } catch (error: any) {
       console.error("[v0] Signup failed:", error)
+      const errorTitle = "회원가입 실패"
       let errorMessage = "회원가입에 실패했습니다"
 
       if (error.message) {
@@ -113,10 +128,10 @@ export default function SignupPage() {
         }
       }
 
-      toast({
-        title: "회원가입 실패",
-        description: errorMessage,
-        variant: "destructive",
+      setErrorDialog({
+        open: true,
+        title: errorTitle,
+        message: errorMessage,
       })
     } finally {
       setIsLoading(false)
@@ -263,6 +278,18 @@ export default function SignupPage() {
           </CardFooter>
         </Card>
       </div>
+
+      <AlertDialog open={errorDialog.open} onOpenChange={(open) => setErrorDialog({ ...errorDialog, open })}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{errorDialog.title}</AlertDialogTitle>
+            <AlertDialogDescription>{errorDialog.message}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={() => setErrorDialog({ ...errorDialog, open: false })}>확인</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

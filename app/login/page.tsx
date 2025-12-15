@@ -10,11 +10,25 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { useToast } from "@/hooks/use-toast"
 import { memberAPI } from "@/lib/api"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 
 export default function LoginPage() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [isLoading, setIsLoading] = useState(false)
+  const [errorDialog, setErrorDialog] = useState<{ open: boolean; title: string; message: string }>({
+    open: false,
+    title: "",
+    message: "",
+  })
   const router = useRouter()
   const { toast } = useToast()
 
@@ -38,6 +52,7 @@ export default function LoginPage() {
       router.push("/")
     } catch (error: any) {
       console.error("[v0] Login failed:", error)
+      const errorTitle = "로그인 실패"
       let errorMessage = "이메일 또는 비밀번호를 확인해주세요"
 
       if (error.message) {
@@ -54,10 +69,10 @@ export default function LoginPage() {
         }
       }
 
-      toast({
-        title: "로그인 실패",
-        description: errorMessage,
-        variant: "destructive",
+      setErrorDialog({
+        open: true,
+        title: errorTitle,
+        message: errorMessage,
       })
     } finally {
       setIsLoading(false)
@@ -122,6 +137,18 @@ export default function LoginPage() {
           </CardFooter>
         </Card>
       </div>
+
+      <AlertDialog open={errorDialog.open} onOpenChange={(open) => setErrorDialog({ ...errorDialog, open })}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{errorDialog.title}</AlertDialogTitle>
+            <AlertDialogDescription>{errorDialog.message}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={() => setErrorDialog({ ...errorDialog, open: false })}>확인</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }
