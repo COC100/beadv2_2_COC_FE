@@ -36,7 +36,13 @@ export default function HomePage() {
 
         // Try to fetch products
         const response = await productAPI.list({ size: 8, sortType: "LATEST" })
-        const activeProducts = (response.products || []).filter((product: any) => product.status === "ACTIVE")
+        console.log("[v0] Products API response:", response)
+
+        // fetchAPI returns { data, headers }, so extract data.products
+        const productsData = response.data?.products || []
+        console.log("[v0] Products data:", productsData)
+
+        const activeProducts = productsData.filter((product: any) => product.status === "ACTIVE")
         setProducts(activeProducts)
       } catch (error: any) {
         console.error("[v0] Failed to fetch products:", error)
