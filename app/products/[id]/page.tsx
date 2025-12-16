@@ -182,8 +182,11 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
       endDate,
     }
 
+    console.log("[v0] Adding to cart with data:", JSON.stringify(requestData, null, 2))
+
     try {
-      await cartAPI.addItem(requestData)
+      const response = await cartAPI.addItem(requestData)
+      console.log("[v0] Cart add item response:", JSON.stringify(response, null, 2))
       setShowCartDialog(true)
     } catch (error: any) {
       console.error("[v0] Failed to add to cart:", error)

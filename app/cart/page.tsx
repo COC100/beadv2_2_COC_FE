@@ -50,10 +50,10 @@ export default function CartPage() {
       try {
         console.log("[v0] Loading cart...")
         const response = await cartAPI.list()
-        console.log("[v0] Cart API raw response:", response)
+        console.log("[v0] Cart API raw response:", JSON.stringify(response, null, 2))
 
         const cartData = response.data
-        console.log("[v0] Cart data extracted:", cartData)
+        console.log("[v0] Cart data extracted:", JSON.stringify(cartData, null, 2))
 
         if (!cartData) {
           console.log("[v0] No cart data received")
@@ -63,7 +63,7 @@ export default function CartPage() {
         }
 
         const items = cartData.items || []
-        console.log("[v0] Cart items:", items)
+        console.log("[v0] Cart items array:", JSON.stringify(items, null, 2))
 
         setCartItems(
           items.map((item: any) => ({

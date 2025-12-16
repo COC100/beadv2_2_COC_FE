@@ -605,17 +605,22 @@ export const rentalAPI = {
 
 // Cart APIs (Rental Service)
 export const cartAPI = {
-  list: () => fetchAPI<{ items: any[]; updatedAt: string }>("/rental-service/api/carts", {}, true),
+  list: () => {
+    console.log("[v0] Cart API: Fetching cart list")
+    return fetchAPI<{ items: any[]; updatedAt: string }>("/rental-service/api/carts", {}, true)
+  },
 
-  addItem: (data: { productId: number; startDate: string; endDate: string }) =>
-    fetchAPI(
+  addItem: (data: { productId: number; startDate: string; endDate: string }) => {
+    console.log("[v0] Cart API: Adding item with data:", JSON.stringify(data, null, 2))
+    return fetchAPI(
       "/rental-service/api/carts/items",
       {
         method: "POST",
         body: JSON.stringify(data),
       },
       true,
-    ),
+    )
+  },
 
   updateItem: (cartItemId: number, data: { startDate: string; endDate: string }) =>
     fetchAPI(
