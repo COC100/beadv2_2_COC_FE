@@ -98,7 +98,7 @@ export default function RentalsPage() {
         const orderMap = new Map<number, Order>()
 
         for (const rental of rentals) {
-          const createdAt = rental.paidAt || rental.items[0]?.startDate || ""
+          const createdAt = rental.createdAt || rental.items[0]?.startDate || ""
 
           if (!orderMap.has(rental.rentalId)) {
             orderMap.set(rental.rentalId, {
