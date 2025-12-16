@@ -33,7 +33,9 @@ export default function SellerSettingsPage() {
       }
 
       try {
-        const seller = await sellerAPI.getSelf()
+        const sellerResponse = await sellerAPI.getSelf()
+        const seller = sellerResponse.data
+        console.log("[v0] Seller data:", seller)
         setStoreName(seller.storeName || "")
         setBusinessNumber(seller.bizRegNo || "")
         setStorePhone(seller.storePhone || "")

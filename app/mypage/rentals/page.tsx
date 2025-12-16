@@ -76,7 +76,8 @@ export default function RentalsPage() {
           return
         }
 
-        const rentals = await rentalAPI.list()
+        const rentalsResponse = await rentalAPI.list()
+        const rentals = rentalsResponse.data
 
         const productIds = Array.from(
           new Set(rentals.flatMap((rental: any) => rental.items.map((item: any) => item.productId))),
@@ -86,8 +87,8 @@ export default function RentalsPage() {
         await Promise.all(
           productIds.map(async (productId: number) => {
             try {
-              const product = await productAPI.getDetail(productId)
-              productDetailsMap.set(productId, product)
+              const productResponse = await productAPI.getDetail(productId)
+              productDetailsMap.set(productId, productResponse.data)
             } catch (error) {
               console.error(`[v0] Failed to fetch product ${productId}:`, error)
             }

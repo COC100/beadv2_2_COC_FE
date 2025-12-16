@@ -90,13 +90,13 @@ export default function SellerPage() {
         }
 
         try {
-          const rentals = await sellerAPI.getRentals({
+          const rentalsResponse = await sellerAPI.getRentals({
             status: "REQUESTED",
             startDate: new Date().toISOString().split("T")[0],
             endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
           })
-          console.log("[v0] Seller rentals loaded:", rentals)
-          setReservations(rentals || [])
+          console.log("[v0] Seller rentals loaded:", rentalsResponse)
+          setReservations(rentalsResponse.data || [])
         } catch (rentalError) {
           console.error("[v0] Failed to load rentals (non-critical):", rentalError)
           setReservations([])

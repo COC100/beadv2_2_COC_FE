@@ -44,7 +44,9 @@ export default function SettingsPage() {
       }
 
       try {
-        const profileData = await memberAPI.getProfile()
+        const profileResponse = await memberAPI.getProfile()
+        const profileData = profileResponse.data
+        console.log("[v0] Profile data:", profileData)
         setProfile({
           name: profileData.name || "",
           phone: profileData.phone || "",
@@ -112,7 +114,8 @@ export default function SettingsPage() {
     }
 
     try {
-      const profileData = await memberAPI.getProfile()
+      const profileResponse = await memberAPI.getProfile()
+      const profileData = profileResponse.data
 
       await memberAPI.updatePassword(profileData.id, {
         name: profile.name,

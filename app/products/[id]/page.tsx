@@ -94,8 +94,9 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
       try {
         console.log("[v0 DEBUG] Loading product ID:", productId)
 
-        const productData = await productAPI.getDetail(productId)
-        console.log("[v0 DEBUG] Raw product data:", JSON.stringify(productData, null, 2))
+        const productResponse = await productAPI.getDetail(productId)
+        const productData = productResponse.data
+        console.log("[v0 DEBUG] Product data:", JSON.stringify(productData, null, 2))
 
         if (!productData) {
           throw new Error("상품 데이터를 불러올 수 없습니다")
@@ -105,7 +106,8 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
 
         // Check if user is seller/owner
         try {
-          const seller = await sellerAPI.getSelf()
+          const sellerResponse = await sellerAPI.getSelf()
+          const seller = sellerResponse.data
           console.log("[v0 DEBUG] Seller data:", JSON.stringify(seller, null, 2))
           const isProductOwner = seller?.sellerId === productData?.sellerId
           console.log(
@@ -243,8 +245,8 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
         title: "상태 변경 완료",
         description: `상품이 ${status === "ACTIVE" ? "활성화" : "비활성화"}되었습니다`,
       })
-      const updated = await productAPI.getDetail(productId)
-      setProduct(updated)
+      const updatedResponse = await productAPI.getDetail(productId)
+      setProduct(updatedResponse.data)
     } catch (error: any) {
       toast({
         title: "상태 변경 실패",
