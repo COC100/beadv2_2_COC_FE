@@ -11,11 +11,7 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Calendar } from "@/components/ui/calendar"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Search, SlidersHorizontal, CalendarIcon } from "lucide-react"
-import { format } from "date-fns"
-import { ko } from "date-fns/locale"
+import { Search, SlidersHorizontal } from "lucide-react"
 import { productAPI } from "@/lib/api"
 import { useToast } from "@/hooks/use-toast"
 
@@ -37,14 +33,11 @@ export default function ProductsPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { toast } = useToast()
+
   const [searchQuery, setSearchQuery] = useState("")
-  const [selectedCategory, setSelectedCategory] = useState("ALL")
   const [sortBy, setSortBy] = useState("LATEST")
-  const [minPrice, setMinPrice] = useState("")
-  const [maxPrice, setMaxPrice] = useState("")
-  const [startDate, setStartDate] = useState<Date>()
-  const [endDate, setEndDate] = useState<Date>()
   const [showFilters, setShowFilters] = useState(false)
+
   const [products, setProducts] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
   const [nextCursor, setNextCursor] = useState<string | null>(null)
@@ -52,74 +45,65 @@ export default function ProductsPage() {
   const observerRef = useRef<IntersectionObserver | null>(null)
   const loadMoreRef = useRef<HTMLDivElement>(null)
 
-  const [tempSearchQuery, setTempSearchQuery] = useState("")
-  const [tempSelectedCategory, setTempSelectedCategory] = useState("ALL")
-  const [tempSortBy, setTempSortBy] = useState("LATEST")
-  const [tempMinPrice, setTempMinPrice] = useState("")
-  const [tempMaxPrice, setTempMaxPrice] = useState("")
-  const [tempStartDate, setTempStartDate] = useState<Date>()
-  const [tempEndDate, setTempEndDate] = useState<Date>()
-
   useEffect(() => {
     const categoryParam = searchParams.get("category")
     if (categoryParam && CATEGORIES.some((c) => c.value === categoryParam)) {
-      setSelectedCategory(categoryParam)
-      setTempSelectedCategory(categoryParam)
+      fetchProductsWithParams("", "LATEST")
+    } else {
+      fetchProductsWithParams("", "LATEST")
     }
-    fetchProducts()
   }, [])
+
+  const fetchProductsWithParams = async (keyword: string, sort: string, cursor?: string) => {
+    if (typeof window !== "undefined") {
+      const token = localStorage.getItem("accessToken")
+      if (!token) {
+        router.push("/intro")
+        return
+      }
+    }
+
+    if (loading) return
+
+    try {
+      setLoading(true)
+      const params: any = {
+        sortType: sort,
+        size: 20,
+      }
+
+      if (cursor) params.cursor = cursor
+      if (keyword) params.keyword = keyword
+
+      const response = await productAPI.list(params)
+
+      const activeProducts = (response.products || []).filter((product: any) => product.status === "ACTIVE")
+
+      if (cursor) {
+        setProducts((prev) => [...prev, ...activeProducts])
+      } else {
+        setProducts(activeProducts)
+      }
+
+      setNextCursor(response.nextCursor)
+      setHasNext(response.hasNext)
+    } catch (error: any) {
+      console.error("[v0] Failed to fetch products:", error)
+      toast({
+        title: "상품 로딩 실패",
+        description: error.message || "상품 목록을 불러올 수 없습니다",
+        variant: "destructive",
+      })
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const fetchProducts = useCallback(
     async (cursor?: string) => {
-      if (typeof window !== "undefined") {
-        const token = localStorage.getItem("accessToken")
-        if (!token) {
-          router.push("/intro")
-          return
-        }
-      }
-
-      if (loading) return
-
-      try {
-        setLoading(true)
-        const params: any = {
-          sortType: sortBy,
-          size: 20,
-        }
-
-        if (cursor) params.cursor = cursor
-        if (searchQuery) params.keyword = searchQuery
-        if (selectedCategory !== "ALL") params.category = selectedCategory
-        if (minPrice) params.minPrice = Number(minPrice)
-        if (maxPrice) params.maxPrice = Number(maxPrice)
-        if (startDate) params.startDate = format(startDate, "yyyy-MM-dd")
-        if (endDate) params.endDate = format(endDate, "yyyy-MM-dd")
-
-        const response = await productAPI.list(params)
-
-        const activeProducts = (response.products || []).filter((product: any) => product.status === "ACTIVE")
-
-        if (cursor) {
-          setProducts((prev) => [...prev, ...activeProducts])
-        } else {
-          setProducts(activeProducts)
-        }
-
-        setNextCursor(response.nextCursor)
-        setHasNext(response.hasNext)
-      } catch (error: any) {
-        console.error("[v0] Failed to fetch products:", error)
-        toast({
-          title: "상품 로딩 실패",
-          description: error.message || "상품 목록을 불러올 수 없습니다",
-          variant: "destructive",
-        })
-      } finally {
-        setLoading(false)
-      }
+      await fetchProductsWithParams(searchQuery, sortBy, cursor)
     },
-    [searchQuery, selectedCategory, sortBy, minPrice, maxPrice, startDate, endDate, router, toast],
+    [searchQuery, sortBy],
   )
 
   useEffect(() => {
@@ -144,42 +128,19 @@ export default function ProductsPage() {
   }, [hasNext, loading, nextCursor, fetchProducts])
 
   const handleSearch = () => {
-    setSearchQuery(tempSearchQuery)
-    setSelectedCategory(tempSelectedCategory)
-    setSortBy(tempSortBy)
-    setMinPrice(tempMinPrice)
-    setMaxPrice(tempMaxPrice)
-    setStartDate(tempStartDate)
-    setEndDate(tempEndDate)
     setProducts([])
     setNextCursor(null)
     setHasNext(true)
-
-    setTimeout(() => {
-      fetchProducts()
-    }, 0)
+    fetchProductsWithParams(searchQuery, sortBy)
   }
 
   const handleResetFilters = () => {
-    setTempSearchQuery("")
-    setTempSelectedCategory("ALL")
-    setTempSortBy("LATEST")
-    setTempMinPrice("")
-    setTempMaxPrice("")
-    setTempStartDate(undefined)
-    setTempEndDate(undefined)
-
     setSearchQuery("")
-    setSelectedCategory("ALL")
     setSortBy("LATEST")
-    setMinPrice("")
-    setMaxPrice("")
-    setStartDate(undefined)
-    setEndDate(undefined)
-
-    setTimeout(() => {
-      fetchProducts()
-    }, 0)
+    setProducts([])
+    setNextCursor(null)
+    setHasNext(true)
+    fetchProductsWithParams("", "LATEST")
   }
 
   return (
@@ -205,8 +166,8 @@ export default function ProductsPage() {
                 <Input
                   placeholder="상품명을 검색하세요"
                   className="pl-10 bg-white"
-                  value={tempSearchQuery}
-                  onChange={(e) => setTempSearchQuery(e.target.value)}
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && handleSearch()}
                 />
               </div>
@@ -216,17 +177,17 @@ export default function ProductsPage() {
               </Button>
               <Button variant="outline" className="gap-2 bg-transparent" onClick={() => setShowFilters(!showFilters)}>
                 <SlidersHorizontal className="h-4 w-4" />
-                필터
+                정렬
               </Button>
             </div>
 
-            {/* Filter Panel */}
+            {/* Filter Panel - Only Sort */}
             {showFilters && (
               <div className="bg-white rounded-lg border p-4 space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>정렬</Label>
-                    <Select value={tempSortBy} onValueChange={setTempSortBy}>
+                    <Select value={sortBy} onValueChange={setSortBy}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
@@ -236,67 +197,13 @@ export default function ProductsPage() {
                       </SelectContent>
                     </Select>
                   </div>
-
-                  {/* Category */}
-                  <div className="space-y-2">
-                    <Label>카테고리</Label>
-                    <Select value={tempSelectedCategory} onValueChange={setTempSelectedCategory}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {CATEGORIES.map((cat) => (
-                          <SelectItem key={cat.value} value={cat.value}>
-                            {cat.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>대여 시작일</Label>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button variant="outline" className="w-full justify-start text-left font-normal bg-transparent">
-                          <CalendarIcon className="mr-2 h-4 w-4" />
-                          {tempStartDate ? format(tempStartDate, "PPP", { locale: ko }) : "날짜 선택"}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0">
-                        <Calendar mode="single" selected={tempStartDate} onSelect={setTempStartDate} initialFocus />
-                      </PopoverContent>
-                    </Popover>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>대여 종료일</Label>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button variant="outline" className="w-full justify-start text-left font-normal bg-transparent">
-                          <CalendarIcon className="mr-2 h-4 w-4" />
-                          {tempEndDate ? format(tempEndDate, "PPP", { locale: ko }) : "날짜 선택"}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0">
-                        <Calendar
-                          mode="single"
-                          selected={tempEndDate}
-                          onSelect={setTempEndDate}
-                          initialFocus
-                          disabled={(date) => (tempStartDate ? date < tempStartDate : false)}
-                        />
-                      </PopoverContent>
-                    </Popover>
-                  </div>
                 </div>
 
                 <div className="flex justify-end gap-2">
                   <Button variant="outline" onClick={handleResetFilters}>
                     초기화
                   </Button>
-                  <Button onClick={handleSearch}>검색</Button>
+                  <Button onClick={handleSearch}>적용</Button>
                 </div>
               </div>
             )}
@@ -311,10 +218,6 @@ export default function ProductsPage() {
               <p className="text-sm text-muted-foreground">
                 총 {products.length}개의 상품{hasNext && " (더 보기 가능)"}
               </p>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground">카테고리:</span>
-              <span className="font-medium">{CATEGORIES.find((c) => c.value === selectedCategory)?.label}</span>
             </div>
           </div>
 
