@@ -65,6 +65,14 @@ export default function RentalsPage() {
     }).format(date)
   }
 
+  const calculateTotal = (startDate: string, endDate: string, product: any) => {
+    if (!startDate || !endDate || !product) return 0
+    const start = new Date(startDate)
+    const end = new Date(endDate)
+    const days = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1
+    return days > 0 ? days * product.pricePerDay : 0
+  }
+
   useEffect(() => {
     const fetchRentals = async () => {
       try {
@@ -112,9 +120,10 @@ export default function RentalsPage() {
           const order = orderMap.get(rental.rentalId)!
 
           for (const item of rental.items) {
-            const days = Math.ceil(
-              (new Date(item.endDate).getTime() - new Date(item.startDate).getTime()) / (1000 * 60 * 60 * 24),
-            )
+            const days =
+              Math.ceil(
+                (new Date(item.endDate).getTime() - new Date(item.startDate).getTime()) / (1000 * 60 * 60 * 24),
+              ) + 1
             const totalAmount = item.unitPrice * days
 
             const product = productDetailsMap.get(item.productId)
@@ -215,6 +224,8 @@ export default function RentalsPage() {
   }
 
   const handlePayment = async (rentalId: number) => {
+    if (!confirm("결제를 진행하시겠습니까?")) return
+
     try {
       console.log("[v0] Payment request - rentalId:", rentalId)
       const response = await rentalAPI.pay(rentalId)
@@ -400,11 +411,6 @@ export default function RentalsPage() {
                                     onClick={() => handlePayment(order.rentalId)}
                                   >
                                     결제하기
-                                  </Button>
-                                )}
-                                {detail.status === "PAID" && (
-                                  <Button size="sm" className="rounded-lg" onClick={() => handleStartRental(detail.id)}>
-                                    렌탈 시작하기
                                   </Button>
                                 )}
                                 {(detail.status === "REQUESTED" || detail.status === "ACCEPTED") && (

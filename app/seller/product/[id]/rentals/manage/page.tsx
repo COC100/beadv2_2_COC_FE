@@ -417,7 +417,7 @@ function ManageProductRentalsContent({ productId }: { productId: string }) {
                       }}
                     >
                       <Check className="h-4 w-4 mr-1" />
-                      반납 처리
+                      대여 완료
                     </Button>
                   }
                 />

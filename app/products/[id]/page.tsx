@@ -147,14 +147,14 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
     if (!startDate || !endDate || !product) return 0
     const start = new Date(startDate)
     const end = new Date(endDate)
-    const days = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24))
+    const days = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1
     return days > 0 ? days * product.pricePerDay : 0
   }
 
   const totalPrice = calculateTotal()
   const rentalDays =
     startDate && endDate
-      ? Math.ceil((new Date(endDate).getTime() - new Date(startDate).getTime()) / (1000 * 60 * 60 * 24))
+      ? Math.ceil((new Date(endDate).getTime() - new Date(startDate).getTime()) / (1000 * 60 * 60 * 24)) + 1
       : 0
 
   const handleAddToCart = async () => {

@@ -114,16 +114,16 @@ export default function DepositSuccessPage() {
                 <div className="bg-muted p-6 rounded-xl space-y-3">
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">충전 금액</span>
-                    <span className="font-bold text-lg">₩{depositInfo.amount?.toLocaleString()}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">주문번호</span>
-                    <span className="text-sm">{depositInfo.orderId}</span>
+                    <span className="font-bold text-lg">
+                      ₩{(depositInfo.data?.amount || depositInfo.amount || 0).toLocaleString()}
+                    </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">승인일시</span>
                     <span className="text-sm">
-                      {depositInfo.approvedAt ? new Date(depositInfo.approvedAt).toLocaleString("ko-KR") : "승인 완료"}
+                      {depositInfo.data?.approvedAt || depositInfo.approvedAt
+                        ? new Date(depositInfo.data?.approvedAt || depositInfo.approvedAt).toLocaleString("ko-KR")
+                        : "승인 완료"}
                     </span>
                   </div>
                 </div>
