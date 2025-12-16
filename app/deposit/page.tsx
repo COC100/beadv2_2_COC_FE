@@ -51,10 +51,12 @@ export default function DepositPage() {
 
   const loadBalance = async () => {
     try {
-      const data = await accountAPI.getBalance()
-      setCurrentBalance(data?.balance ?? 0)
+      const response = await accountAPI.getBalance()
+      const balanceData = response?.data
+      console.log("[v0] Balance data:", balanceData)
+      setCurrentBalance(balanceData?.balance ?? 0)
     } catch (error: any) {
-      console.error("Failed to load balance:", error)
+      console.error("[v0] Failed to load balance:", error)
       setCurrentBalance(0)
       toast({
         title: "예치금 조회 실패",
@@ -80,7 +82,9 @@ export default function DepositPage() {
         return
       }
 
-      const config = await accountAPI.getDepositConfig()
+      const response = await accountAPI.getDepositConfig()
+      const config = response?.data
+      console.log("[v0] Deposit config:", config)
 
       if (!config || !config.clientKey) {
         throw new Error("결제 설정을 불러올 수 없습니다.")
@@ -89,7 +93,7 @@ export default function DepositPage() {
       const tossPaymentsInstance = window.TossPayments(config.clientKey)
       setTossPayments(tossPaymentsInstance)
     } catch (error: any) {
-      console.error("Toss Payments initialization failed:", error)
+      console.error("[v0] Toss Payments initialization failed:", error)
       toast({
         title: "결제 모듈 초기화 실패",
         description: error.message || "잠시 후 다시 시도해주세요.",
@@ -120,7 +124,13 @@ export default function DepositPage() {
     setLoading(true)
 
     try {
-      const order = await accountAPI.requestDeposit(Number.parseInt(amount))
+      const response = await accountAPI.requestDeposit(Number.parseInt(amount))
+      const order = response?.data
+      console.log("[v0] Deposit order:", order)
+
+      if (!order || !order.orderId || !order.amount) {
+        throw new Error("결제 정보가 올바르지 않습니다")
+      }
 
       const baseUrl = typeof window !== "undefined" ? window.location.origin : ""
       const successUrl = `${baseUrl}/deposit/success`
