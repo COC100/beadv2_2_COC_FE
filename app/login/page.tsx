@@ -41,19 +41,13 @@ export default function LoginPage() {
 
       console.log("[v0] Login response:", {
         hasAccessToken: !!response.accessToken,
-        hasRefreshToken: !!response.refreshToken,
-        member: response.member,
       })
 
       localStorage.setItem("accessToken", response.accessToken)
-      if (response.refreshToken) {
-        localStorage.setItem("refreshToken", response.refreshToken)
-      }
-      localStorage.setItem("user", JSON.stringify(response.member))
 
       toast({
         title: "로그인 성공",
-        description: `${response.member.name}님, 환영합니다!`,
+        description: "환영합니다!",
       })
 
       router.push("/")

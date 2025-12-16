@@ -153,14 +153,10 @@ export const memberAPI = {
       throw new Error(errorMessage)
     }
 
-    const responseData: ApiResponse<{ accessToken: string; member: any }> = await response.json()
-
-    const refreshToken = response.headers.get("refreshToken") || response.headers.get("refresh-token") || ""
+    const responseData: ApiResponse<string> = await response.json()
 
     return {
-      accessToken: responseData.data.accessToken,
-      refreshToken: refreshToken,
-      member: responseData.data.member,
+      accessToken: responseData.data, // data is now the accessToken string directly
     }
   },
 
