@@ -1,6 +1,6 @@
 "use client"
 import Link from "next/link"
-import { Plus, Package, Clock, DollarSign, Edit, Check, ChevronLeft, ChevronRight, Receipt } from "lucide-react"
+import { Plus, Package, DollarSign, Edit, ChevronLeft, ChevronRight, Receipt } from "lucide-react"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { Button } from "@/components/ui/button"
@@ -24,29 +24,6 @@ export default function SellerPage() {
   const [totalPages, setTotalPages] = useState(0)
   const [isLastPage, setIsLastPage] = useState(false)
   const [statusChanging, setStatusChanging] = useState<{ [key: number]: boolean }>({})
-  const [reservations, setReservations] = useState<any[]>([])
-
-  const handleAcceptRental = async (reservationId: number) => {
-    try {
-      await sellerAPI.acceptRental(reservationId)
-      toast({
-        title: "예약 승인 완료",
-        description: "예약이 승인되었습니다",
-      })
-      const rentals = await sellerAPI.getRentals({
-        status: "REQUESTED",
-        startDate: new Date().toISOString().split("T")[0],
-        endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
-      })
-      setReservations(rentals || [])
-    } catch (error: any) {
-      toast({
-        title: "예약 승인 실패",
-        description: error.message || "예약 승인에 실패했습니다",
-        variant: "destructive",
-      })
-    }
-  }
 
   useEffect(() => {
     const loadSellerData = async () => {
@@ -85,19 +62,6 @@ export default function SellerPage() {
           setTotalProducts(0)
         }
 
-        try {
-          const rentalsResponse = await sellerAPI.getRentals({
-            status: "REQUESTED",
-            startDate: new Date().toISOString().split("T")[0],
-            endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
-          })
-          console.log("[v0] Seller rentals loaded:", rentalsResponse)
-          setReservations(rentalsResponse.data || [])
-        } catch (rentalError) {
-          console.error("[v0] Failed to load rentals (non-critical):", rentalError)
-          setReservations([])
-        }
-
         setIsLoading(false)
       } catch (error: any) {
         console.error("[v0] Failed to load seller data:", error)
@@ -108,25 +72,12 @@ export default function SellerPage() {
         } else {
           setIsLoading(false)
           setProducts([])
-          setReservations([])
         }
       }
     }
 
     loadSellerData()
   }, [router, currentPage])
-
-  const handlePreviousPage = () => {
-    if (currentPage > 0) {
-      setCurrentPage(currentPage - 1)
-    }
-  }
-
-  const handleNextPage = () => {
-    if (!isLastPage) {
-      setCurrentPage(currentPage + 1)
-    }
-  }
 
   const handleToggleStatus = async (productId: number, currentStatus: string) => {
     setStatusChanging((prev) => ({ ...prev, [productId]: true }))
@@ -243,20 +194,6 @@ export default function SellerPage() {
           <Card>
             <CardContent className="p-6">
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center">
-                  <Clock className="h-6 w-6 text-yellow-600" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">대기 중인 예약</p>
-                  <p className="text-2xl font-bold">{reservations.length}건</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center gap-3">
                 <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
                   <DollarSign className="h-6 w-6 text-green-600" />
                 </div>
@@ -316,16 +253,15 @@ export default function SellerPage() {
                               </div>
                             </div>
                             <div className="flex gap-2">
-                              <Link href={`/seller/product/${product.productId}/rentals`}>
+                              <Link href={`/seller/product/${product.productId}/edit`}>
                                 <Button variant="outline" size="sm" className="rounded-lg bg-transparent">
-                                  <Clock className="h-4 w-4 mr-1" />
-                                  예약 내역
+                                  <Edit className="h-4 w-4 mr-1" />
+                                  수정
                                 </Button>
                               </Link>
-                              <Link href={`/seller/product/${product.productId}/rentals/manage`}>
+                              <Link href={`/products/${product.productId}`}>
                                 <Button variant="outline" size="sm" className="rounded-lg bg-transparent">
-                                  <Check className="h-4 w-4 mr-1" />
-                                  상태 변경
+                                  보기
                                 </Button>
                               </Link>
                               <Button
@@ -341,17 +277,6 @@ export default function SellerPage() {
                                     ? "예약 불가로 변경"
                                     : "예약 가능으로 변경"}
                               </Button>
-                              <Link href={`/seller/product/${product.productId}/edit`}>
-                                <Button variant="outline" size="sm" className="rounded-lg bg-transparent">
-                                  <Edit className="h-4 w-4 mr-1" />
-                                  수정
-                                </Button>
-                              </Link>
-                              <Link href={`/products/${product.productId}`}>
-                                <Button variant="outline" size="sm" className="rounded-lg bg-transparent">
-                                  보기
-                                </Button>
-                              </Link>
                             </div>
                           </div>
                         </div>
@@ -365,7 +290,7 @@ export default function SellerPage() {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={handlePreviousPage}
+                      onClick={() => setCurrentPage(currentPage - 1)}
                       disabled={currentPage === 0}
                       className="rounded-lg bg-transparent"
                     >
@@ -378,7 +303,7 @@ export default function SellerPage() {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={handleNextPage}
+                      onClick={() => setCurrentPage(currentPage + 1)}
                       disabled={isLastPage}
                       className="rounded-lg bg-transparent"
                     >
