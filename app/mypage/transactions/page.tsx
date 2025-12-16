@@ -93,11 +93,33 @@ export default function TransactionsPage() {
       return
     }
 
+    const orderId =
+      selectedTransaction.pgTid ||
+      selectedTransaction.orderId ||
+      selectedTransaction.relatedPgDepositId?.toString() ||
+      ""
+
+    if (!orderId) {
+      toast({
+        title: "환불 불가",
+        description: "주문 정보가 없어 환불할 수 없습니다",
+        variant: "destructive",
+      })
+      return
+    }
+
     setIsRefunding(true)
     try {
+      console.log("[v0] Refund request:", {
+        paymentKey: selectedTransaction.paymentKey,
+        orderId: orderId,
+        amount: selectedTransaction.amount,
+        reason: refundReason.trim(),
+      })
+
       const response = await accountAPI.cancelDeposit({
         paymentKey: selectedTransaction.paymentKey,
-        orderId: selectedTransaction.orderId || selectedTransaction.relatedPgDepositId?.toString() || "",
+        orderId: orderId,
         amount: selectedTransaction.amount,
         reason: refundReason.trim(),
       })
@@ -236,9 +258,9 @@ export default function TransactionsPage() {
                         {transaction.description && (
                           <p className="text-sm text-muted-foreground mt-1">{transaction.description}</p>
                         )}
-                        {transaction.relatedPgDepositId && (
+                        {(transaction.pgTid || transaction.relatedPgDepositId) && (
                           <p className="text-xs text-muted-foreground mt-1">
-                            주문번호: {transaction.orderId || transaction.relatedPgDepositId}
+                            주문번호: {transaction.pgTid || transaction.orderId || transaction.relatedPgDepositId}
                           </p>
                         )}
                       </div>
@@ -289,7 +311,12 @@ export default function TransactionsPage() {
                 <div className="space-y-2">
                   <Label>주문번호</Label>
                   <Input
-                    value={selectedTransaction.orderId || selectedTransaction.relatedPgDepositId || ""}
+                    value={
+                      selectedTransaction.pgTid ||
+                      selectedTransaction.orderId ||
+                      selectedTransaction.relatedPgDepositId ||
+                      ""
+                    }
                     disabled
                     className="bg-muted"
                   />

@@ -166,6 +166,8 @@ export default function ProductsPage() {
                 <SelectContent>
                   <SelectItem value="LATEST">최신순</SelectItem>
                   <SelectItem value="OLDEST">오래된순</SelectItem>
+                  <SelectItem value="PRICE_HIGH">가격 높은 순</SelectItem>
+                  <SelectItem value="PRICE_LOW">가격 낮은 순</SelectItem>
                 </SelectContent>
               </Select>
 
