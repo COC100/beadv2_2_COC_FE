@@ -84,14 +84,25 @@ export default function TransactionsPage() {
       return
     }
 
+    if (!selectedTransaction.paymentKey) {
+      toast({
+        title: "환불 불가",
+        description: "결제 정보가 없어 환불할 수 없습니다",
+        variant: "destructive",
+      })
+      return
+    }
+
     setIsRefunding(true)
     try {
-      await accountAPI.cancelDeposit({
-        paymentKey: selectedTransaction.paymentKey || "",
+      const response = await accountAPI.cancelDeposit({
+        paymentKey: selectedTransaction.paymentKey,
         orderId: selectedTransaction.orderId || selectedTransaction.relatedPgDepositId?.toString() || "",
         amount: selectedTransaction.amount,
         reason: refundReason.trim(),
       })
+
+      console.log("[v0] Refund response:", response.data)
 
       toast({
         title: "환불 요청 완료",
@@ -99,10 +110,11 @@ export default function TransactionsPage() {
       })
 
       // Reload transactions
-      const response = await accountAPI.getTransactions()
-      const data = response.data
+      const transactionsResponse = await accountAPI.getTransactions()
+      const data = transactionsResponse.data
       setTransactions(Array.isArray(data) ? data : [])
     } catch (error: any) {
+      console.error("[v0] Refund error:", error)
       toast({
         title: "환불 요청 실패",
         description: error.message || "환불 처리에 실패했습니다",
