@@ -308,6 +308,18 @@ export default function SellerPage() {
                               </div>
                             </div>
                             <div className="flex gap-2">
+                              <Link href={`/seller/product/${product.productId}/rentals`}>
+                                <Button variant="outline" size="sm" className="rounded-lg bg-transparent">
+                                  <Clock className="h-4 w-4 mr-1" />
+                                  예약 내역
+                                </Button>
+                              </Link>
+                              <Link href={`/seller/product/${product.productId}/rentals/manage`}>
+                                <Button variant="outline" size="sm" className="rounded-lg bg-transparent">
+                                  <Check className="h-4 w-4 mr-1" />
+                                  상태 변경
+                                </Button>
+                              </Link>
                               <Button
                                 variant={product.status === "ACTIVE" ? "outline" : "default"}
                                 size="sm"

@@ -3,16 +3,30 @@
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { ArrowLeft, Receipt, TrendingUp, TrendingDown } from "lucide-react"
+import { ArrowLeft, Receipt, TrendingUp, TrendingDown, XCircle } from "lucide-react"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { useToast } from "@/hooks/use-toast"
 import { accountAPI } from "@/lib/api"
 
 export default function TransactionsPage() {
   const [transactions, setTransactions] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false)
+  const [selectedTransaction, setSelectedTransaction] = useState<any>(null)
+  const [isCancelling, setIsCancelling] = useState(false)
   const router = useRouter()
   const { toast } = useToast()
 
@@ -42,6 +56,44 @@ export default function TransactionsPage() {
     loadTransactions()
   }, [router, toast])
 
+  const handleCancelClick = (transaction: any) => {
+    setSelectedTransaction(transaction)
+    setCancelDialogOpen(true)
+  }
+
+  const handleCancelConfirm = async () => {
+    if (!selectedTransaction) return
+
+    setIsCancelling(true)
+    try {
+      await accountAPI.cancelDeposit({
+        paymentKey: selectedTransaction.paymentKey || "",
+        orderId: selectedTransaction.orderId || selectedTransaction.id.toString(),
+        amount: selectedTransaction.amount,
+        reason: "사용자 요청",
+      })
+
+      toast({
+        title: "충전 취소 완료",
+        description: "충전이 성공적으로 취소되었습니다",
+      })
+
+      // Reload transactions
+      const data = await accountAPI.getTransactions()
+      setTransactions(data || [])
+    } catch (error: any) {
+      toast({
+        title: "충전 취소 실패",
+        description: error.message || "충전 취소에 실패했습니다",
+        variant: "destructive",
+      })
+    } finally {
+      setIsCancelling(false)
+      setCancelDialogOpen(false)
+      setSelectedTransaction(null)
+    }
+  }
+
   const getTransactionIcon = (type: string) => {
     return type === "DEPOSIT" || type === "REFUND" ? (
       <TrendingUp className="h-5 w-5 text-green-600" />
@@ -66,6 +118,10 @@ export default function TransactionsPage() {
       REFUND: "환불",
     }
     return labels[type] || type
+  }
+
+  const isCancellable = (transaction: any) => {
+    return transaction.type === "DEPOSIT" && transaction.status !== "CANCELLED"
   }
 
   if (isLoading) {
@@ -139,13 +195,26 @@ export default function TransactionsPage() {
                         )}
                       </div>
                     </div>
-                    <div className="text-right">
-                      <p className={`text-xl font-bold ${getTransactionColor(transaction.type)}`}>
-                        {getTransactionSign(transaction.type)}₩{transaction.amount?.toLocaleString()}
-                      </p>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        잔액: ₩{transaction.balanceAfter?.toLocaleString()}
-                      </p>
+                    <div className="flex items-center gap-4">
+                      <div className="text-right">
+                        <p className={`text-xl font-bold ${getTransactionColor(transaction.type)}`}>
+                          {getTransactionSign(transaction.type)}₩{transaction.amount?.toLocaleString()}
+                        </p>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          잔액: ₩{transaction.balanceAfter?.toLocaleString()}
+                        </p>
+                      </div>
+                      {isCancellable(transaction) && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleCancelClick(transaction)}
+                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                        >
+                          <XCircle className="h-4 w-4 mr-1" />
+                          취소
+                        </Button>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -154,6 +223,34 @@ export default function TransactionsPage() {
           </CardContent>
         </Card>
       </div>
+
+      <AlertDialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>충전 취소 확인</AlertDialogTitle>
+            <AlertDialogDescription>
+              {selectedTransaction && (
+                <>
+                  <span className="font-semibold">₩{selectedTransaction.amount?.toLocaleString()}</span> 충전을
+                  취소하시겠습니까?
+                  <br />
+                  취소된 금액은 원래 결제 수단으로 환불됩니다.
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isCancelling}>취소</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleCancelConfirm}
+              disabled={isCancelling}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {isCancelling ? "처리 중..." : "충전 취소"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <Footer />
     </div>
