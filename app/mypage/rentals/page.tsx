@@ -251,6 +251,23 @@ export default function RentalsPage() {
     }
   }
 
+  const handleStartRental = async (rentalItemId: number) => {
+    try {
+      await rentalAPI.startRental(rentalItemId)
+      toast({
+        title: "렌탈 시작 완료",
+        description: "렌탈이 시작되었습니다",
+      })
+      window.location.reload()
+    } catch (error: any) {
+      toast({
+        title: "렌탈 시작 실패",
+        description: error.message,
+        variant: "destructive",
+      })
+    }
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-white">
@@ -379,6 +396,11 @@ export default function RentalsPage() {
                                     onClick={() => handlePayment(order.rentalId)}
                                   >
                                     결제하기
+                                  </Button>
+                                )}
+                                {detail.status === "PAID" && (
+                                  <Button size="sm" className="rounded-lg" onClick={() => handleStartRental(detail.id)}>
+                                    렌탈 시작하기
                                   </Button>
                                 )}
                                 {(detail.status === "REQUESTED" || detail.status === "ACCEPTED") && (

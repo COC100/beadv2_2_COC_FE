@@ -224,6 +224,27 @@ export const memberAPI = {
       },
       true,
     ),
+
+  // Email Verification APIs
+  sendEmailVerification: (email: string) =>
+    fetchAPI(
+      "/member-service/api/auth/email/verify/send",
+      {
+        method: "POST",
+        body: JSON.stringify({ email }),
+      },
+      false,
+    ),
+
+  confirmEmailVerification: (data: { email: string; code: string }) =>
+    fetchAPI<{ verified: boolean }>(
+      "/member-service/api/auth/email/verify/confirm",
+      {
+        method: "POST",
+        body: JSON.stringify(data),
+      },
+      false,
+    ),
 }
 
 // Account Service APIs
@@ -522,6 +543,16 @@ export const rentalAPI = {
       {
         method: "POST",
         body: JSON.stringify({ newEndDate }),
+      },
+      true,
+    ),
+
+  // Rental Start API
+  startRental: (rentalItemId: number) =>
+    fetchAPI(
+      `/rental-service/api/rentals/${rentalItemId}/rent`,
+      {
+        method: "POST",
       },
       true,
     ),
