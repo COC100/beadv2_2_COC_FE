@@ -21,15 +21,19 @@ const handleAuthError = () => {
   }
 }
 
+let isRefreshing = false
+let refreshPromise: Promise<string> | null = null
+
 // Helper function for API calls
 async function fetchAPI<T>(
   endpoint: string,
   options: RequestInit = {},
   requiresAuth = true,
+  isRetry = false,
 ): Promise<{ data: T; headers: Headers }> {
   const url = `${API_BASE_URL}${endpoint}`
 
-  console.log("[v0] API Request:", { url, requiresAuth })
+  console.log("[v0] API Request:", { url, requiresAuth, isRetry })
 
   const headers: HeadersInit = {
     "Content-Type": "application/json",
@@ -62,14 +66,48 @@ async function fetchAPI<T>(
     console.log("[v0] Content-Type:", contentType)
 
     if (response.status === 401) {
-      if (requiresAuth) {
-        console.error("[v0] 401 Unauthorized on authenticated endpoint, clearing token and redirecting")
+      if (requiresAuth && !isRetry) {
+        console.log("[v0] 401 Unauthorized - attempting token refresh")
+
+        try {
+          // Use shared promise to prevent multiple simultaneous refresh attempts
+          if (!isRefreshing) {
+            isRefreshing = true
+            refreshPromise = authAPI
+              .reissueToken()
+              .then((result) => {
+                isRefreshing = false
+                refreshPromise = null
+                return result.accessToken
+              })
+              .catch((error) => {
+                isRefreshing = false
+                refreshPromise = null
+                throw error
+              })
+          }
+
+          if (refreshPromise) {
+            await refreshPromise
+            console.log("[v0] Token refreshed, retrying original request")
+
+            // Retry the original request with new token
+            return fetchAPI<T>(endpoint, options, requiresAuth, true)
+          }
+        } catch (refreshError) {
+          console.error("[v0] Token refresh failed:", refreshError)
+          if (typeof window !== "undefined") {
+            localStorage.removeItem("accessToken")
+          }
+          handleAuthError()
+          throw new Error("토큰 갱신에 실패했습니다. 다시 로그인해주세요.")
+        }
+      } else {
+        console.error("[v0] 401 Unauthorized after retry or on public endpoint, clearing token and redirecting")
         if (typeof window !== "undefined") {
           localStorage.removeItem("accessToken")
         }
         handleAuthError()
-      } else {
-        console.warn("[v0] 401 on public endpoint - backend may require auth incorrectly")
       }
       throw new Error("인증되지 않았습니다")
     }
