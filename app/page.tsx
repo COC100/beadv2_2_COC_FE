@@ -118,7 +118,7 @@ export default function HomePage() {
                     </Button>
                   </Link>
                 )}
-                <Link href="/become-seller">
+                <Link href="/seller">
                   <Button size="lg" variant="outline" className="rounded-lg bg-transparent">
                     판매자 되기
                   </Button>
@@ -244,7 +244,7 @@ export default function HomePage() {
           <p className="text-lg mb-6 opacity-90 max-w-2xl mx-auto">
             사용하지 않는 전자기기를 Modi에 등록하고 수익을 만들어보세요
           </p>
-          <Link href="/become-seller">
+          <Link href="/seller">
             <Button size="lg" variant="secondary" className="rounded-lg">
               판매자 시작하기
             </Button>

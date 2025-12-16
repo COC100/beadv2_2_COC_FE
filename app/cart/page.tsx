@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { Trash2, ShoppingBag, Settings } from "lucide-react"
+import { Trash2, ShoppingBag, Settings, AlertCircle } from "lucide-react"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { Button } from "@/components/ui/button"
@@ -11,6 +11,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { useToast } from "@/hooks/use-toast"
 import { cartAPI } from "@/lib/api"
 
@@ -31,6 +32,7 @@ export default function CartPage() {
   const { toast } = useToast()
   const [cartItems, setCartItems] = useState<CartItem[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [editingItemId, setEditingItemId] = useState<number | null>(null)
   const [editingData, setEditingData] = useState<{ startDate: string; endDate: string }>({
     startDate: "",
@@ -46,13 +48,21 @@ export default function CartPage() {
       }
 
       try {
+        console.log("[v0] Loading cart...")
         const response = await cartAPI.list()
-        console.log("[v0] Cart API response:", response)
+        console.log("[v0] Cart API raw response:", response)
 
         const cartData = response.data
-        console.log("[v0] Cart data:", cartData)
+        console.log("[v0] Cart data extracted:", cartData)
 
-        const items = cartData?.items || []
+        if (!cartData) {
+          console.log("[v0] No cart data received")
+          setCartItems([])
+          setError(null)
+          return
+        }
+
+        const items = cartData.items || []
         console.log("[v0] Cart items:", items)
 
         setCartItems(
@@ -61,7 +71,7 @@ export default function CartPage() {
             cartItemId: item.cartItemId,
             productId: item.productId,
             productName: item.productName || `상품 #${item.productId}`,
-            productImage: item.productImage || "/abstract-geometric-shapes.png",
+            productImage: item.productImage || "/placeholder.svg?height=200&width=200",
             pricePerDay: item.price || 0,
             startDate: item.startDate,
             endDate: item.endDate,
@@ -69,20 +79,24 @@ export default function CartPage() {
           })),
         )
 
-        toast({
-          title: "장바구니 조회 완료",
-          description: `${items.length}개의 상품이 있습니다`,
-        })
+        setError(null)
       } catch (error: any) {
         console.error("[v0] Failed to load cart:", error)
+
+        if (error.message.includes("500")) {
+          setError("장바구니를 불러오는 중 서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.")
+        } else if (error.message.includes("401") || error.message.includes("인증")) {
+          router.push("/intro")
+          return
+        } else {
+          setError(error.message || "장바구니를 불러올 수 없습니다.")
+        }
+
         toast({
           title: "장바구니 조회 실패",
           description: error.message || "장바구니를 불러올 수 없습니다",
           variant: "destructive",
         })
-        if (error.message.includes("401") || error.message.includes("인증")) {
-          router.push("/intro")
-        }
       } finally {
         setLoading(false)
       }
@@ -166,6 +180,14 @@ export default function CartPage() {
       </section>
 
       <div className="container mx-auto px-4 py-12">
+        {error && (
+          <Alert variant="destructive" className="mb-6">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>오류 발생</AlertTitle>
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+
         {cartItems.length === 0 ? (
           <Card className="p-12 text-center border-gray-200">
             <ShoppingBag className="h-20 w-20 mx-auto mb-6 text-muted-foreground" />

@@ -22,6 +22,7 @@ import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { useToast } from "@/hooks/use-toast"
 import { sellerAPI, productAPI } from "@/lib/api"
+import { getUserRoleFromToken } from "@/lib/utils"
 
 export default function SellerPage() {
   const router = useRouter()
@@ -66,6 +67,12 @@ export default function SellerPage() {
         return
       }
 
+      const userRole = getUserRoleFromToken()
+      if (userRole === "MEMBER") {
+        router.push("/become-seller")
+        return
+      }
+
       try {
         const sellerResponse = await sellerAPI.getSelf()
         console.log("[v0] Seller API response:", sellerResponse)
@@ -105,7 +112,7 @@ export default function SellerPage() {
         setIsLoading(false)
       } catch (error: any) {
         console.error("[v0] Failed to load seller data:", error)
-        if (error.message.includes("404") || error.message.includes("Not Found")) {
+        if (error.message.includes("404") || error.message.includes("Not Found") || error.message.includes("403")) {
           router.push("/become-seller")
         } else if (error.message.includes("401") || error.message.includes("Unauthorized")) {
           router.push("/intro")

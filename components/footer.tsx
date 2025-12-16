@@ -22,10 +22,7 @@ export function Footer() {
                 </Link>
               </li>
               <li>
-                <Link
-                  href={isSeller ? "/seller" : "/become-seller"}
-                  className="hover:text-foreground transition-colors"
-                >
+                <Link href="/seller" className="hover:text-foreground transition-colors">
                   판매자 등록
                 </Link>
               </li>
