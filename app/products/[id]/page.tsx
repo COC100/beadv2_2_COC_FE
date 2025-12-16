@@ -2,7 +2,19 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
-import { ArrowLeft, ShoppingCart, Calendar, Edit, Eye, EyeOff, Trash2, AlertCircle } from "lucide-react"
+import {
+  ArrowLeft,
+  ShoppingCart,
+  Calendar,
+  Edit,
+  Eye,
+  EyeOff,
+  Trash2,
+  AlertCircle,
+  Store,
+  Phone,
+  MapPin,
+} from "lucide-react"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { Button } from "@/components/ui/button"
@@ -38,6 +50,7 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
     title: "",
     message: "",
   })
+  const [seller, setSeller] = useState<any>(null)
 
   useEffect(() => {
     const resolveParams = async () => {
@@ -107,6 +120,17 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
         } catch (error) {
           console.log("[v0 DEBUG] Not a seller or seller check failed:", error)
           setIsOwner(false)
+        }
+
+        if (productData.sellerId) {
+          try {
+            const sellerData = await sellerAPI.getSelf()
+            if (sellerData.sellerId === productData.sellerId) {
+              setSeller(sellerData)
+            }
+          } catch (error) {
+            console.log("[v0 DEBUG] Could not fetch seller info:", error)
+          }
         }
       } catch (error: any) {
         console.error("[v0 DEBUG] Failed to load product:", error)
@@ -462,6 +486,44 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
               <p className="text-muted-foreground leading-relaxed whitespace-pre-wrap">{product.description}</p>
             </CardContent>
           </Card>
+
+          {seller && (
+            <Card>
+              <CardContent className="p-6">
+                <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+                  <Store className="h-5 w-5 text-primary" />
+                  판매자 정보
+                </h2>
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3">
+                    <Store className="h-5 w-5 text-muted-foreground" />
+                    <div>
+                      <div className="text-sm text-muted-foreground">상호명</div>
+                      <div className="font-medium">{seller.storeName}</div>
+                    </div>
+                  </div>
+                  {seller.storePhone && (
+                    <div className="flex items-center gap-3">
+                      <Phone className="h-5 w-5 text-muted-foreground" />
+                      <div>
+                        <div className="text-sm text-muted-foreground">연락처</div>
+                        <div className="font-medium">{seller.storePhone}</div>
+                      </div>
+                    </div>
+                  )}
+                  {seller.bizRegNo && (
+                    <div className="flex items-center gap-3">
+                      <MapPin className="h-5 w-5 text-muted-foreground" />
+                      <div>
+                        <div className="text-sm text-muted-foreground">사업자 등록번호</div>
+                        <div className="font-medium">{seller.bizRegNo}</div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
 

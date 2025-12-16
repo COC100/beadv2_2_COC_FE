@@ -1,5 +1,7 @@
 "use client"
 
+import type React from "react"
+
 import { useState, useEffect } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Header } from "@/components/header"
@@ -10,7 +12,8 @@ import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { useToast } from "@/hooks/use-toast"
 import { productAPI, memberAPI, rentalAPI } from "@/lib/api"
-import { MapPin, Calendar, CreditCard, AlertCircle } from "lucide-react"
+import { MapPin, Calendar, CreditCard, AlertCircle, Plus, Edit2 } from "lucide-react"
+import { Input } from "@/components/ui/input"
 import {
   Dialog,
   DialogContent,
@@ -19,6 +22,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { handlePhoneInput } from "@/lib/utils"
 
 export default function RentalApplicationPage() {
   const router = useRouter()
@@ -34,6 +38,16 @@ export default function RentalApplicationPage() {
     open: false,
     title: "",
     message: "",
+  })
+  const [isAddressDialogOpen, setIsAddressDialogOpen] = useState(false)
+  const [editingAddress, setEditingAddress] = useState<any>(null)
+  const [addressFormData, setAddressFormData] = useState({
+    name: "",
+    recipient: "",
+    phone: "",
+    address: "",
+    detailAddress: "",
+    zipCode: "",
   })
 
   const productId = searchParams.get("productId")
@@ -152,6 +166,95 @@ export default function RentalApplicationPage() {
     }
   }
 
+  const handleAddAddress = () => {
+    setEditingAddress(null)
+    setAddressFormData({
+      name: "",
+      recipient: "",
+      phone: "",
+      address: "",
+      detailAddress: "",
+      zipCode: "",
+    })
+    setIsAddressDialogOpen(true)
+  }
+
+  const handleEditAddress = (address: any) => {
+    setEditingAddress(address)
+    setAddressFormData({
+      name: address.addressLabel || "",
+      recipient: address.recipientName || "",
+      phone: address.recipientPhone || "",
+      address: address.roadAddress || "",
+      detailAddress: address.detailAddress || "",
+      zipCode: address.postcode || "",
+    })
+    setIsAddressDialogOpen(true)
+  }
+
+  const handleAddressSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+
+    try {
+      if (editingAddress) {
+        await memberAPI.updateAddress(editingAddress.addressId, {
+          addressLabel: addressFormData.name,
+          recipientName: addressFormData.recipient,
+          recipientPhone: addressFormData.phone,
+          postcode: addressFormData.zipCode,
+          roadAddress: addressFormData.address,
+          detailAddress: addressFormData.detailAddress,
+          isDefault: editingAddress.isDefault,
+          type: "MEMBER",
+        })
+        toast({
+          title: "주소 수정 완료",
+          description: "주소가 성공적으로 수정되었습니다",
+        })
+      } else {
+        await memberAPI.createAddress({
+          addressLabel: addressFormData.name,
+          recipientName: addressFormData.recipient,
+          recipientPhone: addressFormData.phone,
+          postcode: addressFormData.zipCode,
+          roadAddress: addressFormData.address,
+          detailAddress: addressFormData.detailAddress,
+          isDefault: addresses.length === 0,
+          type: "MEMBER",
+        })
+        toast({
+          title: "주소 추가 완료",
+          description: "주소가 성공적으로 추가되었습니다",
+        })
+      }
+
+      const addressData = await memberAPI.getAddresses()
+      setAddresses(addressData || [])
+
+      setIsAddressDialogOpen(false)
+    } catch (error: any) {
+      toast({
+        title: "주소 저장 실패",
+        description: error.message,
+        variant: "destructive",
+      })
+    }
+  }
+
+  const handlePostcodeSearch = () => {
+    ;(window as any).daum
+      .Postcode({
+        oncomplete: (data: any) => {
+          setAddressFormData({
+            ...addressFormData,
+            zipCode: data.zonecode,
+            address: data.roadAddress,
+          })
+        },
+      })
+      .open()
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-white">
@@ -213,10 +316,16 @@ export default function RentalApplicationPage() {
 
           <Card>
             <CardContent className="p-6">
-              <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-                <MapPin className="h-5 w-5" />
-                배송지 선택
-              </h2>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-bold flex items-center gap-2">
+                  <MapPin className="h-5 w-5" />
+                  배송지 선택
+                </h2>
+                <Button variant="outline" size="sm" onClick={handleAddAddress} className="rounded-lg bg-transparent">
+                  <Plus className="h-4 w-4 mr-2" />
+                  주소 추가
+                </Button>
+              </div>
               <RadioGroup value={selectedAddressId} onValueChange={setSelectedAddressId}>
                 {addresses.map((address) => (
                   <div key={address.addressId} className="flex items-start space-x-3 p-4 border rounded-lg">
@@ -230,6 +339,14 @@ export default function RentalApplicationPage() {
                         {address.recipientName} / {address.recipientPhone}
                       </div>
                     </Label>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleEditAddress(address)}
+                      className="rounded-lg"
+                    >
+                      <Edit2 className="h-4 w-4" />
+                    </Button>
                   </div>
                 ))}
               </RadioGroup>
@@ -265,6 +382,92 @@ export default function RentalApplicationPage() {
           </div>
         </div>
       </div>
+
+      <Dialog open={isAddressDialogOpen} onOpenChange={setIsAddressDialogOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>{editingAddress ? "주소 수정" : "주소 추가"}</DialogTitle>
+            <DialogDescription>배송받을 주소 정보를 입력하세요</DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleAddressSubmit} className="space-y-4 mt-4">
+            <div className="space-y-2">
+              <Label htmlFor="name">주소지 이름 *</Label>
+              <Input
+                id="name"
+                placeholder="예: 집, 회사"
+                value={addressFormData.name}
+                onChange={(e) => setAddressFormData({ ...addressFormData, name: e.target.value })}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="recipient">받는 사람 *</Label>
+              <Input
+                id="recipient"
+                placeholder="이름"
+                value={addressFormData.recipient}
+                onChange={(e) => setAddressFormData({ ...addressFormData, recipient: e.target.value })}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="phone">연락처 *</Label>
+              <Input
+                id="phone"
+                type="tel"
+                placeholder="010-0000-0000"
+                value={addressFormData.phone}
+                onChange={(e) => setAddressFormData({ ...addressFormData, phone: handlePhoneInput(e.target.value) })}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="zipCode">우편번호 *</Label>
+              <div className="flex gap-2">
+                <Input
+                  id="zipCode"
+                  placeholder="12345"
+                  value={addressFormData.zipCode}
+                  onChange={(e) => setAddressFormData({ ...addressFormData, zipCode: e.target.value })}
+                  required
+                  readOnly
+                />
+                <Button type="button" variant="outline" onClick={handlePostcodeSearch}>
+                  우편번호 찾기
+                </Button>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="address">주소 *</Label>
+              <Input
+                id="address"
+                placeholder="도로명 주소"
+                value={addressFormData.address}
+                onChange={(e) => setAddressFormData({ ...addressFormData, address: e.target.value })}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="detailAddress">상세 주소 *</Label>
+              <Input
+                id="detailAddress"
+                placeholder="동/호수"
+                value={addressFormData.detailAddress}
+                onChange={(e) => setAddressFormData({ ...addressFormData, detailAddress: e.target.value })}
+                required
+              />
+            </div>
+            <div className="flex gap-3 pt-4">
+              <Button type="submit" className="flex-1">
+                {editingAddress ? "수정하기" : "추가하기"}
+              </Button>
+              <Button type="button" variant="outline" onClick={() => setIsAddressDialogOpen(false)} className="flex-1">
+                취소
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={errorDialog.open} onOpenChange={(open) => setErrorDialog({ ...errorDialog, open })}>
         <DialogContent>
