@@ -15,13 +15,13 @@ export default function HowItWorksPage() {
       icon: ShoppingCart,
       title: "예약 및 결제",
       description: "대여 기간을 선택하고 간편하게 결제하세요.",
-      details: ["원하는 대여 기간 선택", "예치금 충전 및 결제", "즉시 예약 확정"],
+      details: ["원하는 대여 기간 선택", "예치금 충전 및 결제", "판매자 승인 후 예약 확정"],
     },
     {
       icon: Package,
       title: "상품 수령",
-      description: "배송 또는 직접 수령으로 상품을 받으세요.",
-      details: ["빠른 배송 서비스", "직접 수령 옵션", "상품 상태 확인"],
+      description: "배송으로 상품을 받으세요.",
+      details: ["빠른 배송 서비스", "상품 상태 확인", "안전한 포장"],
     },
     {
       icon: RotateCcw,
@@ -90,9 +90,7 @@ export default function HowItWorksPage() {
                 </div>
                 <div>
                   <h3 className="font-semibold text-foreground mb-2">배송은 얼마나 걸리나요?</h3>
-                  <p className="text-sm">
-                    지역에 따라 다르지만, 일반적으로 1-2일 이내에 배송됩니다. 급하신 경우 직접 수령도 가능합니다.
-                  </p>
+                  <p className="text-sm">지역에 따라 다르지만, 일반적으로 1-2일 이내에 배송됩니다.</p>
                 </div>
               </div>
             </CardContent>
