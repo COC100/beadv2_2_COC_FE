@@ -1,6 +1,6 @@
 "use client"
 import Link from "next/link"
-import { Plus, Package, DollarSign, Edit, ChevronLeft, ChevronRight, Receipt } from "lucide-react"
+import { Plus, Package, DollarSign, Edit, ChevronLeft, ChevronRight, Receipt, Trash2 } from "lucide-react"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { Button } from "@/components/ui/button"
@@ -24,6 +24,7 @@ export default function SellerPage() {
   const [totalPages, setTotalPages] = useState(0)
   const [isLastPage, setIsLastPage] = useState(false)
   const [statusChanging, setStatusChanging] = useState<{ [key: number]: boolean }>({})
+  const [deleting, setDeleting] = useState<{ [key: number]: boolean }>({})
 
   useEffect(() => {
     const loadSellerData = async () => {
@@ -121,6 +122,45 @@ export default function SellerPage() {
       })
     } finally {
       setStatusChanging((prev) => ({ ...prev, [productId]: false }))
+    }
+  }
+
+  const handleDeleteProduct = async (productId: number, productName: string) => {
+    const confirmed = window.confirm(`"${productName}" 상품을 삭제하시겠습니까?\n\n삭제된 상품은 복구할 수 없습니다.`)
+
+    if (!confirmed) return
+
+    setDeleting((prev) => ({ ...prev, [productId]: true }))
+
+    try {
+      await productAPI.delete(productId)
+
+      toast({
+        title: "상품 삭제 완료",
+        description: "상품이 성공적으로 삭제되었습니다.",
+      })
+
+      // Reload products
+      const productsResponse = await productAPI.getSellerProducts({
+        page: currentPage,
+        size: 20,
+        sort: "createdAt,desc",
+      })
+
+      const productsData = productsResponse.data
+      setProducts(productsData?.content || [])
+      setTotalPages(productsData?.totalPages || 0)
+      setTotalProducts(productsData?.totalElements || 0)
+      setIsLastPage(productsData?.last || false)
+    } catch (error: any) {
+      console.error("[v0] Failed to delete product:", error)
+      toast({
+        title: "상품 삭제 실패",
+        description: error.message || "상품 삭제에 실패했습니다.",
+        variant: "destructive",
+      })
+    } finally {
+      setDeleting((prev) => ({ ...prev, [productId]: false }))
     }
   }
 
@@ -286,6 +326,16 @@ export default function SellerPage() {
                                   : product.status === "ACTIVE"
                                     ? "예약 불가로 변경"
                                     : "예약 가능으로 변경"}
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="rounded-lg text-destructive hover:bg-destructive hover:text-destructive-foreground bg-transparent"
+                                onClick={() => handleDeleteProduct(product.productId, product.name)}
+                                disabled={deleting[product.productId]}
+                              >
+                                <Trash2 className="h-4 w-4 mr-1" />
+                                {deleting[product.productId] ? "삭제 중..." : "삭제"}
                               </Button>
                             </div>
                           </div>

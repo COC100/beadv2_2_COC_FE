@@ -28,6 +28,7 @@ export default function DepositPage() {
   const router = useRouter()
 
   const presetAmounts = [50000, 100000, 200000, 500000]
+  const MAX_DEPOSIT_AMOUNT = 100000000 // 1억원
 
   useEffect(() => {
     loadBalance()
@@ -87,6 +88,22 @@ export default function DepositPage() {
     }
   }
 
+  const handleAmountChange = (value: string) => {
+    const numValue = Number.parseInt(value)
+
+    if (numValue > MAX_DEPOSIT_AMOUNT) {
+      toast({
+        title: "충전 금액 제한",
+        description: "1회 최대 충전 가능 금액은 1억원입니다.",
+        variant: "destructive",
+      })
+      setAmount(MAX_DEPOSIT_AMOUNT.toString())
+      return
+    }
+
+    setAmount(value)
+  }
+
   const handleCharge = async () => {
     if (!amount || Number.parseInt(amount) <= 0) {
       toast({
@@ -97,12 +114,13 @@ export default function DepositPage() {
       return
     }
 
-    if (!tossPayments) {
+    if (Number.parseInt(amount) > MAX_DEPOSIT_AMOUNT) {
       toast({
-        title: "결제 모듈 오류",
-        description: "결제 모듈을 불러오는 중입니다. 잠시 후 다시 시도해주세요.",
+        title: "충전 금액 제한",
+        description: "1회 최대 충전 가능 금액은 1억원입니다.",
         variant: "destructive",
       })
+      setAmount(MAX_DEPOSIT_AMOUNT.toString())
       return
     }
 
@@ -202,10 +220,11 @@ export default function DepositPage() {
                     type="number"
                     placeholder="충전할 금액을 입력하세요"
                     value={amount}
-                    onChange={(e) => setAmount(e.target.value)}
+                    onChange={(e) => handleAmountChange(e.target.value)}
                     className="h-14 text-lg rounded-xl"
                     disabled={loading}
                   />
+                  <p className="text-xs text-muted-foreground mt-1">* 1회 최대 충전 가능 금액: 1억원</p>
                 </div>
 
                 {amount && (
