@@ -75,16 +75,18 @@ export default function RentalApplicationPage() {
       }
 
       try {
-        const [productData, addressData] = await Promise.all([
+        const [productResponse, addressResponse] = await Promise.all([
           productAPI.getDetail(Number(productId)),
           memberAPI.getAddresses(),
         ])
 
-        setProduct(productData)
-        setAddresses(addressData || [])
+        setProduct(productResponse.data)
+        const addressData = addressResponse.data
+        setAddresses(Array.isArray(addressData) ? addressData : addressData?.addressList || [])
 
         // Select default address
-        const defaultAddr = addressData.find((a: any) => a.isDefault)
+        const addressesArray = Array.isArray(addressData) ? addressData : addressData?.addressList || []
+        const defaultAddr = addressesArray.find((a: any) => a.isDefault)
         if (defaultAddr) {
           setSelectedAddressId(defaultAddr.addressId.toString())
         }
@@ -228,8 +230,9 @@ export default function RentalApplicationPage() {
         })
       }
 
-      const addressData = await memberAPI.getAddresses()
-      setAddresses(addressData || [])
+      const addressResponse = await memberAPI.getAddresses()
+      const addressData = addressResponse.data
+      setAddresses(Array.isArray(addressData) ? addressData : addressData?.addressList || [])
 
       setIsAddressDialogOpen(false)
     } catch (error: any) {

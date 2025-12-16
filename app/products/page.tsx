@@ -73,8 +73,10 @@ export default function ProductsPage() {
       if (keyword) params.keyword = keyword
 
       const response = await productAPI.list(params)
+      const data = response.data
+      console.log("[v0] Products response:", data)
 
-      const activeProducts = (response.products || []).filter((product: any) => product.status === "ACTIVE")
+      const activeProducts = (data.products || []).filter((product: any) => product.status === "ACTIVE")
 
       if (cursor) {
         setProducts((prev) => [...prev, ...activeProducts])
@@ -82,8 +84,8 @@ export default function ProductsPage() {
         setProducts(activeProducts)
       }
 
-      setNextCursor(response.nextCursor)
-      setHasNext(response.hasNext)
+      setNextCursor(data.nextCursor)
+      setHasNext(data.hasNext)
     } catch (error: any) {
       console.error("[v0] Failed to fetch products:", error)
       toast({

@@ -41,8 +41,11 @@ export default function TransactionsPage() {
       }
 
       try {
-        const data = await accountAPI.getTransactions()
-        setTransactions(data || [])
+        const response = await accountAPI.getTransactions()
+        const data = response.data
+        console.log("[v0] Transactions data:", data)
+
+        setTransactions(Array.isArray(data) ? data : [])
       } catch (error: any) {
         console.error("[v0] Failed to load transactions:", error)
         toast({
@@ -96,8 +99,9 @@ export default function TransactionsPage() {
       })
 
       // Reload transactions
-      const data = await accountAPI.getTransactions()
-      setTransactions(data || [])
+      const response = await accountAPI.getTransactions()
+      const data = response.data
+      setTransactions(Array.isArray(data) ? data : [])
     } catch (error: any) {
       toast({
         title: "환불 요청 실패",

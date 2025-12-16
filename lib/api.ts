@@ -22,7 +22,11 @@ const handleAuthError = () => {
 }
 
 // Helper function for API calls
-async function fetchAPI<T>(endpoint: string, options: RequestInit = {}, requiresAuth = true): Promise<any> {
+async function fetchAPI<T>(
+  endpoint: string,
+  options: RequestInit = {},
+  requiresAuth = true,
+): Promise<{ data: T; headers: Headers }> {
   const url = `${API_BASE_URL}${endpoint}`
 
   console.log("[v0] API Request:", { url, requiresAuth })

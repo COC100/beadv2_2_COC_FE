@@ -34,8 +34,7 @@ export default function MyPage() {
         const profileResponse = await memberAPI.getProfile()
         console.log("[v0] MyPage - profile response:", profileResponse)
 
-        // Extract data from the response
-        const profileData = profileResponse?.data || profileResponse
+        const profileData = profileResponse.data
         console.log("[v0] MyPage - profile data:", profileData)
         setProfile(profileData)
 
@@ -43,7 +42,7 @@ export default function MyPage() {
         const walletResponse = await accountAPI.getBalance()
         console.log("[v0] MyPage - wallet response:", walletResponse)
 
-        const walletData = walletResponse?.data || walletResponse
+        const walletData = walletResponse.data
         console.log("[v0] MyPage - wallet data:", walletData)
         setBalance(walletData?.balance ?? 0)
       } catch (error: any) {

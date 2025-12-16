@@ -52,7 +52,7 @@ export default function DepositPage() {
   const loadBalance = async () => {
     try {
       const response = await accountAPI.getBalance()
-      const balanceData = response?.data
+      const balanceData = response.data
       console.log("[v0] Balance data:", balanceData)
       setCurrentBalance(balanceData?.balance ?? 0)
     } catch (error: any) {
@@ -83,7 +83,7 @@ export default function DepositPage() {
       }
 
       const response = await accountAPI.getDepositConfig()
-      const config = response?.data
+      const config = response.data
       console.log("[v0] Deposit config:", config)
 
       if (!config || !config.clientKey) {
@@ -125,7 +125,7 @@ export default function DepositPage() {
 
     try {
       const response = await accountAPI.requestDeposit(Number.parseInt(amount))
-      const order = response?.data
+      const order = response.data
       console.log("[v0] Deposit order:", order)
 
       if (!order || !order.orderId || !order.amount) {
