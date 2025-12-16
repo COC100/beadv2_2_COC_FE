@@ -47,7 +47,6 @@ export default function RentalsPage() {
     if (!dateStr) return ""
     const date = new Date(dateStr)
     return new Intl.DateTimeFormat("ko-KR", {
-      timeZone: "Asia/Seoul",
       year: "numeric",
       month: "2-digit",
       day: "2-digit",
@@ -60,7 +59,6 @@ export default function RentalsPage() {
     if (!dateStr) return ""
     const date = new Date(dateStr)
     return new Intl.DateTimeFormat("ko-KR", {
-      timeZone: "Asia/Seoul",
       year: "numeric",
       month: "2-digit",
       day: "2-digit",
