@@ -44,18 +44,33 @@ export default function BecomeSellerPage() {
 
     setIsLoading(true)
     try {
-      await sellerAPI.register({
+      console.log("[v0] Submitting seller registration:", {
         storeName: formData.businessName,
         bizRegNo: formData.businessNumber || undefined,
         storePhone: formData.phone || undefined,
       })
+
+      const response = await sellerAPI.register({
+        storeName: formData.businessName,
+        bizRegNo: formData.businessNumber || undefined,
+        storePhone: formData.phone || undefined,
+      })
+
+      console.log("[v0] Seller registration response:", response)
+
+      if (response.data && typeof response.data === "string" && response.data.length > 0) {
+        localStorage.setItem("accessToken", response.data)
+        console.log("[v0] Updated accessToken after seller registration")
+      }
 
       toast({
         title: "판매자 신청 완료",
         description: "판매자 등록이 완료되었습니다",
       })
 
-      router.push("/seller")
+      setTimeout(() => {
+        router.push("/seller")
+      }, 500)
     } catch (error: any) {
       console.error("[v0] Seller registration failed:", error)
       toast({

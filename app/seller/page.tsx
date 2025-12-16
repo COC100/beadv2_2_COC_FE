@@ -133,8 +133,11 @@ export default function SellerPage() {
   }
 
   const handleToggleStatus = async (productId: number, currentStatus: string) => {
-    setStatusChanging({ ...statusChanging, [productId]: true })
+    setStatusChanging((prev) => ({ ...prev, [productId]: true }))
+
     try {
+      console.log("[v0] Toggling product status:", { productId, currentStatus })
+
       if (currentStatus === "ACTIVE") {
         await productAPI.deactivate(productId)
         toast({
@@ -154,16 +157,23 @@ export default function SellerPage() {
         size: 20,
         sort: "createdAt,desc",
       })
-      setProducts(productsResponse.content || [])
-      setTotalProducts(productsResponse.totalElements || 0)
+
+      console.log("[v0] Fetched products after status change:", productsResponse)
+
+      // fetchAPI returns { data, headers }, so extract data.content
+      const productsData = productsResponse.data
+      setProducts(productsData?.content || [])
+      setTotalPages(productsData?.totalPages || 0)
+      setTotalProducts(productsData?.totalElements || 0)
     } catch (error: any) {
+      console.error("[v0] Failed to toggle product status:", error)
       toast({
         title: "상태 변경 실패",
-        description: error.message || "상태 변경에 실패했습니다",
+        description: error.message || "상품 상태 변경에 실패했습니다",
         variant: "destructive",
       })
     } finally {
-      setStatusChanging({ ...statusChanging, [productId]: false })
+      setStatusChanging((prev) => ({ ...prev, [productId]: false }))
     }
   }
 
