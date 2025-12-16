@@ -4,7 +4,7 @@ import type React from "react"
 
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { ArrowLeft, Calendar, Check, X, Play, Package } from "lucide-react"
+import { ArrowLeft, Calendar, Check, X, Play, Package, Search } from "lucide-react"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { Button } from "@/components/ui/button"
@@ -33,6 +33,17 @@ export default async function ManageProductRentalsPage({ params }: { params: Pro
   return <ManageProductRentalsContent productId={productId} />
 }
 
+function getDefaultDates() {
+  const today = new Date()
+  const oneMonthLater = new Date(today)
+  oneMonthLater.setMonth(oneMonthLater.getMonth() + 1)
+
+  return {
+    startDate: today.toISOString().split("T")[0],
+    endDate: oneMonthLater.toISOString().split("T")[0],
+  }
+}
+
 function ManageProductRentalsContent({ productId }: { productId: string }) {
   const router = useRouter()
   const { toast } = useToast()
@@ -52,17 +63,20 @@ function ManageProductRentalsContent({ productId }: { productId: string }) {
     lateReason: "",
     memo: "",
   })
+  const defaultDates = getDefaultDates()
+  const [startDate, setStartDate] = useState(defaultDates.startDate)
+  const [endDate, setEndDate] = useState(defaultDates.endDate)
 
   const loadRentals = async () => {
     try {
-      console.log("[v0] Loading rentals for productId:", productId)
+      console.log("[v0] Loading rentals for productId:", productId, "dates:", startDate, "to", endDate)
 
       // Load REQUESTED rentals
       const requestedResponse = await sellerAPI.getRentals({
         productId: Number(productId),
         status: "REQUESTED",
-        startDate: "2020-01-01",
-        endDate: "2099-12-31",
+        startDate,
+        endDate,
         size: 100,
       })
       console.log("[v0] Requested rentals response:", requestedResponse)
@@ -73,8 +87,8 @@ function ManageProductRentalsContent({ productId }: { productId: string }) {
       const acceptedResponse = await sellerAPI.getRentals({
         productId: Number(productId),
         status: "ACCEPTED",
-        startDate: "2020-01-01",
-        endDate: "2099-12-31",
+        startDate,
+        endDate,
         size: 100,
       })
       console.log("[v0] Accepted rentals response:", acceptedResponse)
@@ -85,8 +99,8 @@ function ManageProductRentalsContent({ productId }: { productId: string }) {
       const rentingResponse = await sellerAPI.getRentals({
         productId: Number(productId),
         status: "RENTING",
-        startDate: "2020-01-01",
-        endDate: "2099-12-31",
+        startDate,
+        endDate,
         size: 100,
       })
       console.log("[v0] Renting rentals response:", rentingResponse)
@@ -113,6 +127,11 @@ function ManageProductRentalsContent({ productId }: { productId: string }) {
 
     loadRentals()
   }, [productId, router, toast])
+
+  const handleSearch = () => {
+    setIsLoading(true)
+    loadRentals()
+  }
 
   const handleAccept = async () => {
     if (!selectedRental) return
@@ -267,6 +286,25 @@ function ManageProductRentalsContent({ productId }: { productId: string }) {
       </section>
 
       <div className="container mx-auto px-4 py-12">
+        <Card className="mb-6">
+          <CardContent className="p-6">
+            <div className="flex items-end gap-4">
+              <div className="flex-1 space-y-2">
+                <Label htmlFor="startDate">시작일</Label>
+                <Input id="startDate" type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+              </div>
+              <div className="flex-1 space-y-2">
+                <Label htmlFor="endDate">종료일</Label>
+                <Input id="endDate" type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
+              </div>
+              <Button onClick={handleSearch} className="rounded-lg">
+                <Search className="h-4 w-4 mr-2" />
+                조회
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
         <Tabs defaultValue="requested" className="space-y-6">
           <TabsList className="grid w-full max-w-2xl grid-cols-3">
             <TabsTrigger value="requested">

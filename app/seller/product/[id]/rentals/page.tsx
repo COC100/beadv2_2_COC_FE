@@ -2,12 +2,14 @@
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { ArrowLeft, Calendar } from "lucide-react"
+import { ArrowLeft, Calendar, Search } from "lucide-react"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import { useToast } from "@/hooks/use-toast"
 import { sellerAPI } from "@/lib/api"
 
@@ -18,48 +20,67 @@ export default async function ProductRentalsPage({ params }: { params: Promise<{
   return <ProductRentalsContent productId={productId} />
 }
 
+function getDefaultDates() {
+  const today = new Date()
+  const oneMonthLater = new Date(today)
+  oneMonthLater.setMonth(oneMonthLater.getMonth() + 1)
+
+  return {
+    startDate: today.toISOString().split("T")[0],
+    endDate: oneMonthLater.toISOString().split("T")[0],
+  }
+}
+
 function ProductRentalsContent({ productId }: { productId: string }) {
   const router = useRouter()
   const { toast } = useToast()
   const [isLoading, setIsLoading] = useState(true)
   const [rentals, setRentals] = useState<any[]>([])
+  const defaultDates = getDefaultDates()
+  const [startDate, setStartDate] = useState(defaultDates.startDate)
+  const [endDate, setEndDate] = useState(defaultDates.endDate)
+
+  const loadRentals = async () => {
+    try {
+      console.log("[v0] Loading rentals for productId:", productId, "dates:", startDate, "to", endDate)
+
+      const response = await sellerAPI.getRentals({
+        productId: Number(productId),
+        startDate,
+        endDate,
+        size: 100,
+      })
+      console.log("[v0] Rentals API response:", response)
+
+      const rentalsData = response.data || []
+      console.log("[v0] Rentals data:", rentalsData)
+      setRentals(Array.isArray(rentalsData) ? rentalsData : [])
+    } catch (error: any) {
+      console.error("[v0] Failed to load rentals:", error)
+      toast({
+        title: "오류",
+        description: error.message || "데이터를 불러오는데 실패했습니다",
+        variant: "destructive",
+      })
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
   useEffect(() => {
-    const loadData = async () => {
-      const token = localStorage.getItem("accessToken")
-      if (!token) {
-        router.push("/intro")
-        return
-      }
-
-      try {
-        console.log("[v0] Loading rentals for productId:", productId)
-
-        const response = await sellerAPI.getRentals({
-          productId: Number(productId),
-          startDate: "2020-01-01",
-          endDate: "2099-12-31",
-          size: 100,
-        })
-        console.log("[v0] Rentals API response:", response)
-
-        const rentalsData = response.data || []
-        console.log("[v0] Rentals data:", rentalsData)
-        setRentals(Array.isArray(rentalsData) ? rentalsData : [])
-      } catch (error: any) {
-        console.error("[v0] Failed to load rentals:", error)
-        toast({
-          title: "오류",
-          description: error.message || "데이터를 불러오는데 실패했습니다",
-          variant: "destructive",
-        })
-      } finally {
-        setIsLoading(false)
-      }
+    const token = localStorage.getItem("accessToken")
+    if (!token) {
+      router.push("/intro")
+      return
     }
 
-    loadData()
+    loadRentals()
   }, [productId, router, toast])
+
+  const handleSearch = () => {
+    setIsLoading(true)
+    loadRentals()
+  }
 
   const getStatusBadge = (status: string) => {
     const statusMap: { [key: string]: { text: string; className: string } } = {
@@ -107,6 +128,25 @@ function ProductRentalsContent({ productId }: { productId: string }) {
       </section>
 
       <div className="container mx-auto px-4 py-12">
+        <Card className="mb-6">
+          <CardContent className="p-6">
+            <div className="flex items-end gap-4">
+              <div className="flex-1 space-y-2">
+                <Label htmlFor="startDate">시작일</Label>
+                <Input id="startDate" type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+              </div>
+              <div className="flex-1 space-y-2">
+                <Label htmlFor="endDate">종료일</Label>
+                <Input id="endDate" type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
+              </div>
+              <Button onClick={handleSearch} className="rounded-lg">
+                <Search className="h-4 w-4 mr-2" />
+                조회
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
         {rentals.length === 0 ? (
           <Card>
             <CardContent className="p-12 text-center">

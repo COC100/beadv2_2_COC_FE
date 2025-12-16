@@ -54,19 +54,21 @@ export default function ReservationPage() {
 
       try {
         const addressResponse = await memberAPI.getAddresses()
-        const addressList = addressResponse.addressList || []
+        const addressData = addressResponse.data
+        const addressList = Array.isArray(addressData) ? addressData : addressData?.addressList || []
         setAddresses(addressList)
 
         // Set default address
         const defaultAddr = addressList.find((a: any) => a.isDefault)
         if (defaultAddr) {
-          setSelectedAddressId(defaultAddr.id)
+          setSelectedAddressId(defaultAddr.addressId)
         } else if (addressList.length > 0) {
-          setSelectedAddressId(addressList[0].id)
+          setSelectedAddressId(addressList[0].addressId)
         }
 
         const cartResponse = await cartAPI.list()
-        setCartItems(cartResponse.items || [])
+        const cartData = cartResponse.data
+        setCartItems(Array.isArray(cartData) ? cartData : cartData?.items || [])
       } catch (error: any) {
         console.error("[v0] Failed to load reservation data:", error)
         if (error.message.includes("401")) {
@@ -102,7 +104,8 @@ export default function ReservationPage() {
       })
 
       const response = await memberAPI.getAddresses()
-      setAddresses(response.addressList || [])
+      const addressData = response.data
+      setAddresses(Array.isArray(addressData) ? addressData : addressData?.addressList || [])
       setIsDialogOpen(false)
       toast({
         title: "주소 추가 완료",
@@ -150,6 +153,14 @@ export default function ReservationPage() {
   const totalAmount = cartItems.reduce((sum, item) => sum + (item.price || 0), 0)
 
   const handlePostcodeSearch = () => {
+    if (!(window as any).daum || !(window as any).daum.Postcode) {
+      toast({
+        title: "우편번호 검색 불가",
+        description: "우편번호 검색 서비스를 불러올 수 없습니다. 페이지를 새로고침해주세요.",
+        variant: "destructive",
+      })
+      return
+    }
     ;new (window as any).daum.Postcode({
       oncomplete: (data: any) => {
         setFormData({
@@ -239,7 +250,7 @@ export default function ReservationPage() {
                             type="tel"
                             placeholder="010-0000-0000"
                             value={formData.phone}
-                            onChange={(e) => setFormData({ ...formData, phone: handlePhoneInput(e) })}
+                            onChange={(e) => setFormData({ ...formData, phone: handlePhoneInput(e.target.value) })}
                             className="rounded-xl"
                             required
                           />
@@ -312,11 +323,15 @@ export default function ReservationPage() {
                 >
                   <div className="space-y-3">
                     {addresses.map((addr) => (
-                      <Card key={addr.id} className="relative">
+                      <Card key={addr.addressId} className="relative">
                         <CardContent className="p-4">
                           <div className="flex items-start gap-3">
-                            <RadioGroupItem value={addr.id.toString()} id={`address-${addr.id}`} className="mt-1" />
-                            <Label htmlFor={`address-${addr.id}`} className="flex-1 cursor-pointer">
+                            <RadioGroupItem
+                              value={addr.addressId.toString()}
+                              id={`address-${addr.addressId}`}
+                              className="mt-1"
+                            />
+                            <Label htmlFor={`address-${addr.addressId}`} className="flex-1 cursor-pointer">
                               <div className="flex items-center gap-2 mb-2">
                                 <span className="font-semibold">{addr.addressLabel}</span>
                                 {addr.isDefault && (

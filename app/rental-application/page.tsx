@@ -245,17 +245,23 @@ export default function RentalApplicationPage() {
   }
 
   const handlePostcodeSearch = () => {
-    ;(window as any).daum
-      .Postcode({
-        oncomplete: (data: any) => {
-          setAddressFormData({
-            ...addressFormData,
-            zipCode: data.zonecode,
-            address: data.roadAddress,
-          })
-        },
+    if (!(window as any).daum || !(window as any).daum.Postcode) {
+      toast({
+        title: "우편번호 검색 불가",
+        description: "우편번호 검색 서비스를 불러올 수 없습니다. 페이지를 새로고침해주세요.",
+        variant: "destructive",
       })
-      .open()
+      return
+    }
+    ;new (window as any).daum.Postcode({
+      oncomplete: (data: any) => {
+        setAddressFormData({
+          ...addressFormData,
+          zipCode: data.zonecode,
+          address: data.roadAddress,
+        })
+      },
+    }).open()
   }
 
   if (loading) {
