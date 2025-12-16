@@ -3,30 +3,32 @@
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { ArrowLeft, Receipt, TrendingUp, TrendingDown, XCircle } from "lucide-react"
+import { ArrowLeft, Receipt, TrendingUp, TrendingDown, CheckCircle } from "lucide-react"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import { useToast } from "@/hooks/use-toast"
 import { accountAPI } from "@/lib/api"
 
 export default function TransactionsPage() {
   const [transactions, setTransactions] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const [cancelDialogOpen, setCancelDialogOpen] = useState(false)
+  const [refundDialogOpen, setRefundDialogOpen] = useState(false)
   const [selectedTransaction, setSelectedTransaction] = useState<any>(null)
-  const [isCancelling, setIsCancelling] = useState(false)
+  const [refundReason, setRefundReason] = useState("")
+  const [isRefunding, setIsRefunding] = useState(false)
   const router = useRouter()
   const { toast } = useToast()
 
@@ -56,26 +58,41 @@ export default function TransactionsPage() {
     loadTransactions()
   }, [router, toast])
 
-  const handleCancelClick = (transaction: any) => {
+  const canceledOrderIds = new Set(
+    transactions
+      .filter((tx) => tx.txType === "DEPOSIT_CANCEL")
+      .map((tx) => tx.relatedPgDepositId || tx.orderId)
+      .filter(Boolean),
+  )
+
+  const handleRefundClick = (transaction: any) => {
     setSelectedTransaction(transaction)
-    setCancelDialogOpen(true)
+    setRefundReason("")
+    setRefundDialogOpen(true)
   }
 
-  const handleCancelConfirm = async () => {
-    if (!selectedTransaction) return
+  const handleRefundConfirm = async () => {
+    if (!selectedTransaction || !refundReason.trim()) {
+      toast({
+        title: "환불 사유 필수",
+        description: "환불 사유를 입력해주세요",
+        variant: "destructive",
+      })
+      return
+    }
 
-    setIsCancelling(true)
+    setIsRefunding(true)
     try {
       await accountAPI.cancelDeposit({
         paymentKey: selectedTransaction.paymentKey || "",
-        orderId: selectedTransaction.orderId || selectedTransaction.id.toString(),
+        orderId: selectedTransaction.orderId || selectedTransaction.relatedPgDepositId?.toString() || "",
         amount: selectedTransaction.amount,
-        reason: "사용자 요청",
+        reason: refundReason.trim(),
       })
 
       toast({
-        title: "충전 취소 완료",
-        description: "충전이 성공적으로 취소되었습니다",
+        title: "환불 요청 완료",
+        description: "환불이 성공적으로 처리되었습니다",
       })
 
       // Reload transactions
@@ -83,45 +100,55 @@ export default function TransactionsPage() {
       setTransactions(data || [])
     } catch (error: any) {
       toast({
-        title: "충전 취소 실패",
-        description: error.message || "충전 취소에 실패했습니다",
+        title: "환불 요청 실패",
+        description: error.message || "환불 처리에 실패했습니다",
         variant: "destructive",
       })
     } finally {
-      setIsCancelling(false)
-      setCancelDialogOpen(false)
+      setIsRefunding(false)
+      setRefundDialogOpen(false)
       setSelectedTransaction(null)
+      setRefundReason("")
     }
   }
 
-  const getTransactionIcon = (type: string) => {
-    return type === "DEPOSIT" || type === "REFUND" ? (
+  const getTransactionIcon = (txType: string) => {
+    return txType === "DEPOSIT_CHARGE" || txType === "RENTAL_REFUND" ? (
       <TrendingUp className="h-5 w-5 text-green-600" />
     ) : (
       <TrendingDown className="h-5 w-5 text-red-600" />
     )
   }
 
-  const getTransactionColor = (type: string) => {
-    return type === "DEPOSIT" || type === "REFUND" ? "text-green-600" : "text-red-600"
+  const getTransactionColor = (txType: string) => {
+    return txType === "DEPOSIT_CHARGE" || txType === "RENTAL_REFUND" ? "text-green-600" : "text-red-600"
   }
 
-  const getTransactionSign = (type: string) => {
-    return type === "DEPOSIT" || type === "REFUND" ? "+" : "-"
+  const getTransactionSign = (txType: string) => {
+    return txType === "DEPOSIT_CHARGE" || txType === "RENTAL_REFUND" ? "+" : "-"
   }
 
-  const getTransactionLabel = (type: string) => {
+  const getTransactionLabel = (txType: string) => {
     const labels: { [key: string]: string } = {
-      DEPOSIT: "충전",
-      WITHDRAW: "출금",
-      PAYMENT: "결제",
-      REFUND: "환불",
+      DEPOSIT_CHARGE: "충전",
+      RENTAL_PAYMENT: "대여 결제",
+      RENTAL_REFUND: "대여 환불",
+      DEPOSIT_CANCEL: "충전 취소",
+      ADJUST: "조정",
     }
-    return labels[type] || type
+    return labels[txType] || txType
   }
 
-  const isCancellable = (transaction: any) => {
-    return transaction.type === "DEPOSIT" && transaction.status !== "CANCELLED"
+  const isRefundable = (transaction: any) => {
+    if (transaction.txType !== "DEPOSIT_CHARGE") return false
+    const orderId = transaction.relatedPgDepositId || transaction.orderId
+    return !canceledOrderIds.has(orderId)
+  }
+
+  const isRefunded = (transaction: any) => {
+    if (transaction.txType !== "DEPOSIT_CHARGE") return false
+    const orderId = transaction.relatedPgDepositId || transaction.orderId
+    return canceledOrderIds.has(orderId)
   }
 
   if (isLoading) {
@@ -177,10 +204,10 @@ export default function TransactionsPage() {
                   >
                     <div className="flex items-center gap-4">
                       <div className="w-10 h-10 rounded-full bg-accent/10 flex items-center justify-center">
-                        {getTransactionIcon(transaction.type)}
+                        {getTransactionIcon(transaction.txType)}
                       </div>
                       <div>
-                        <p className="font-medium">{getTransactionLabel(transaction.type)}</p>
+                        <p className="font-medium">{getTransactionLabel(transaction.txType)}</p>
                         <p className="text-sm text-muted-foreground">
                           {new Date(transaction.createdAt).toLocaleString("ko-KR", {
                             year: "numeric",
@@ -188,32 +215,43 @@ export default function TransactionsPage() {
                             day: "2-digit",
                             hour: "2-digit",
                             minute: "2-digit",
+                            timeZone: "Asia/Seoul",
                           })}
                         </p>
                         {transaction.description && (
                           <p className="text-sm text-muted-foreground mt-1">{transaction.description}</p>
                         )}
+                        {transaction.relatedPgDepositId && (
+                          <p className="text-xs text-muted-foreground mt-1">
+                            주문번호: {transaction.orderId || transaction.relatedPgDepositId}
+                          </p>
+                        )}
                       </div>
                     </div>
                     <div className="flex items-center gap-4">
                       <div className="text-right">
-                        <p className={`text-xl font-bold ${getTransactionColor(transaction.type)}`}>
-                          {getTransactionSign(transaction.type)}₩{transaction.amount?.toLocaleString()}
+                        <p className={`text-xl font-bold ${getTransactionColor(transaction.txType)}`}>
+                          {getTransactionSign(transaction.txType)}₩{transaction.amount?.toLocaleString()}
                         </p>
                         <p className="text-sm text-muted-foreground mt-1">
                           잔액: ₩{transaction.balanceAfter?.toLocaleString()}
                         </p>
                       </div>
-                      {isCancellable(transaction) && (
+                      {isRefundable(transaction) && (
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => handleCancelClick(transaction)}
+                          onClick={() => handleRefundClick(transaction)}
                           className="text-red-600 hover:text-red-700 hover:bg-red-50"
                         >
-                          <XCircle className="h-4 w-4 mr-1" />
-                          취소
+                          환불
                         </Button>
+                      )}
+                      {isRefunded(transaction) && (
+                        <div className="flex items-center gap-1 text-sm text-green-600 font-medium">
+                          <CheckCircle className="h-4 w-4" />
+                          환불 완료
+                        </div>
                       )}
                     </div>
                   </div>
@@ -224,33 +262,57 @@ export default function TransactionsPage() {
         </Card>
       </div>
 
-      <AlertDialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>충전 취소 확인</AlertDialogTitle>
-            <AlertDialogDescription>
-              {selectedTransaction && (
-                <>
-                  <span className="font-semibold">₩{selectedTransaction.amount?.toLocaleString()}</span> 충전을
-                  취소하시겠습니까?
-                  <br />
-                  취소된 금액은 원래 결제 수단으로 환불됩니다.
-                </>
-              )}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isCancelling}>취소</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleCancelConfirm}
-              disabled={isCancelling}
+      <Dialog open={refundDialogOpen} onOpenChange={setRefundDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>충전 환불 요청</DialogTitle>
+            <DialogDescription>환불 정보를 확인하고 사유를 입력해주세요</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            {selectedTransaction && (
+              <>
+                <div className="space-y-2">
+                  <Label>주문번호</Label>
+                  <Input
+                    value={selectedTransaction.orderId || selectedTransaction.relatedPgDepositId || ""}
+                    disabled
+                    className="bg-muted"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>환불 금액</Label>
+                  <Input value={`₩${selectedTransaction.amount?.toLocaleString()}`} disabled className="bg-muted" />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="refund-reason">
+                    환불 사유 <span className="text-red-600">*</span>
+                  </Label>
+                  <Textarea
+                    id="refund-reason"
+                    placeholder="환불 사유를 입력해주세요"
+                    value={refundReason}
+                    onChange={(e) => setRefundReason(e.target.value)}
+                    rows={4}
+                    className="resize-none"
+                  />
+                </div>
+              </>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRefundDialogOpen(false)} disabled={isRefunding}>
+              취소
+            </Button>
+            <Button
+              onClick={handleRefundConfirm}
+              disabled={isRefunding || !refundReason.trim()}
               className="bg-red-600 hover:bg-red-700"
             >
-              {isCancelling ? "처리 중..." : "충전 취소"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+              {isRefunding ? "처리 중..." : "환불 요청"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Footer />
     </div>
