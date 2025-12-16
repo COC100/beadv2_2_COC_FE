@@ -43,6 +43,30 @@ export default function RentalsPage() {
   const router = useRouter()
   const { toast } = useToast()
 
+  const formatDateTime = (dateStr: string) => {
+    if (!dateStr) return ""
+    const date = new Date(dateStr)
+    return new Intl.DateTimeFormat("ko-KR", {
+      timeZone: "Asia/Seoul",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+    }).format(date)
+  }
+
+  const formatDate = (dateStr: string) => {
+    if (!dateStr) return ""
+    const date = new Date(dateStr)
+    return new Intl.DateTimeFormat("ko-KR", {
+      timeZone: "Asia/Seoul",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).format(date)
+  }
+
   useEffect(() => {
     const fetchRentals = async () => {
       try {
@@ -73,12 +97,12 @@ export default function RentalsPage() {
         const orderMap = new Map<number, Order>()
 
         for (const rental of rentals) {
-          const orderDate = rental.paidAt || rental.items[0]?.startDate || ""
+          const createdAt = rental.paidAt || rental.items[0]?.startDate || ""
 
           if (!orderMap.has(rental.rentalId)) {
             orderMap.set(rental.rentalId, {
               orderId: `ORD-${rental.rentalId}`,
-              orderDate: orderDate.split("T")[0],
+              orderDate: formatDateTime(createdAt),
               totalAmount: 0,
               status: rental.items[0]?.status || "PENDING",
               details: [],
@@ -107,7 +131,7 @@ export default function RentalsPage() {
               totalDays: days,
               totalAmount,
               status: item.status,
-              createdAt: orderDate,
+              createdAt: createdAt,
             })
 
             order.totalAmount += totalAmount
@@ -330,8 +354,12 @@ export default function RentalsPage() {
                                     {detail.productName}
                                   </Link>
                                   <p className="text-sm text-muted-foreground mt-1">
-                                    {detail.startDate} ~ {detail.endDate} ({detail.totalDays}일)
+                                    렌탈 시작일: {formatDate(detail.startDate)}
                                   </p>
+                                  <p className="text-sm text-muted-foreground">
+                                    렌탈 마감일: {formatDate(detail.endDate)}
+                                  </p>
+                                  <p className="text-xs text-muted-foreground mt-1">({detail.totalDays}일)</p>
                                 </div>
                                 <Badge className={getStatusText(detail.status).color}>
                                   {getStatusText(detail.status).text}
