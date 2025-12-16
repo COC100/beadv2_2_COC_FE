@@ -9,9 +9,8 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Search, SlidersHorizontal } from "lucide-react"
+import { Search } from "lucide-react"
 import { productAPI } from "@/lib/api"
 import { useToast } from "@/hooks/use-toast"
 
@@ -36,8 +35,6 @@ export default function ProductsPage() {
 
   const [searchQuery, setSearchQuery] = useState("")
   const [sortBy, setSortBy] = useState("LATEST")
-  const [showFilters, setShowFilters] = useState(false)
-
   const [products, setProducts] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
   const [nextCursor, setNextCursor] = useState<string | null>(null)
@@ -158,9 +155,18 @@ export default function ProductsPage() {
 
       <section className="border-b bg-gray-50 py-6">
         <div className="container mx-auto px-4">
-          <div className="max-w-7xl mx-auto space-y-4">
-            {/* Search Bar */}
+          <div className="max-w-7xl mx-auto">
             <div className="flex gap-2">
+              <Select value={sortBy} onValueChange={setSortBy}>
+                <SelectTrigger className="w-[140px] bg-white">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="LATEST">최신순</SelectItem>
+                  <SelectItem value="OLDEST">오래된순</SelectItem>
+                </SelectContent>
+              </Select>
+
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <Input
@@ -171,42 +177,12 @@ export default function ProductsPage() {
                   onKeyDown={(e) => e.key === "Enter" && handleSearch()}
                 />
               </div>
+
               <Button onClick={handleSearch} className="gap-2">
                 <Search className="h-4 w-4" />
                 검색
               </Button>
-              <Button variant="outline" className="gap-2 bg-transparent" onClick={() => setShowFilters(!showFilters)}>
-                <SlidersHorizontal className="h-4 w-4" />
-                정렬
-              </Button>
             </div>
-
-            {/* Filter Panel - Only Sort */}
-            {showFilters && (
-              <div className="bg-white rounded-lg border p-4 space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>정렬</Label>
-                    <Select value={sortBy} onValueChange={setSortBy}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="LATEST">최신순</SelectItem>
-                        <SelectItem value="OLDEST">오래된순</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                <div className="flex justify-end gap-2">
-                  <Button variant="outline" onClick={handleResetFilters}>
-                    초기화
-                  </Button>
-                  <Button onClick={handleSearch}>적용</Button>
-                </div>
-              </div>
-            )}
           </div>
         </div>
       </section>
