@@ -1,23 +1,12 @@
 "use client"
 import Link from "next/link"
-import { Plus, Package, Clock, DollarSign, Edit, Check, X, ChevronLeft, ChevronRight, Receipt } from "lucide-react"
+import { Plus, Package, Clock, DollarSign, Edit, Check, ChevronLeft, ChevronRight, Receipt } from "lucide-react"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog"
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { useToast } from "@/hooks/use-toast"
@@ -34,8 +23,8 @@ export default function SellerPage() {
   const [totalProducts, setTotalProducts] = useState(0)
   const [totalPages, setTotalPages] = useState(0)
   const [isLastPage, setIsLastPage] = useState(false)
-  const [reservations, setReservations] = useState<any[]>([])
   const [statusChanging, setStatusChanging] = useState<{ [key: number]: boolean }>({})
+  const [reservations, setReservations] = useState<any[]>([])
 
   const handleAcceptRental = async (reservationId: number) => {
     try {
@@ -281,9 +270,8 @@ export default function SellerPage() {
         </div>
 
         <Tabs defaultValue="products" className="space-y-6">
-          <TabsList className="grid w-full max-w-md grid-cols-3">
+          <TabsList className="grid w-full max-w-md grid-cols-2">
             <TabsTrigger value="products">판매 상품</TabsTrigger>
-            <TabsTrigger value="reservations">예약 관리</TabsTrigger>
             <TabsTrigger value="settings">판매자 정보</TabsTrigger>
           </TabsList>
 
@@ -400,88 +388,6 @@ export default function SellerPage() {
                   </div>
                 )}
               </>
-            )}
-          </TabsContent>
-
-          <TabsContent value="reservations" className="space-y-4">
-            {reservations.length === 0 ? (
-              <Card>
-                <CardContent className="p-12 text-center">
-                  <Clock className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                  <p className="text-muted-foreground">대기 중인 예약이 없습니다</p>
-                </CardContent>
-              </Card>
-            ) : (
-              reservations.map((reservation) => (
-                <Card key={reservation.id}>
-                  <CardContent className="p-5">
-                    <div className="flex items-start justify-between mb-3">
-                      <div>
-                        <h3 className="font-semibold mb-1">{reservation.productName}</h3>
-                        <p className="text-sm text-muted-foreground mb-1">고객: {reservation.customerName}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {reservation.startDate} ~ {reservation.endDate}
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <Badge className={getStatusText(reservation.status).className}>
-                          {getStatusText(reservation.status).text}
-                        </Badge>
-                        <p className="text-lg font-bold text-primary mt-2">
-                          ₩{reservation.totalAmount.toLocaleString()}
-                        </p>
-                      </div>
-                    </div>
-                    {reservation.status === "PENDING" && (
-                      <div className="flex gap-2 pt-3 border-t">
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button
-                              size="sm"
-                              className="flex-1 rounded-lg"
-                              onClick={() => handleAcceptRental(reservation.id)}
-                            >
-                              <Check className="h-4 w-4 mr-1" />
-                              승인
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>예약을 승인하시겠습니까?</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                승인 후에는 취소할 수 없습니다. 고객에게 승인 알림이 전송됩니다.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>취소</AlertDialogCancel>
-                              <AlertDialogAction>승인하기</AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button size="sm" variant="outline" className="flex-1 rounded-lg bg-transparent">
-                              <X className="h-4 w-4 mr-1" />
-                              거절
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>예약을 거절하시겠습니까?</AlertDialogTitle>
-                              <AlertDialogDescription>거절 사유를 고객에게 알릴 수 있습니다.</AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>취소</AlertDialogCancel>
-                              <AlertDialogAction className="bg-red-600">거절하기</AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              ))
             )}
           </TabsContent>
 

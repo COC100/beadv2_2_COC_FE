@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useToast } from "@/hooks/use-toast"
-import { sellerAPI } from "@/lib/api"
+import { sellerAPI, productAPI } from "@/lib/api"
 
 export default async function ProductRentalsPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = await params
@@ -36,6 +36,7 @@ function ProductRentalsContent({ productId }: { productId: string }) {
   const { toast } = useToast()
   const [isLoading, setIsLoading] = useState(true)
   const [rentals, setRentals] = useState<any[]>([])
+  const [product, setProduct] = useState<any>(null)
   const defaultDates = getDefaultDates()
   const [startDate, setStartDate] = useState(defaultDates.startDate)
   const [endDate, setEndDate] = useState(defaultDates.endDate)
@@ -43,6 +44,10 @@ function ProductRentalsContent({ productId }: { productId: string }) {
   const loadRentals = async () => {
     try {
       console.log("[v0] Loading rentals for productId:", productId, "dates:", startDate, "to", endDate)
+
+      const productResponse = await productAPI.getDetail(Number(productId))
+      console.log("[v0] Product response:", productResponse)
+      setProduct(productResponse.data)
 
       const response = await sellerAPI.getRentals({
         productId: Number(productId),
@@ -128,6 +133,28 @@ function ProductRentalsContent({ productId }: { productId: string }) {
       </section>
 
       <div className="container mx-auto px-4 py-12">
+        {product && (
+          <Card className="mb-6">
+            <CardContent className="p-6">
+              <div className="flex gap-4 items-center">
+                <div className="w-20 h-20 bg-gray-50 rounded-lg overflow-hidden flex-shrink-0">
+                  <img
+                    src={product.images?.[0]?.url || "/placeholder.svg"}
+                    alt={product.name}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+                <div className="flex-1">
+                  <h2 className="text-xl font-bold mb-1">{product.name}</h2>
+                  <Badge className="bg-accent text-white hover:bg-accent">
+                    ₩{product.pricePerDay?.toLocaleString()}/일
+                  </Badge>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         <Card className="mb-6">
           <CardContent className="p-6">
             <div className="flex items-end gap-4">

@@ -1,10 +1,9 @@
 "use client"
 import { useState, useEffect } from "react"
 import type React from "react"
-
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { ArrowLeft, Calendar, Check, X, Play, Package, Search } from "lucide-react"
+import { ArrowLeft, Calendar, Check, X, Play, Package } from "lucide-react"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { Button } from "@/components/ui/button"
@@ -24,7 +23,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useToast } from "@/hooks/use-toast"
-import { sellerAPI, rentalAPI } from "@/lib/api"
+import { sellerAPI, rentalAPI, productAPI } from "@/lib/api"
 
 export default async function ManageProductRentalsPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = await params
@@ -34,13 +33,9 @@ export default async function ManageProductRentalsPage({ params }: { params: Pro
 }
 
 function getDefaultDates() {
-  const today = new Date()
-  const oneMonthLater = new Date(today)
-  oneMonthLater.setMonth(oneMonthLater.getMonth() + 1)
-
   return {
-    startDate: today.toISOString().split("T")[0],
-    endDate: oneMonthLater.toISOString().split("T")[0],
+    startDate: "2000-01-01",
+    endDate: "2099-12-31",
   }
 }
 
@@ -51,6 +46,7 @@ function ManageProductRentalsContent({ productId }: { productId: string }) {
   const [requestedRentals, setRequestedRentals] = useState<any[]>([])
   const [acceptedRentals, setAcceptedRentals] = useState<any[]>([])
   const [rentingRentals, setRentingRentals] = useState<any[]>([])
+  const [product, setProduct] = useState<any>(null)
   const [selectedRental, setSelectedRental] = useState<any>(null)
   const [showAcceptDialog, setShowAcceptDialog] = useState(false)
   const [showRejectDialog, setShowRejectDialog] = useState(false)
@@ -64,14 +60,17 @@ function ManageProductRentalsContent({ productId }: { productId: string }) {
     memo: "",
   })
   const defaultDates = getDefaultDates()
-  const [startDate, setStartDate] = useState(defaultDates.startDate)
-  const [endDate, setEndDate] = useState(defaultDates.endDate)
+  const [startDate] = useState(defaultDates.startDate)
+  const [endDate] = useState(defaultDates.endDate)
 
   const loadRentals = async () => {
     try {
-      console.log("[v0] Loading rentals for productId:", productId, "dates:", startDate, "to", endDate)
+      console.log("[v0] Loading rentals for productId:", productId)
 
-      // Load REQUESTED rentals
+      const productResponse = await productAPI.getDetail(Number(productId))
+      console.log("[v0] Product response:", productResponse)
+      setProduct(productResponse.data)
+
       const requestedResponse = await sellerAPI.getRentals({
         productId: Number(productId),
         status: "REQUESTED",
@@ -83,7 +82,6 @@ function ManageProductRentalsContent({ productId }: { productId: string }) {
       const requestedData = requestedResponse.data || []
       setRequestedRentals(Array.isArray(requestedData) ? requestedData : [])
 
-      // Load ACCEPTED rentals
       const acceptedResponse = await sellerAPI.getRentals({
         productId: Number(productId),
         status: "ACCEPTED",
@@ -95,7 +93,6 @@ function ManageProductRentalsContent({ productId }: { productId: string }) {
       const acceptedData = acceptedResponse.data || []
       setAcceptedRentals(Array.isArray(acceptedData) ? acceptedData : [])
 
-      // Load RENTING rentals
       const rentingResponse = await sellerAPI.getRentals({
         productId: Number(productId),
         status: "RENTING",
@@ -127,11 +124,6 @@ function ManageProductRentalsContent({ productId }: { productId: string }) {
 
     loadRentals()
   }, [productId, router, toast])
-
-  const handleSearch = () => {
-    setIsLoading(true)
-    loadRentals()
-  }
 
   const handleAccept = async () => {
     if (!selectedRental) return
@@ -286,24 +278,27 @@ function ManageProductRentalsContent({ productId }: { productId: string }) {
       </section>
 
       <div className="container mx-auto px-4 py-12">
-        <Card className="mb-6">
-          <CardContent className="p-6">
-            <div className="flex items-end gap-4">
-              <div className="flex-1 space-y-2">
-                <Label htmlFor="startDate">시작일</Label>
-                <Input id="startDate" type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+        {product && (
+          <Card className="mb-6">
+            <CardContent className="p-6">
+              <div className="flex gap-4 items-center">
+                <div className="w-20 h-20 bg-gray-50 rounded-lg overflow-hidden flex-shrink-0">
+                  <img
+                    src={product.images?.[0]?.url || "/placeholder.svg"}
+                    alt={product.name}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+                <div className="flex-1">
+                  <h2 className="text-xl font-bold mb-1">{product.name}</h2>
+                  <Badge className="bg-accent text-white hover:bg-accent">
+                    ₩{product.pricePerDay?.toLocaleString()}/일
+                  </Badge>
+                </div>
               </div>
-              <div className="flex-1 space-y-2">
-                <Label htmlFor="endDate">종료일</Label>
-                <Input id="endDate" type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
-              </div>
-              <Button onClick={handleSearch} className="rounded-lg">
-                <Search className="h-4 w-4 mr-2" />
-                조회
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        )}
 
         <Tabs defaultValue="requested" className="space-y-6">
           <TabsList className="grid w-full max-w-2xl grid-cols-3">
@@ -427,7 +422,6 @@ function ManageProductRentalsContent({ productId }: { productId: string }) {
         </Tabs>
       </div>
 
-      {/* Accept Dialog */}
       <AlertDialog open={showAcceptDialog} onOpenChange={setShowAcceptDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -441,7 +435,6 @@ function ManageProductRentalsContent({ productId }: { productId: string }) {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Reject Dialog */}
       <AlertDialog open={showRejectDialog} onOpenChange={setShowRejectDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -459,7 +452,6 @@ function ManageProductRentalsContent({ productId }: { productId: string }) {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Start Rental Dialog */}
       <AlertDialog open={showStartRentalDialog} onOpenChange={setShowStartRentalDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -473,7 +465,6 @@ function ManageProductRentalsContent({ productId }: { productId: string }) {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Return Dialog */}
       <AlertDialog open={showReturnDialog} onOpenChange={setShowReturnDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
