@@ -13,6 +13,16 @@ import { useToast } from "@/hooks/use-toast"
 import { sellerAPI } from "@/lib/api"
 import { ArrowLeft, ChevronLeft, ChevronRight, Calendar, DollarSign } from "lucide-react"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 
 export default function SettlementsPage() {
   const router = useRouter()
@@ -26,6 +36,15 @@ export default function SettlementsPage() {
   const [selectedSettlement, setSelectedSettlement] = useState<any>(null)
   const [settlementLines, setSettlementLines] = useState<any[]>([])
   const [showDetailDialog, setShowDetailDialog] = useState(false)
+
+  const [showBatchDialog, setShowBatchDialog] = useState(false)
+  const [batchPeriodYm, setBatchPeriodYm] = useState("")
+  const [batchStartDate, setBatchStartDate] = useState("")
+  const [batchEndDate, setBatchEndDate] = useState("")
+  const [batchPageSize, setBatchPageSize] = useState(100)
+  const [showPayDialog, setShowPayDialog] = useState(false)
+  const [showCancelDialog, setShowCancelDialog] = useState(false)
+  const [actionSettlementId, setActionSettlementId] = useState<number | null>(null)
 
   const loadSettlements = async (page: number, period?: string) => {
     try {
@@ -77,6 +96,82 @@ export default function SettlementsPage() {
     loadSettlements(0)
   }, [])
 
+  const handleRunBatch = async () => {
+    if (!batchPeriodYm || !batchStartDate || !batchEndDate) {
+      toast({
+        title: "입력 오류",
+        description: "모든 필드를 입력해주세요",
+        variant: "destructive",
+      })
+      return
+    }
+
+    try {
+      const result = await sellerAPI.runSettlementBatch({
+        periodYm: batchPeriodYm,
+        startDate: batchStartDate,
+        endDate: batchEndDate,
+        pageSize: batchPageSize,
+      })
+
+      toast({
+        title: "정산 배치 실행",
+        description: `배치 ID: ${result.id}, 상태: ${result.status}`,
+      })
+
+      setShowBatchDialog(false)
+      loadSettlements(0, batchPeriodYm)
+    } catch (error: any) {
+      toast({
+        title: "배치 실행 실패",
+        description: error.message || "정산 배치 실행에 실패했습니다",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const handlePaySettlement = async () => {
+    if (!actionSettlementId) return
+
+    try {
+      await sellerAPI.paySettlement(actionSettlementId)
+      toast({
+        title: "정산 완료",
+        description: "정산이 완료 처리되었습니다",
+      })
+      setShowPayDialog(false)
+      setActionSettlementId(null)
+      loadSettlements(currentPage, periodYm)
+    } catch (error: any) {
+      toast({
+        title: "정산 완료 실패",
+        description: error.message || "정산 완료 처리에 실패했습니다",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const handleCancelSettlement = async () => {
+    if (!actionSettlementId) return
+
+    try {
+      await sellerAPI.cancelSettlement(actionSettlementId)
+      toast({
+        title: "정산 취소",
+        description: "정산이 취소되었습니다",
+      })
+      setShowCancelDialog(false)
+      setActionSettlementId(null)
+      loadSettlements(currentPage, periodYm)
+    } catch (error: any) {
+      toast({
+        title: "정산 취소 실패",
+        description: error.message || "정산 취소에 실패했습니다",
+        variant: "destructive",
+      })
+    }
+  }
+
   const handleSearch = () => {
     if (periodYm && !/^\d{4}-\d{2}$/.test(periodYm)) {
       toast({
@@ -104,8 +199,11 @@ export default function SettlementsPage() {
   const getStatusBadge = (status: string) => {
     const statusMap: { [key: string]: { text: string; className: string } } = {
       READY: { text: "대기", className: "bg-yellow-100 text-yellow-800" },
-      PAID: { text: "완료", className: "bg-green-100 text-green-800" },
-      CANCELED: { text: "취소", className: "bg-red-100 text-red-800" },
+      CALCULATING: { text: "계산중", className: "bg-blue-100 text-blue-800" },
+      COMPLETED: { text: "완료", className: "bg-green-100 text-green-800" },
+      PAID: { text: "지급완료", className: "bg-green-100 text-green-800" },
+      FAILED: { text: "실패", className: "bg-red-100 text-red-800" },
+      CANCELED: { text: "취소", className: "bg-gray-100 text-gray-800" },
     }
     return statusMap[status] || { text: status, className: "" }
   }
@@ -140,6 +238,13 @@ export default function SettlementsPage() {
       </section>
 
       <div className="container mx-auto px-4 py-12">
+        <div className="mb-6 flex justify-end">
+          <Button onClick={() => setShowBatchDialog(true)} className="rounded-lg">
+            <Calendar className="h-4 w-4 mr-2" />
+            정산 실행
+          </Button>
+        </div>
+
         <Card className="mb-6">
           <CardHeader>
             <CardTitle>정산 기간 조회</CardTitle>
@@ -181,10 +286,13 @@ export default function SettlementsPage() {
             settlements.map((settlement) => {
               const statusBadge = getStatusBadge(settlement.status)
               return (
-                <Card key={settlement.id} className="hover:shadow-md transition-shadow cursor-pointer">
-                  <CardContent className="p-6" onClick={() => loadSettlementDetail(settlement.id)}>
-                    <div className="flex items-center justify-between">
-                      <div className="flex-1">
+                <Card key={settlement.id} className="hover:shadow-md transition-shadow">
+                  <CardContent className="p-6">
+                    <div
+                      className="flex items-center justify-between"
+                      onClick={() => loadSettlementDetail(settlement.id)}
+                    >
+                      <div className="flex-1 cursor-pointer">
                         <div className="flex items-center gap-3 mb-2">
                           <h3 className="font-semibold text-lg">{settlement.periodYm}</h3>
                           <Badge className={statusBadge.className}>{statusBadge.text}</Badge>
@@ -197,10 +305,37 @@ export default function SettlementsPage() {
                         )}
                       </div>
                       <div className="text-right">
-                        <p className="text-2xl font-bold text-primary">₩{settlement.amount?.toLocaleString() || "0"}</p>
+                        <p className="text-2xl font-bold text-primary">
+                          ₩{settlement.settlementAmount?.toLocaleString() || "0"}
+                        </p>
                         <p className="text-sm text-muted-foreground mt-1">정산 금액</p>
                       </div>
                     </div>
+                    {settlement.status === "READY" && (
+                      <div className="flex gap-2 mt-4 pt-4 border-t">
+                        <Button
+                          size="sm"
+                          onClick={() => {
+                            setActionSettlementId(settlement.id)
+                            setShowPayDialog(true)
+                          }}
+                          className="flex-1"
+                        >
+                          정산 완료 처리
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            setActionSettlementId(settlement.id)
+                            setShowCancelDialog(true)
+                          }}
+                          className="flex-1"
+                        >
+                          정산 취소
+                        </Button>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               )
@@ -236,6 +371,87 @@ export default function SettlementsPage() {
           </div>
         )}
       </div>
+
+      <Dialog open={showBatchDialog} onOpenChange={setShowBatchDialog}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>정산 배치 실행</DialogTitle>
+            <DialogDescription>정산을 실행할 기간과 설정을 입력하세요</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div>
+              <Label>정산 기간 (yyyy-MM)</Label>
+              <Input
+                placeholder="2025-01"
+                value={batchPeriodYm}
+                onChange={(e) => setBatchPeriodYm(e.target.value)}
+                className="mt-2"
+              />
+            </div>
+            <div>
+              <Label>시작일 (yyyy-MM-dd)</Label>
+              <Input
+                type="date"
+                value={batchStartDate}
+                onChange={(e) => setBatchStartDate(e.target.value)}
+                className="mt-2"
+              />
+            </div>
+            <div>
+              <Label>종료일 (yyyy-MM-dd)</Label>
+              <Input
+                type="date"
+                value={batchEndDate}
+                onChange={(e) => setBatchEndDate(e.target.value)}
+                className="mt-2"
+              />
+            </div>
+            <div>
+              <Label>페이지 크기</Label>
+              <Input
+                type="number"
+                value={batchPageSize}
+                onChange={(e) => setBatchPageSize(Number.parseInt(e.target.value))}
+                className="mt-2"
+              />
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => setShowBatchDialog(false)} className="flex-1">
+              취소
+            </Button>
+            <Button onClick={handleRunBatch} className="flex-1">
+              실행
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog open={showPayDialog} onOpenChange={setShowPayDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>정산 완료 처리</AlertDialogTitle>
+            <AlertDialogDescription>이 정산을 완료 처리하시겠습니까?</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>취소</AlertDialogCancel>
+            <AlertDialogAction onClick={handlePaySettlement}>완료 처리</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>정산 취소</AlertDialogTitle>
+            <AlertDialogDescription>이 정산을 취소하시겠습니까?</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>닫기</AlertDialogCancel>
+            <AlertDialogAction onClick={handleCancelSettlement}>취소 진행</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <Dialog open={showDetailDialog} onOpenChange={setShowDetailDialog}>
         <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">

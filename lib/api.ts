@@ -639,6 +639,16 @@ export const sellerAPI = {
     )
   },
 
+  runSettlementBatch: (data: { periodYm: string; startDate: string; endDate: string; pageSize: number }) =>
+    fetchAPI<{ id: number; status: string }>(
+      "/seller-service/api/settlements/sellers/self/batches/run",
+      {
+        method: "POST",
+        body: JSON.stringify(data),
+      },
+      true,
+    ),
+
   getSettlements: (params?: { periodYm?: string; page?: number; size?: number }) => {
     const queryParams = new URLSearchParams()
     if (params) {
@@ -648,7 +658,12 @@ export const sellerAPI = {
         }
       })
     }
-    return fetchAPI<any>(
+    return fetchAPI<{
+      content: any[]
+      totalElements: number
+      totalPages: number
+      number: number
+    }>(
       `/seller-service/api/settlements/sellers/self${queryParams.toString() ? `?${queryParams.toString()}` : ""}`,
       {},
       true,
@@ -661,15 +676,16 @@ export const sellerAPI = {
   getSettlementLines: (sellerSettlementId: number) =>
     fetchAPI<any[]>(`/seller-service/api/settlements/sellers/self/${sellerSettlementId}/lines`, {}, true),
 
-  paySettlement: (sellerSettlementId: number, paidAt?: string) =>
-    fetchAPI(
-      `/seller-service/api/settlements/sellers/self/${sellerSettlementId}/pay`,
+  paySettlement: (sellerSettlementId: number, paidAt?: string) => {
+    const queryParams = paidAt ? `?paidAt=${encodeURIComponent(paidAt)}` : ""
+    return fetchAPI(
+      `/seller-service/api/settlements/sellers/self/${sellerSettlementId}/pay${queryParams}`,
       {
         method: "POST",
-        body: JSON.stringify(paidAt ? { paidAt } : {}),
       },
       true,
-    ),
+    )
+  },
 
   cancelSettlement: (sellerSettlementId: number) =>
     fetchAPI(

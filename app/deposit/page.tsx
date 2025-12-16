@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { ArrowLeft, Wallet } from "lucide-react"
+import { ArrowLeft, Wallet, RefreshCw } from "lucide-react"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { Button } from "@/components/ui/button"
@@ -12,6 +12,16 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useToast } from "@/hooks/use-toast"
 import { accountAPI } from "@/lib/api"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 
 declare global {
   interface Window {
@@ -26,6 +36,11 @@ export default function DepositPage() {
   const [tossPayments, setTossPayments] = useState<any>(null)
   const { toast } = useToast()
   const router = useRouter()
+
+  const [showCancelDialog, setShowCancelDialog] = useState(false)
+  const [cancelPaymentKey, setCancelPaymentKey] = useState("")
+  const [cancelOrderId, setCancelOrderId] = useState("")
+  const [cancelAmount, setCancelAmount] = useState(0)
 
   const presetAmounts = [50000, 100000, 200000, 500000]
 
@@ -126,6 +141,41 @@ export default function DepositPage() {
     }
   }
 
+  const handleCancelDeposit = async () => {
+    if (!cancelPaymentKey || !cancelOrderId) {
+      toast({
+        title: "환불 정보 오류",
+        description: "환불할 결제 정보가 없습니다.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    try {
+      await accountAPI.cancelDeposit({
+        paymentKey: cancelPaymentKey,
+        orderId: cancelOrderId,
+        amount: cancelAmount,
+        reason: "사용자 요청",
+      })
+
+      toast({
+        title: "환불 완료",
+        description: "예치금 충전이 취소되었습니다.",
+      })
+
+      setShowCancelDialog(false)
+      await loadBalance()
+    } catch (error: any) {
+      console.error("[v0] Cancel deposit failed:", error)
+      toast({
+        title: "환불 실패",
+        description: error.message || "환불 처리 중 오류가 발생했습니다.",
+        variant: "destructive",
+      })
+    }
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <Header />
@@ -217,6 +267,15 @@ export default function DepositPage() {
                 </Button>
               </Link>
               <Button
+                variant="outline"
+                className="h-14 rounded-xl text-lg bg-transparent"
+                disabled={loading}
+                onClick={() => setShowCancelDialog(true)}
+              >
+                <RefreshCw className="h-4 w-4 mr-2" />
+                환불
+              </Button>
+              <Button
                 className="flex-1 h-14 rounded-xl text-lg"
                 disabled={!amount || Number.parseInt(amount) <= 0 || loading}
                 onClick={handleCharge}
@@ -227,6 +286,48 @@ export default function DepositPage() {
           </div>
         </div>
       </div>
+
+      <AlertDialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>충전 취소(환불)</AlertDialogTitle>
+            <AlertDialogDescription>
+              최근 충전한 예치금을 환불하시겠습니까? 환불 처리는 즉시 진행됩니다.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-4 py-4">
+            <div>
+              <Label>결제 키</Label>
+              <Input
+                placeholder="paymentKey를 입력하세요"
+                value={cancelPaymentKey}
+                onChange={(e) => setCancelPaymentKey(e.target.value)}
+              />
+            </div>
+            <div>
+              <Label>주문 ID</Label>
+              <Input
+                placeholder="orderId를 입력하세요"
+                value={cancelOrderId}
+                onChange={(e) => setCancelOrderId(e.target.value)}
+              />
+            </div>
+            <div>
+              <Label>환불 금액</Label>
+              <Input
+                type="number"
+                placeholder="환불할 금액을 입력하세요"
+                value={cancelAmount}
+                onChange={(e) => setCancelAmount(Number.parseInt(e.target.value))}
+              />
+            </div>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>취소</AlertDialogCancel>
+            <AlertDialogAction onClick={handleCancelDeposit}>환불 진행</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <Footer />
     </div>

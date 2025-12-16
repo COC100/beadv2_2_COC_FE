@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { User, Wallet, Settings, LogOut, MapPin } from "lucide-react"
+import { User, Wallet, Settings, LogOut, MapPin, Receipt } from "lucide-react"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { Button } from "@/components/ui/button"
@@ -103,6 +103,12 @@ export default function MyPage() {
                 </div>
 
                 <div className="space-y-2">
+                  <Link href="/mypage/transactions">
+                    <Button variant="ghost" className="w-full justify-start rounded-xl">
+                      <Receipt className="h-4 w-4 mr-2" />
+                      거래 내역
+                    </Button>
+                  </Link>
                   <Link href="/mypage/addresses">
                     <Button variant="ghost" className="w-full justify-start rounded-xl">
                       <MapPin className="h-4 w-4 mr-2" />
@@ -157,6 +163,15 @@ export default function MyPage() {
                   <CardContent className="p-6">
                     <h3 className="font-semibold text-lg mb-2">렌탈 내역</h3>
                     <p className="text-sm text-muted-foreground">렌탈 현황과 내역을 확인하세요</p>
+                  </CardContent>
+                </Card>
+              </Link>
+
+              <Link href="/mypage/transactions">
+                <Card className="rounded-2xl hover:shadow-lg transition-shadow cursor-pointer">
+                  <CardContent className="p-6">
+                    <h3 className="font-semibold text-lg mb-2">거래 내역</h3>
+                    <p className="text-sm text-muted-foreground">예치금 거래 내역을 확인하세요</p>
                   </CardContent>
                 </Card>
               </Link>
