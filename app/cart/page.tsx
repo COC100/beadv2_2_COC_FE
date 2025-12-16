@@ -47,10 +47,14 @@ export default function CartPage() {
 
       try {
         const response = await cartAPI.list()
+        console.log("[v0] Cart API response:", response)
+
         const cartData = response.data
-        console.log("[v0] Cart response:", cartData)
+        console.log("[v0] Cart data:", cartData)
 
         const items = cartData?.items || []
+        console.log("[v0] Cart items:", items)
+
         setCartItems(
           items.map((item: any) => ({
             id: item.cartItemId,
