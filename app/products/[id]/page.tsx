@@ -117,20 +117,13 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
             productData?.sellerId,
           )
           setIsOwner(isProductOwner)
+
+          if (isProductOwner) {
+            setSeller(seller)
+          }
         } catch (error) {
           console.log("[v0 DEBUG] Not a seller or seller check failed:", error)
           setIsOwner(false)
-        }
-
-        if (productData.sellerId) {
-          try {
-            const sellerData = await sellerAPI.getSelf()
-            if (sellerData.sellerId === productData.sellerId) {
-              setSeller(sellerData)
-            }
-          } catch (error) {
-            console.log("[v0 DEBUG] Could not fetch seller info:", error)
-          }
         }
       } catch (error: any) {
         console.error("[v0 DEBUG] Failed to load product:", error)
@@ -487,7 +480,7 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
             </CardContent>
           </Card>
 
-          {seller && (
+          {isOwner && seller && (
             <Card>
               <CardContent className="p-6">
                 <h2 className="text-xl font-bold mb-4 flex items-center gap-2">

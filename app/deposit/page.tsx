@@ -51,10 +51,11 @@ export default function DepositPage() {
 
   const loadBalance = async () => {
     try {
-      const balance = await accountAPI.getBalance()
-      setCurrentBalance(balance.balance)
+      const data = await accountAPI.getBalance()
+      setCurrentBalance(data?.balance ?? 0)
     } catch (error: any) {
-      console.error("[v0] Failed to load balance:", error)
+      console.error("Failed to load balance:", error)
+      setCurrentBalance(0)
       toast({
         title: "예치금 조회 실패",
         description: error.message || "예치금 정보를 불러올 수 없습니다.",
@@ -79,12 +80,16 @@ export default function DepositPage() {
         return
       }
 
-      // Get Toss config from backend
       const config = await accountAPI.getDepositConfig()
+
+      if (!config || !config.clientKey) {
+        throw new Error("결제 설정을 불러올 수 없습니다.")
+      }
+
       const tossPaymentsInstance = window.TossPayments(config.clientKey)
       setTossPayments(tossPaymentsInstance)
     } catch (error: any) {
-      console.error("[v0] Toss Payments initialization failed:", error)
+      console.error("Toss Payments initialization failed:", error)
       toast({
         title: "결제 모듈 초기화 실패",
         description: error.message || "잠시 후 다시 시도해주세요.",
