@@ -22,7 +22,7 @@ const handleAuthError = () => {
 }
 
 // Helper function for API calls
-async function fetchAPI<T>(endpoint: string, options: RequestInit = {}, requiresAuth = true): Promise<T> {
+async function fetchAPI<T>(endpoint: string, options: RequestInit = {}, requiresAuth = true): Promise<any> {
   const url = `${API_BASE_URL}${endpoint}`
 
   console.log("[v0] API Request:", { url, requiresAuth })
@@ -100,7 +100,8 @@ async function fetchAPI<T>(endpoint: string, options: RequestInit = {}, requires
     }
 
     const data: ApiResponse<T> = await response.json()
-    return data.data
+
+    return { data: data.data, headers: response.headers }
   } catch (error: any) {
     console.error("[v0] API Error:", error)
     throw new Error(error.message || "요청 처리 중 오류가 발생했습니다")
@@ -124,15 +125,44 @@ export const memberAPI = {
       false,
     ),
 
-  login: (data: { email: string; password: string }) =>
-    fetchAPI<{ accessToken: string; refreshToken: string; member: any }>(
-      "/member-service/api/auth/login",
-      {
-        method: "POST",
-        body: JSON.stringify(data),
-      },
-      false,
-    ),
+  login: async (data: { email: string; password: string }) => {
+    const url = `${API_BASE_URL}/member-service/api/auth/login`
+
+    const headers: HeadersInit = {
+      "Content-Type": "application/json",
+    }
+
+    if (API_BASE_URL.includes("ngrok")) {
+      headers["ngrok-skip-browser-warning"] = "true"
+    }
+
+    const response = await fetch(url, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(data),
+    })
+
+    if (!response.ok) {
+      let errorMessage = `${response.statusText}`
+      try {
+        const errorData = await response.json()
+        errorMessage = errorData.message || errorData.error || errorMessage
+      } catch {
+        // Ignore parsing error
+      }
+      throw new Error(errorMessage)
+    }
+
+    const responseData: ApiResponse<{ accessToken: string; member: any }> = await response.json()
+
+    const refreshToken = response.headers.get("refreshToken") || response.headers.get("refresh-token") || ""
+
+    return {
+      accessToken: responseData.data.accessToken,
+      refreshToken: refreshToken,
+      member: responseData.data.member,
+    }
+  },
 
   getProfile: () => fetchAPI("/member-service/api/members/profile", {}, true),
 

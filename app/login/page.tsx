@@ -39,9 +39,16 @@ export default function LoginPage() {
     try {
       const response = await memberAPI.login({ email, password })
 
-      // Store auth tokens
+      console.log("[v0] Login response:", {
+        hasAccessToken: !!response.accessToken,
+        hasRefreshToken: !!response.refreshToken,
+        member: response.member,
+      })
+
       localStorage.setItem("accessToken", response.accessToken)
-      localStorage.setItem("refreshToken", response.refreshToken)
+      if (response.refreshToken) {
+        localStorage.setItem("refreshToken", response.refreshToken)
+      }
       localStorage.setItem("user", JSON.stringify(response.member))
 
       toast({
