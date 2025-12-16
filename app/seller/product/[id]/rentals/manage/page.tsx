@@ -45,6 +45,7 @@ function ManageProductRentalsContent({ productId }: { productId: string }) {
   const [isLoading, setIsLoading] = useState(true)
   const [requestedRentals, setRequestedRentals] = useState<any[]>([])
   const [acceptedRentals, setAcceptedRentals] = useState<any[]>([])
+  const [paidRentals, setPaidRentals] = useState<any[]>([])
   const [rentingRentals, setRentingRentals] = useState<any[]>([])
   const [product, setProduct] = useState<any>(null)
   const [selectedRental, setSelectedRental] = useState<any>(null)
@@ -92,6 +93,17 @@ function ManageProductRentalsContent({ productId }: { productId: string }) {
       console.log("[v0] Accepted rentals response:", acceptedResponse)
       const acceptedData = acceptedResponse.data || []
       setAcceptedRentals(Array.isArray(acceptedData) ? acceptedData : [])
+
+      const paidResponse = await sellerAPI.getRentals({
+        productId: Number(productId),
+        status: "PAID",
+        startDate,
+        endDate,
+        size: 100,
+      })
+      console.log("[v0] Paid rentals response:", paidResponse)
+      const paidData = paidResponse.data || []
+      setPaidRentals(Array.isArray(paidData) ? paidData : [])
 
       const rentingResponse = await sellerAPI.getRentals({
         productId: Number(productId),
@@ -242,7 +254,7 @@ function ManageProductRentalsContent({ productId }: { productId: string }) {
             <p className="text-lg font-bold text-primary">₩{rental.totalAmount?.toLocaleString()}</p>
           </div>
         </div>
-        <div className="flex gap-2 pt-3 border-t">{actions}</div>
+        {actions && <div className="flex gap-2 pt-3 border-t">{actions}</div>}
       </CardContent>
     </Card>
   )
@@ -301,12 +313,15 @@ function ManageProductRentalsContent({ productId }: { productId: string }) {
         )}
 
         <Tabs defaultValue="requested" className="space-y-6">
-          <TabsList className="grid w-full max-w-2xl grid-cols-3">
+          <TabsList className="grid w-full max-w-3xl grid-cols-4">
             <TabsTrigger value="requested">
-              요청됨 <Badge className="ml-2 bg-yellow-500">{requestedRentals.length}</Badge>
+              요청 <Badge className="ml-2 bg-yellow-500">{requestedRentals.length}</Badge>
             </TabsTrigger>
             <TabsTrigger value="accepted">
-              수락됨 <Badge className="ml-2 bg-blue-500">{acceptedRentals.length}</Badge>
+              수락 <Badge className="ml-2 bg-blue-500">{acceptedRentals.length}</Badge>
+            </TabsTrigger>
+            <TabsTrigger value="paid">
+              결제완료 <Badge className="ml-2 bg-green-500">{paidRentals.length}</Badge>
             </TabsTrigger>
             <TabsTrigger value="renting">
               렌탈 중 <Badge className="ml-2 bg-purple-500">{rentingRentals.length}</Badge>
@@ -367,7 +382,20 @@ function ManageProductRentalsContent({ productId }: { productId: string }) {
                 </CardContent>
               </Card>
             ) : (
-              acceptedRentals.map((rental) => (
+              acceptedRentals.map((rental) => <RentalCard key={rental.rentalItemId} rental={rental} actions={null} />)
+            )}
+          </TabsContent>
+
+          <TabsContent value="paid" className="space-y-4">
+            {paidRentals.length === 0 ? (
+              <Card>
+                <CardContent className="p-12 text-center">
+                  <Package className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <p className="text-muted-foreground">결제완료된 예약이 없습니다</p>
+                </CardContent>
+              </Card>
+            ) : (
+              paidRentals.map((rental) => (
                 <RentalCard
                   key={rental.rentalItemId}
                   rental={rental}
@@ -412,7 +440,7 @@ function ManageProductRentalsContent({ productId }: { productId: string }) {
                       }}
                     >
                       <Check className="h-4 w-4 mr-1" />
-                      대여 완료
+                      반납 완료
                     </Button>
                   }
                 />
