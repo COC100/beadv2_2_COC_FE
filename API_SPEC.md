@@ -117,9 +117,9 @@
 ### 판매자 기본
 - **POST /api/sellers** — 판매자 등록 (Auth)
   - Req: `storeName:string<=50`, `bizRegNo?:string<=20`, `storePhone?:string<=20`
-  - Res: `SellerDetailResponse { sellerId, memberId, storeName, bizRegNo, storePhone, status:SellerStatus, createdAt, updatedAt }`
+  - Res: `String accessToken` (내부적으로 `/internal/members/{memberId}/role` 호출하여 SELLER 롤로 변경 후 새 토큰 반환)
 - **GET /api/sellers/self** — 내 판매자 (Auth)
-  - Res: `SellerDetailResponse`
+  - Res: `SellerDetailResponse { sellerId, memberId, storeName, bizRegNo, storePhone, status:SellerStatus, createdAt, updatedAt }`
 - **GET /api/sellers/self/rentals** — 내 대여 목록 (Auth)
   - Query: `productId?:long`, `status:string`, `startDate:yyyy-MM-dd`, `endDate:yyyy-MM-dd`, `page?:int`, `size?:int`
   - Res: `SellerRentalResponse[] { rentalItemId, productId, memberId, sellerId, status, totalAmount:decimal, startDate, endDate, paidAt }`
