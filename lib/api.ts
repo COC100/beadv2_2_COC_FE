@@ -636,9 +636,12 @@ export const sellerAPI = {
       true,
     )
 
-    // Check if response contains accessToken (from internal role change)
-    if (result.data.accessToken) {
-      return { data: { ...result.data, accessToken: result.data.accessToken } }
+    // Backend internally calls PATCH /internal/members/{memberId}/role which returns new accessToken
+    // The accessToken is returned in the response body as a String
+    if (typeof result.data === "string" && result.data.length > 0) {
+      // If data is a string token, update localStorage
+      localStorage.setItem("accessToken", result.data)
+      console.log("[v0] Updated accessToken after seller registration")
     }
 
     return result
@@ -744,4 +747,70 @@ export const sellerAPI = {
       },
       true,
     ),
+}
+
+// Auth Service APIs
+export const authAPI = {
+  reissueToken: async () => {
+    const url = `${API_BASE_URL}/member-service/api/auth/reissue`
+
+    const headers: HeadersInit = {
+      "Content-Type": "application/json",
+    }
+
+    if (API_BASE_URL.includes("ngrok")) {
+      headers["ngrok-skip-browser-warning"] = "true"
+    }
+
+    // Cookie with refresh token is automatically sent by browser
+    const response = await fetch(url, {
+      method: "POST",
+      headers,
+      credentials: "include", // Include cookies
+    })
+
+    if (!response.ok) {
+      let errorMessage = `${response.statusText}`
+      try {
+        const errorData = await response.json()
+        errorMessage = errorData.message || errorData.error || errorMessage
+      } catch {
+        // Ignore parsing error
+      }
+      throw new Error(errorMessage)
+    }
+
+    const responseData: ApiResponse<string> = await response.json()
+
+    // Update accessToken in localStorage
+    if (responseData.data) {
+      localStorage.setItem("accessToken", responseData.data)
+      console.log("[v0] Reissued accessToken")
+    }
+
+    return {
+      accessToken: responseData.data,
+    }
+  },
+
+  logout: async () => {
+    const url = `${API_BASE_URL}/member-service/api/auth/logout`
+
+    const headers: HeadersInit = {
+      "Content-Type": "application/json",
+    }
+
+    if (API_BASE_URL.includes("ngrok")) {
+      headers["ngrok-skip-browser-warning"] = "true"
+    }
+
+    await fetch(url, {
+      method: "POST",
+      headers,
+      credentials: "include",
+    })
+
+    // Clear local storage
+    localStorage.removeItem("accessToken")
+  },
 }
