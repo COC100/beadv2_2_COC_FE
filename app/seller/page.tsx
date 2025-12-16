@@ -67,8 +67,9 @@ export default function SellerPage() {
       }
 
       try {
-        const seller = await sellerAPI.getSelf()
-        setSellerInfo(seller)
+        const sellerResponse = await sellerAPI.getSelf()
+        console.log("[v0] Seller API response:", sellerResponse)
+        setSellerInfo(sellerResponse.data)
 
         try {
           const productsResponse = await productAPI.getSellerProducts({
@@ -76,10 +77,12 @@ export default function SellerPage() {
             size: 20,
             sort: "createdAt,desc",
           })
-          setProducts(productsResponse.content || [])
-          setTotalProducts(productsResponse.totalElements || 0)
-          setTotalPages(productsResponse.totalPages || 0)
-          setIsLastPage(productsResponse.last || false)
+          console.log("[v0] Products API response:", productsResponse)
+          const productsData = productsResponse.data
+          setProducts(productsData.content || [])
+          setTotalProducts(productsData.totalElements || 0)
+          setTotalPages(productsData.totalPages || 0)
+          setIsLastPage(productsData.last || false)
         } catch (productError) {
           console.error("[v0] Failed to load products (non-critical):", productError)
           setProducts([])

@@ -75,7 +75,8 @@ export default function AddressesPage() {
         const response = await memberAPI.getAddresses()
         console.log("[v0] Address API response:", response)
 
-        const addressList = Array.isArray(response) ? response : []
+        const addressData = response.data
+        const addressList = Array.isArray(addressData) ? addressData : []
 
         if (!Array.isArray(addressList)) {
           console.error("[v0] Invalid address list format:", addressList)
@@ -179,7 +180,8 @@ export default function AddressesPage() {
       }
 
       const response = await memberAPI.getAddresses()
-      const addressList = Array.isArray(response) ? response : []
+      const addressData = response.data
+      const addressList = Array.isArray(addressData) ? addressData : []
 
       if (Array.isArray(addressList)) {
         const mappedAddresses = addressList.map((addr: any) => ({
@@ -210,7 +212,8 @@ export default function AddressesPage() {
     try {
       await memberAPI.deleteAddress(addressId)
       const response = await memberAPI.getAddresses()
-      const addressList = Array.isArray(response) ? response : []
+      const addressData = response.data
+      const addressList = Array.isArray(addressData) ? addressData : []
 
       if (Array.isArray(addressList)) {
         const mappedAddresses = addressList.map((addr: any) => ({
@@ -260,7 +263,8 @@ export default function AddressesPage() {
       })
 
       const response = await memberAPI.getAddresses()
-      const addressList = Array.isArray(response) ? response : []
+      const addressData = response.data
+      const addressList = Array.isArray(addressData) ? addressData : []
 
       if (Array.isArray(addressList)) {
         const mappedAddresses = addressList.map((addr: any) => ({
