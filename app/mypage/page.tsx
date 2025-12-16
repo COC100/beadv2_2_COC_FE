@@ -21,21 +21,20 @@ export default function MyPage() {
   useEffect(() => {
     const loadData = async () => {
       const token = localStorage.getItem("accessToken")
+
       if (!token) {
         router.push("/intro")
         return
       }
 
       try {
-        // Load member profile
         const profileData = await memberAPI.getProfile()
         setProfile(profileData)
 
-        // Load wallet balance
         const walletData = await accountAPI.getBalance()
         setBalance(walletData?.balance ?? 0)
       } catch (error: any) {
-        console.error("[v0] Failed to load mypage data:", error)
+        console.error("Failed to load mypage data:", error)
         if (error.message.includes("401") || error.message.includes("인증되지 않았습니다")) {
           localStorage.removeItem("accessToken")
           router.push("/intro")
