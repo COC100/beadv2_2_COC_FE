@@ -626,15 +626,23 @@ export const cartAPI = {
 
 // Seller Service APIs
 export const sellerAPI = {
-  register: (data: { storeName: string; bizRegNo?: string; storePhone?: string }) =>
-    fetchAPI(
+  register: async (data: { storeName: string; bizRegNo?: string; storePhone?: string }) => {
+    const result = await fetchAPI(
       "/seller-service/api/sellers",
       {
         method: "POST",
         body: JSON.stringify(data),
       },
       true,
-    ),
+    )
+
+    // Check if response contains accessToken (from internal role change)
+    if (result.data.accessToken) {
+      return { data: { ...result.data, accessToken: result.data.accessToken } }
+    }
+
+    return result
+  },
 
   getSelf: () => fetchAPI<any>("/seller-service/api/sellers/self", {}, true),
 

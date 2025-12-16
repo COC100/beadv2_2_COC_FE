@@ -44,11 +44,18 @@ export default function BecomeSellerPage() {
 
     setIsLoading(true)
     try {
-      await sellerAPI.register({
+      const response = await sellerAPI.register({
         storeName: formData.businessName,
         bizRegNo: formData.businessNumber || undefined,
         storePhone: formData.phone || undefined,
       })
+
+      console.log("[v0] Seller registration response:", response)
+
+      if (response.data.accessToken) {
+        localStorage.setItem("accessToken", response.data.accessToken)
+        console.log("[v0] Updated accessToken after seller registration")
+      }
 
       toast({
         title: "판매자 신청 완료",

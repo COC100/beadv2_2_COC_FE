@@ -1,15 +1,15 @@
 # MODI 서비스 API 명세
 
-본 문서는 member-service, account-service, seller-service, product-service, rental-service, review-service, notification-service 의 컨트롤러 기반 API 명세입니다. 기본 응답은 `ApiResponse<T>`(`success:boolean, code:string, message:string, data:T`)를 사용하며, 내부용(wallet/product/rental/settlement) 엔드포인트와 리뷰 삭제는 래퍼 없이 원본을 반환하고 알림 스트림은 text/event-stream을 반환합니다.
+본 문서는 member-service, account-service, seller-service, product-service, rental-service, review-service, notification-service의 컨트롤러 기반 API 명세입니다. 기본 응답은 `ApiResponse<T>`(`success:boolean, code:string, message:string, data:T`)이며, 내부 지갑/상품/대여/판매자/회원 컨트롤러는 래퍼 없이 원본을 반환하고 리뷰 삭제는 204 No Content, 알림 스트림은 `text/event-stream`을 반환합니다. 인증/재발급/로그아웃 과정에서 리프레시 토큰은 HttpOnly 쿠키로 전달됩니다.
 
 ## 인증/권한
 - JWT Bearer: 헤더 `Authorization: Bearer <accessToken>`
 - 토큰 예외: 회원가입 `POST /api/members/signup`, 인증 구간 `/api/auth/**`, Swagger(`/swagger-ui/**`, `/v3/api-docs/**`), Actuator(`/actuator/**`), 내부용 `/internal/**`
-- 기본 Role 클레임: `ROLE_<role>`(MemberRole), 기본 USER. principal(CustomMember.memberId) 필요 API는 토큰 필수.
+- 기본 role 클레임: `MemberRole` 값(`MEMBER` 기본, `SELLER`)이 `role`로 담김. principal(CustomMember.memberId) 필요 API는 토큰 필수.
 
 ## Enum 목록
 - AddressType: `MEMBER`, `SELLER`
-- MemberRole: `USER`, `SELLER`
+- MemberRole: `MEMBER`, `SELLER`
 - MemberStatus: `ACTIVE`, `INACTIVE`, `WITHDRAWN`
 - ProductCategory: `LAPTOP`, `DESKTOP`, `CAMERA`, `TABLET`, `MOBILE`, `MONITOR`, `ACCESSORY`, `DRONE`, `AUDIO`, `PROJECTOR`
 - ProductStatus: `ACTIVE`, `INACTIVE`, `DELETE`
@@ -56,7 +56,13 @@
 ### 인증
 - **POST /api/auth/login**
   - Req: `email`, `password:string(8-20 영문/숫자/특수문자)`
-  - Res: `MemberLoginResponse { accessToken, refreshToken, member:{ id:long, email, name, role } }`
+  - Res: `String accessToken` (body), 리프레시 토큰 HttpOnly 쿠키 발급
+- **POST /api/auth/reissue** — 토큰 재발급
+  - Req: 리프레시 토큰 쿠키
+  - Res: `String accessToken` (body), 리프레시 토큰 쿠키 재발급
+- **POST /api/auth/logout**
+  - Req: 리프레시 토큰 쿠키
+  - Res: `Void` (리프레시 쿠키 제거)
 - **POST /api/auth/email/verify/send**
   - Req: `email`
   - Res: `EmailVerificationSendResponse { result:"OK" }`
@@ -70,18 +76,22 @@
   - Req: `email`, `code:string(6)`, `newPassword:string(규칙 동일)`
   - Res: `Void`
 
+### 내부
+- **PATCH /internal/members/{memberId}/role** — 판매자 롤로 변경 및 새 액세스 토큰 발급
+  - Res: `String accessToken` (래퍼 없음)
+
 ---
 ## account-service
 ### 지갑
 - **GET /api/accounts/balance** — 내 예치금 (Auth)
   - Res: `MemberWalletResponse { balance:decimal, createdAt:datetime }`
 - **GET /api/accounts/transactions** — 내 거래내역 (Auth)
-  - Res: `WalletTransactionResponse[] { txType:WalletTransactionType, amount, balanceAfter, relatedRentalId?:long, relatedPgDepositId?:long, relatedSettlementId?:long, description, createdAt }`
+  - Res: `WalletTransactionResponse[] { txType:WalletTransactionType, amount, balanceAfter, relatedRentalId?:long, relatedPgDepositId?:long, relatedSettlementId?:long, description, createdAt, paymentKey?:string }`
 
 ### PG 예치금
 - **POST /api/deposits/pg/request** — 충전 요청 (Auth)
   - Req: `amount:decimal>0`
-  - Res: `DepositResponse { id, memberId, amount, status:PgDepositStatus, pgProvider, orderId, requestedAt, approvedAt, failedReason }`
+  - Res: `DepositResponse { id, memberId, amount, status:PgDepositStatus, pgProvider, orderId, requestedAt, approvedAt, failedReason, paymentKey }`
 - **POST /api/deposits/pg/approve** — 결제 승인
   - Req: `paymentKey`, `orderId`, `amount:decimal`
   - Res: `DepositResponse`
@@ -116,6 +126,8 @@
 - **PUT /api/sellers/self** — 내 판매자 수정 (Auth)
   - Req: `storeName`, `bizRegNo?`, `storePhone?`, `status:SellerStatus`
   - Res: `SellerDetailResponse`
+- **GET /api/sellers/products/{productId}** — 상품 요약 조회 (Auth)
+  - Res: `ProductSummaryResponse { productId, productName, thumbnailImageUrl }`
 
 ### 내부 판매자 (래퍼 없음)
 - **GET /internal/sellers/by-member/{memberId}** — 판매자 ID 조회
@@ -126,7 +138,7 @@
 ### 판매자 정산(셀프)
 - **GET /api/settlements/sellers/self** — 내 정산 목록 (Auth)
   - Query: `periodYm?:yyyy-MM`, `pageable`
-  - Res: `Page<SellerSettlementResponse>`
+  - Res: `Page<SellerSettlementResponse { id, batchId, sellerId, periodYm, totalRentalAmount, totalFeeAmount, settlementAmount, status:SellerSettlementStatus, paidAt, createdAt, updatedAt }>`
 - **GET /api/settlements/sellers/self/{sellerSettlementId}** — 단건 (Auth)
   - Res: `SellerSettlementResponse`
 - **GET /api/settlements/sellers/self/{sellerSettlementId}/lines** — 라인 상세 (Auth)
@@ -137,10 +149,15 @@
 - **POST /api/settlements/sellers/self/{sellerSettlementId}/cancel** — 정산 취소 (Auth)
   - Res: `SellerSettlementResponse`
 
+### 판매자 정산 배치(셀프)
+- **POST /api/settlements/sellers/self/batches/run** — 셀프 배치 생성+실행 (Auth)
+  - Req: `SellerSettlementBatchRunRequest { periodYm:yyyy-MM, startDate?:yyyy-MM-dd, endDate?:yyyy-MM-dd, pageSize?:int>0 }`
+  - Res: `SettlementBatchResponse { id, periodYm, status:SettlementBatchStatus, startedAt, completedAt, createdAt, updatedAt }`
+
 ### 정산 배치 내부 (래퍼 ApiResponse)
 - **POST /internal/settlements/batches** — 배치 생성
   - Req: `periodYm:string`
-  - Res: `SettlementBatchResponse { id, periodYm, status:SettlementBatchStatus, startedAt, completedAt, createdAt, updatedAt }`
+  - Res: `SettlementBatchResponse`
 - **POST /internal/settlements/batches/{batchId}/start** — 배치 시작 표시
   - Res: `SettlementBatchResponse`
 - **POST /internal/settlements/batches/{batchId}/complete** — 배치 완료 표시
@@ -149,9 +166,6 @@
   - Query: `periodYm?:string`, `pageable`
   - Res: `Page<SettlementBatchResponse>`
 - **GET /internal/settlements/batches/{batchId}** — 배치 단건
-  - Res: `SettlementBatchResponse`
-- **POST /internal/settlements/batches/{batchId}/run** — 배치 실행
-  - Req: `SettlementBatchRunCommand { periodYm?, startDate?, endDate?, sellerId?, pageSize? }`
   - Res: `SettlementBatchResponse`
 
 ---
@@ -188,6 +202,9 @@
 - **POST /internal/products/bulk** — 상품 다건 조회
   - Req: `productIds:long[]`
   - Res: `ProductBulkResponse[] { productId, sellerId, price:decimal, status:string }`
+- **GET /internal/products** — 상품 단건 조회
+  - Query: `productId:long`
+  - Res: `ProductInternalSellerResponse { productId, productName, thumbnailImageUrl }`
 
 ---
 ## rental-service
@@ -215,7 +232,7 @@
 - **POST /api/rentals/{rentalItemId}/return** — 반납 처리 (Auth)
   - Path: `rentalItemId:long`
   - Req: `damageFee?:decimal>=0`, `damageReason?:string<=255`, `lateFee?:decimal>=0`, `lateReason?:string<=255`, `memo?:string<=500`
-  - Res: `RentalReturnResponse { rentalId, rentalItemId, status, extraFeeAmount }`
+  - Res: `RentalReturnResponse { rentalId, rentalItemId, status, extraFeeAmount:string }`
 - **POST /api/rentals/{rentalItemId}/refund** — 환불 (Auth)
   - Path: `rentalItemId:long`
   - Res: `Void`
