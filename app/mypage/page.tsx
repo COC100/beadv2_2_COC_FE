@@ -33,13 +33,11 @@ export default function MyPage() {
 
         // Load wallet balance
         const walletData = await accountAPI.getBalance()
-        setBalance(walletData.balance)
+        setBalance(walletData?.balance ?? 0)
       } catch (error: any) {
         console.error("[v0] Failed to load mypage data:", error)
-        if (error.message.includes("401") || error.message.includes("unauthorized")) {
+        if (error.message.includes("401") || error.message.includes("인증되지 않았습니다")) {
           localStorage.removeItem("accessToken")
-          localStorage.removeItem("refreshToken")
-          localStorage.removeItem("user")
           router.push("/intro")
         } else {
           toast({
@@ -140,7 +138,7 @@ export default function MyPage() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm opacity-90 mb-2">예치금 잔액</p>
-                    <p className="text-5xl font-bold">₩{balance.toLocaleString()}</p>
+                    <p className="text-5xl font-bold">₩{(balance ?? 0).toLocaleString()}</p>
                   </div>
                   <Wallet className="h-16 w-16 opacity-30" />
                 </div>

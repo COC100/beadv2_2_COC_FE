@@ -73,16 +73,22 @@ async function fetchAPI<T>(endpoint: string, options: RequestInit = {}, requires
     }
 
     if (!response.ok) {
+      const clonedResponse = response.clone()
       let errorMessage = `${response.statusText}`
+
       try {
-        const errorData = await response.json()
+        const errorData = await clonedResponse.json()
         errorMessage = errorData.message || errorData.error || errorMessage
       } catch {
-        const errorText = await response.text()
-        if (errorText.startsWith("<!DOCTYPE") || errorText.startsWith("<html")) {
-          errorMessage = "서버 오류가 발생했습니다."
-        } else if (errorText) {
-          errorMessage = errorText
+        try {
+          const errorText = await clonedResponse.text()
+          if (errorText.startsWith("<!DOCTYPE") || errorText.startsWith("<html")) {
+            errorMessage = "서버 오류가 발생했습니다."
+          } else if (errorText) {
+            errorMessage = errorText
+          }
+        } catch {
+          // Ignore if both JSON and text parsing fail
         }
       }
       throw new Error(errorMessage)
