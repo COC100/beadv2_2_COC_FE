@@ -22,19 +22,32 @@ export default function MyPage() {
     const loadData = async () => {
       const token = localStorage.getItem("accessToken")
 
+      console.log("[v0] MyPage - checking token:", !!token)
+
       if (!token) {
         router.push("/intro")
         return
       }
 
       try {
-        const profileData = await memberAPI.getProfile()
+        console.log("[v0] MyPage - calling memberAPI.getProfile()")
+        const profileResponse = await memberAPI.getProfile()
+        console.log("[v0] MyPage - profile response:", profileResponse)
+
+        // Extract data from the response
+        const profileData = profileResponse?.data || profileResponse
+        console.log("[v0] MyPage - profile data:", profileData)
         setProfile(profileData)
 
-        const walletData = await accountAPI.getBalance()
+        console.log("[v0] MyPage - calling accountAPI.getBalance()")
+        const walletResponse = await accountAPI.getBalance()
+        console.log("[v0] MyPage - wallet response:", walletResponse)
+
+        const walletData = walletResponse?.data || walletResponse
+        console.log("[v0] MyPage - wallet data:", walletData)
         setBalance(walletData?.balance ?? 0)
       } catch (error: any) {
-        console.error("Failed to load mypage data:", error)
+        console.error("[v0] MyPage - Failed to load data:", error)
         if (error.message.includes("401") || error.message.includes("인증되지 않았습니다")) {
           localStorage.removeItem("accessToken")
           router.push("/intro")

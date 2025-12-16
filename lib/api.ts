@@ -62,8 +62,6 @@ async function fetchAPI<T>(endpoint: string, options: RequestInit = {}, requires
         console.error("[v0] 401 Unauthorized on authenticated endpoint, clearing token and redirecting")
         if (typeof window !== "undefined") {
           localStorage.removeItem("accessToken")
-          localStorage.removeItem("refreshToken")
-          localStorage.removeItem("user")
         }
         handleAuthError()
       } else {
@@ -78,6 +76,7 @@ async function fetchAPI<T>(endpoint: string, options: RequestInit = {}, requires
 
       try {
         const errorData = await clonedResponse.json()
+        console.log("[v0] Error response data:", errorData)
         errorMessage = errorData.message || errorData.error || errorMessage
       } catch {
         try {
@@ -94,6 +93,8 @@ async function fetchAPI<T>(endpoint: string, options: RequestInit = {}, requires
       throw new Error(errorMessage)
     }
 
+    const clonedResponse = response.clone()
+
     if (contentType && !contentType.includes("application/json")) {
       const responseText = await response.text()
       console.error("[v0] Non-JSON response:", responseText.substring(0, 200))
@@ -105,7 +106,15 @@ async function fetchAPI<T>(endpoint: string, options: RequestInit = {}, requires
       throw new Error("서버 응답 형식이 올바르지 않습니다")
     }
 
-    const data: ApiResponse<T> = await response.json()
+    const data: ApiResponse<T> = await clonedResponse.json()
+
+    console.log("[v0] Response data structure:", {
+      success: data.success,
+      code: data.code,
+      message: data.message,
+      dataType: typeof data.data,
+      data: data.data,
+    })
 
     return { data: data.data, headers: response.headers }
   } catch (error: any) {
