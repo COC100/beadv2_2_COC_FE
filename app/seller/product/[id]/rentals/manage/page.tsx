@@ -24,13 +24,19 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useToast } from "@/hooks/use-toast"
-import { sellerAPI, productAPI, rentalAPI } from "@/lib/api"
+import { sellerAPI, rentalAPI } from "@/lib/api"
 
-export default function ManageProductRentalsPage({ params }: { params: { id: string } }) {
+export default async function ManageProductRentalsPage({ params }: { params: Promise<{ id: string }> }) {
+  const resolvedParams = await params
+  const productId = resolvedParams.id
+
+  return <ManageProductRentalsContent productId={productId} />
+}
+
+function ManageProductRentalsContent({ productId }: { productId: string }) {
   const router = useRouter()
   const { toast } = useToast()
   const [isLoading, setIsLoading] = useState(true)
-  const [product, setProduct] = useState<any>(null)
   const [requestedRentals, setRequestedRentals] = useState<any[]>([])
   const [acceptedRentals, setAcceptedRentals] = useState<any[]>([])
   const [rentingRentals, setRentingRentals] = useState<any[]>([])
@@ -46,43 +52,48 @@ export default function ManageProductRentalsPage({ params }: { params: { id: str
     lateReason: "",
     memo: "",
   })
-  const productId = params.id
 
   const loadRentals = async () => {
     try {
-      const productData = await productAPI.getDetail(Number(productId))
-      setProduct(productData)
+      console.log("[v0] Loading rentals for productId:", productId)
 
       // Load REQUESTED rentals
-      const requested = await sellerAPI.getRentals({
+      const requestedResponse = await sellerAPI.getRentals({
         productId: Number(productId),
         status: "REQUESTED",
         startDate: "2020-01-01",
         endDate: "2099-12-31",
         size: 100,
       })
-      setRequestedRentals(requested || [])
+      console.log("[v0] Requested rentals response:", requestedResponse)
+      const requestedData = requestedResponse.data || []
+      setRequestedRentals(Array.isArray(requestedData) ? requestedData : [])
 
       // Load ACCEPTED rentals
-      const accepted = await sellerAPI.getRentals({
+      const acceptedResponse = await sellerAPI.getRentals({
         productId: Number(productId),
         status: "ACCEPTED",
         startDate: "2020-01-01",
         endDate: "2099-12-31",
         size: 100,
       })
-      setAcceptedRentals(accepted || [])
+      console.log("[v0] Accepted rentals response:", acceptedResponse)
+      const acceptedData = acceptedResponse.data || []
+      setAcceptedRentals(Array.isArray(acceptedData) ? acceptedData : [])
 
       // Load RENTING rentals
-      const renting = await sellerAPI.getRentals({
+      const rentingResponse = await sellerAPI.getRentals({
         productId: Number(productId),
         status: "RENTING",
         startDate: "2020-01-01",
         endDate: "2099-12-31",
         size: 100,
       })
-      setRentingRentals(renting || [])
+      console.log("[v0] Renting rentals response:", rentingResponse)
+      const rentingData = rentingResponse.data || []
+      setRentingRentals(Array.isArray(rentingData) ? rentingData : [])
     } catch (error: any) {
+      console.error("[v0] Failed to load rentals:", error)
       toast({
         title: "오류",
         description: error.message || "데이터를 불러오는데 실패했습니다",
@@ -251,7 +262,7 @@ export default function ManageProductRentalsPage({ params }: { params: { id: str
               </Button>
             </Link>
           </div>
-          <h1 className="text-3xl font-bold">{product?.name || "상품"} 상태 관리</h1>
+          <h1 className="text-3xl font-bold">상품 상태 관리</h1>
         </div>
       </section>
 

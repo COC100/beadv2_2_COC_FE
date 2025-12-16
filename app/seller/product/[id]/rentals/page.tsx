@@ -9,15 +9,20 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { useToast } from "@/hooks/use-toast"
-import { sellerAPI, productAPI } from "@/lib/api"
+import { sellerAPI } from "@/lib/api"
 
-export default function ProductRentalsPage({ params }: { params: { id: string } }) {
+export default async function ProductRentalsPage({ params }: { params: Promise<{ id: string }> }) {
+  const resolvedParams = await params
+  const productId = resolvedParams.id
+
+  return <ProductRentalsContent productId={productId} />
+}
+
+function ProductRentalsContent({ productId }: { productId: string }) {
   const router = useRouter()
   const { toast } = useToast()
   const [isLoading, setIsLoading] = useState(true)
   const [rentals, setRentals] = useState<any[]>([])
-  const [product, setProduct] = useState<any>(null)
-  const productId = params.id
 
   useEffect(() => {
     const loadData = async () => {
@@ -28,19 +33,21 @@ export default function ProductRentalsPage({ params }: { params: { id: string } 
       }
 
       try {
-        // Load product details
-        const productData = await productAPI.getDetail(Number(productId))
-        setProduct(productData)
+        console.log("[v0] Loading rentals for productId:", productId)
 
-        // Load all rentals for this product
-        const rentalsData = await sellerAPI.getRentals({
+        const response = await sellerAPI.getRentals({
           productId: Number(productId),
           startDate: "2020-01-01",
           endDate: "2099-12-31",
           size: 100,
         })
-        setRentals(rentalsData || [])
+        console.log("[v0] Rentals API response:", response)
+
+        const rentalsData = response.data || []
+        console.log("[v0] Rentals data:", rentalsData)
+        setRentals(Array.isArray(rentalsData) ? rentalsData : [])
       } catch (error: any) {
+        console.error("[v0] Failed to load rentals:", error)
         toast({
           title: "오류",
           description: error.message || "데이터를 불러오는데 실패했습니다",
@@ -94,7 +101,7 @@ export default function ProductRentalsPage({ params }: { params: { id: string } 
               </Button>
             </Link>
           </div>
-          <h1 className="text-3xl font-bold">{product?.name || "상품"} 예약 내역</h1>
+          <h1 className="text-3xl font-bold">상품 예약 내역</h1>
           <p className="text-muted-foreground mt-2">총 {rentals.length}건의 예약</p>
         </div>
       </section>

@@ -688,11 +688,10 @@ export const sellerAPI = {
         }
       })
     }
-    return fetchAPI<any[]>(
-      `/seller-service/api/sellers/self/rentals${queryParams.toString() ? `?${queryParams.toString()}` : ""}`,
-      {},
-      true,
-    )
+    const url = `/seller-service/api/sellers/self/rentals${queryParams.toString() ? `?${queryParams.toString()}` : ""}`
+    console.log("[v0] Seller getRentals API URL:", url)
+    console.log("[v0] Seller getRentals params:", params)
+    return fetchAPI<any[]>(url, {}, true)
   },
 
   runSettlementBatch: (data: { periodYm: string; startDate: string; endDate: string; pageSize: number }) =>
