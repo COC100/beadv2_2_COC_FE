@@ -51,7 +51,7 @@ function ProductRentalsContent({ productId }: { productId: string }) {
 
       const response = await sellerAPI.getRentals({
         productId: Number(productId),
-        status: "", // Empty status to get all rentals
+        status: "COMPLETED", // Updated status to filter only completed rentals
         startDate,
         endDate,
         size: 100,
