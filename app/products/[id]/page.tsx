@@ -139,6 +139,15 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
       : 0
 
   const handleAddToCart = async () => {
+    if (isOwner) {
+      setErrorDialog({
+        open: true,
+        title: "본인 상품입니다",
+        message: "본인이 등록한 상품은 장바구니에 추가할 수 없습니다.",
+      })
+      return
+    }
+
     if (!productId || !startDate || !endDate) {
       toast({
         title: "날짜를 선택해주세요",
@@ -183,6 +192,15 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
   }
 
   const handleRentalApplication = () => {
+    if (isOwner) {
+      setErrorDialog({
+        open: true,
+        title: "본인 상품입니다",
+        message: "본인이 등록한 상품은 렌탈 신청할 수 없습니다.",
+      })
+      return
+    }
+
     if (!productId || !startDate || !endDate) {
       toast({
         title: "날짜를 선택해주세요",
@@ -365,77 +383,75 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
               </div>
             </div>
 
-            {!isOwner && (
-              <Card className="border-2">
-                <CardContent className="p-5 space-y-4">
-                  <h3 className="font-semibold flex items-center gap-2">
-                    <Calendar className="h-5 w-5 text-primary" />
-                    대여 기간 선택
-                  </h3>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <Label htmlFor="startDate" className="text-sm mb-2">
-                        시작일
-                      </Label>
-                      <Input
-                        id="startDate"
-                        type="date"
-                        value={startDate}
-                        onChange={(e) => setStartDate(e.target.value)}
-                        min={new Date().toISOString().split("T")[0]}
-                        className="rounded-lg"
-                      />
+            <Card className="border-2">
+              <CardContent className="p-5 space-y-4">
+                <h3 className="font-semibold flex items-center gap-2">
+                  <Calendar className="h-5 w-5 text-primary" />
+                  대여 기간 선택
+                </h3>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label htmlFor="startDate" className="text-sm mb-2">
+                      시작일
+                    </Label>
+                    <Input
+                      id="startDate"
+                      type="date"
+                      value={startDate}
+                      onChange={(e) => setStartDate(e.target.value)}
+                      min={new Date().toISOString().split("T")[0]}
+                      className="rounded-lg"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="endDate" className="text-sm mb-2">
+                      종료일
+                    </Label>
+                    <Input
+                      id="endDate"
+                      type="date"
+                      value={endDate}
+                      onChange={(e) => setEndDate(e.target.value)}
+                      min={startDate || new Date().toISOString().split("T")[0]}
+                      className="rounded-lg"
+                    />
+                  </div>
+                </div>
+
+                {rentalDays > 0 && (
+                  <div className="border-t pt-4 space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">
+                        {product.pricePerDay.toLocaleString()}원 x {rentalDays}일
+                      </span>
+                      <span className="font-medium">₩{totalPrice.toLocaleString()}</span>
                     </div>
-                    <div>
-                      <Label htmlFor="endDate" className="text-sm mb-2">
-                        종료일
-                      </Label>
-                      <Input
-                        id="endDate"
-                        type="date"
-                        value={endDate}
-                        onChange={(e) => setEndDate(e.target.value)}
-                        min={startDate || new Date().toISOString().split("T")[0]}
-                        className="rounded-lg"
-                      />
+                    <div className="flex justify-between font-bold text-lg">
+                      <span>총 금액</span>
+                      <span className="text-primary">₩{totalPrice.toLocaleString()}</span>
                     </div>
                   </div>
+                )}
 
-                  {rentalDays > 0 && (
-                    <div className="border-t pt-4 space-y-2">
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">
-                          {product.pricePerDay.toLocaleString()}원 x {rentalDays}일
-                        </span>
-                        <span className="font-medium">₩{totalPrice.toLocaleString()}</span>
-                      </div>
-                      <div className="flex justify-between font-bold text-lg">
-                        <span>총 금액</span>
-                        <span className="text-primary">₩{totalPrice.toLocaleString()}</span>
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="flex gap-2 pt-2">
-                    <Button
-                      className="flex-1 rounded-lg h-11"
-                      disabled={!startDate || !endDate}
-                      onClick={handleRentalApplication}
-                    >
-                      렌탈 신청
-                    </Button>
-                    <Button
-                      variant="outline"
-                      disabled={!startDate || !endDate}
-                      className="rounded-lg h-11 px-4 bg-transparent"
-                      onClick={handleAddToCart}
-                    >
-                      <ShoppingCart className="h-5 w-5" />
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
+                <div className="flex gap-2 pt-2">
+                  <Button
+                    className="flex-1 rounded-lg h-11"
+                    disabled={!startDate || !endDate}
+                    onClick={handleRentalApplication}
+                  >
+                    렌탈 신청
+                  </Button>
+                  <Button
+                    variant="outline"
+                    disabled={!startDate || !endDate}
+                    className="rounded-lg h-11 px-4 bg-transparent"
+                    onClick={handleAddToCart}
+                  >
+                    <ShoppingCart className="h-5 w-5" />
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
           </div>
         </div>
 
