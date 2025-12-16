@@ -536,14 +536,16 @@ export const rentalAPI = {
       true,
     ),
 
-  pay: (rentalId: number) =>
-    fetchAPI<any>(
+  pay: (rentalId: number) => {
+    console.log("[v0] rentalAPI.pay called with rentalId:", rentalId)
+    return fetchAPI<any>(
       `/rental-service/api/rentals/${rentalId}/pay`,
       {
         method: "POST",
       },
       true,
-    ),
+    )
+  },
 
   cancel: (rentalItemId: number) =>
     fetchAPI(

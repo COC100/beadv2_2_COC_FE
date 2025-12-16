@@ -216,13 +216,18 @@ export default function RentalsPage() {
 
   const handlePayment = async (rentalId: number) => {
     try {
-      await rentalAPI.pay(rentalId)
+      console.log("[v0] Payment request - rentalId:", rentalId)
+      const response = await rentalAPI.pay(rentalId)
+      console.log("[v0] Payment response:", response)
+      console.log("[v0] Payment response data:", response.data)
+
       toast({
         title: "결제 완료",
         description: "렌탈 결제가 완료되었습니다",
       })
       window.location.reload()
     } catch (error: any) {
+      console.error("[v0] Payment error:", error)
       toast({
         title: "결제 실패",
         description: error.message,
