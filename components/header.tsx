@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Separator } from "@/components/ui/separator"
-import { sellerAPI } from "@/lib/api"
+import { getUserRoleFromToken } from "@/lib/utils"
 
 interface Notification {
   id: number
@@ -31,12 +31,9 @@ export function Header() {
       const token = localStorage.getItem("accessToken")
       setIsLoggedIn(!!token)
 
-      // Check seller status via API
       if (token) {
-        sellerAPI
-          .getSelf()
-          .then(() => setIsSeller(true))
-          .catch(() => setIsSeller(false))
+        const role = getUserRoleFromToken()
+        setIsSeller(role === "SELLER")
       }
     }
   }, [])
