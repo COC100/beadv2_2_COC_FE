@@ -58,8 +58,6 @@ export default function MyPage() {
 
   const handleLogout = () => {
     localStorage.removeItem("accessToken")
-    localStorage.removeItem("refreshToken")
-    localStorage.removeItem("user")
     toast({
       title: "로그아웃 완료",
       description: "안전하게 로그아웃되었습니다",

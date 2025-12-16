@@ -25,7 +25,6 @@ export default function SettingsPage() {
 
   const [profile, setProfile] = useState({
     name: "",
-    email: "",
     phone: "",
   })
 
@@ -48,7 +47,6 @@ export default function SettingsPage() {
         const profileData = await memberAPI.getProfile()
         setProfile({
           name: profileData.name || "",
-          email: localStorage.getItem("user") ? JSON.parse(localStorage.getItem("user")!).email : "",
           phone: profileData.phone || "",
         })
       } catch (error: any) {
@@ -114,17 +112,12 @@ export default function SettingsPage() {
     }
 
     try {
-      const user = localStorage.getItem("user")
-      const memberId = user ? JSON.parse(user).id : null
+      const profileData = await memberAPI.getProfile()
 
-      if (!memberId) {
-        throw new Error("회원 정보를 찾을 수 없습니다")
-      }
-
-      await memberAPI.updatePassword(memberId, {
+      await memberAPI.updatePassword(profileData.id, {
         name: profile.name,
         password: passwords.newPassword,
-        email: profile.email,
+        email: "", // Email not available, backend should handle this
         verificationCode: "000000", // TODO: Implement verification code
       })
       toast({
@@ -148,8 +141,6 @@ export default function SettingsPage() {
     try {
       await memberAPI.deleteAccount()
       localStorage.removeItem("accessToken")
-      localStorage.removeItem("refreshToken")
-      localStorage.removeItem("user")
       toast({
         title: "회원 탈퇴 완료",
         description: "그동안 이용해주셔서 감사합니다.",
@@ -222,17 +213,6 @@ export default function SettingsPage() {
                       onChange={(e) => setProfile({ ...profile, name: e.target.value })}
                       className="rounded-xl"
                       required
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="email">이메일</Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      value={profile.email}
-                      className="rounded-xl bg-muted cursor-not-allowed"
-                      disabled
                     />
                   </div>
 
