@@ -264,6 +264,16 @@ export default function SellerPage() {
                                   보기
                                 </Button>
                               </Link>
+                              <Link href={`/seller/product/${product.productId}/rentals`}>
+                                <Button variant="outline" size="sm" className="rounded-lg bg-transparent">
+                                  상품 예약 내역
+                                </Button>
+                              </Link>
+                              <Link href={`/seller/product/${product.productId}/rentals/manage`}>
+                                <Button variant="outline" size="sm" className="rounded-lg bg-transparent">
+                                  상태 변경
+                                </Button>
+                              </Link>
                               <Button
                                 variant={product.status === "ACTIVE" ? "outline" : "default"}
                                 size="sm"
