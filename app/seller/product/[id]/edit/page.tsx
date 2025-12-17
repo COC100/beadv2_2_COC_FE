@@ -85,10 +85,13 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
 
     const loadProduct = async () => {
       try {
-        console.log("[v0 DEBUG] Loading product for edit, ID:", productId)
+        console.log("[v0] Loading product for edit, ID:", productId)
 
-        const productData = await productAPI.getDetail(productId)
-        console.log("[v0 DEBUG] Raw product data for edit:", JSON.stringify(productData, null, 2))
+        const response = await productAPI.getDetail(productId)
+        const productData = response.data
+
+        console.log("[v0] Product API response:", JSON.stringify(response, null, 2))
+        console.log("[v0] Product data extracted:", JSON.stringify(productData, null, 2))
 
         if (!productData) {
           throw new Error("상품 데이터를 불러올 수 없습니다")
@@ -103,7 +106,7 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
         })
 
         if (productData.images && Array.isArray(productData.images) && productData.images.length > 0) {
-          console.log("[v0 DEBUG] Product images:", productData.images)
+          console.log("[v0] Product images:", productData.images)
           setImages(
             productData.images.map((img: any, index: number) => ({
               imageId: img.imageId || null,
@@ -113,8 +116,7 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
           )
         }
       } catch (error: any) {
-        console.error("[v0 DEBUG] Failed to load product:", error)
-        console.error("[v0 DEBUG] Error stack:", error.stack)
+        console.error("[v0] Failed to load product:", error)
         toast({
           title: "상품 로딩 실패",
           description: error.message || "상품 정보를 불러올 수 없습니다",
