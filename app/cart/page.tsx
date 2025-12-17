@@ -95,7 +95,7 @@ export default function CartPage() {
               cartItemId: item.cartItemId,
               productId: item.productId,
               productName: product?.name || `상품 #${item.productId}`,
-              productImage: thumbnailImage?.url || product?.images?.[0]?.url || "/placeholder.svg?height=200&width=200",
+              productImage: thumbnailImage?.url || product?.images?.[0]?.url || "/images/image.png",
               pricePerDay: product?.pricePerDay || item.price || 0,
               startDate: item.startDate,
               endDate: item.endDate,
@@ -240,7 +240,7 @@ export default function CartPage() {
                     <div className="flex gap-4">
                       <div className="w-24 h-24 bg-gray-50 rounded-lg overflow-hidden flex-shrink-0">
                         <img
-                          src={item.productImage || "/placeholder.svg"}
+                          src={item.productImage || "/images/image.png"}
                           alt={item.productName}
                           className="w-full h-full object-cover"
                         />

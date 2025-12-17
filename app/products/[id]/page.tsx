@@ -310,9 +310,7 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
   }
 
   const images =
-    product.images && product.images.length > 0
-      ? product.images.map((img: any) => img.url)
-      : ["/abstract-geometric-shapes.png"]
+    product.images && product.images.length > 0 ? product.images.map((img: any) => img.url) : ["/images/image.png"] // Use NO IMAGE placeholder instead of placeholder.svg
 
   return (
     <div className="min-h-screen bg-white">
@@ -365,7 +363,7 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
           <div className="space-y-4">
             <div className="aspect-square bg-gray-50 rounded-lg overflow-hidden">
               <img
-                src={images[currentImageIndex] || "/placeholder.svg"}
+                src={images[currentImageIndex] || "/images/image.png"}
                 alt={product.name}
                 className="w-full h-full object-cover"
               />
@@ -381,7 +379,7 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
                     onClick={() => setCurrentImageIndex(index)}
                   >
                     <img
-                      src={image || "/placeholder.svg"}
+                      src={image || "/images/image.png"}
                       alt={`${product.name} ${index + 1}`}
                       className="w-full h-full object-cover"
                     />

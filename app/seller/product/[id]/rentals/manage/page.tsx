@@ -296,7 +296,7 @@ function ManageProductRentalsContent({ productId }: { productId: string }) {
               <div className="flex gap-4 items-center">
                 <div className="w-20 h-20 bg-gray-50 rounded-lg overflow-hidden flex-shrink-0">
                   <img
-                    src={product.images?.[0]?.url || "/placeholder.svg"}
+                    src={product.images?.[0]?.url || "/images/image.png"}
                     alt={product.name}
                     className="w-full h-full object-cover"
                   />

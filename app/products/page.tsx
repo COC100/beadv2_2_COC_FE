@@ -216,7 +216,7 @@ export default function ProductsPage() {
                     <Card className="overflow-hidden hover:shadow-lg transition-shadow group border-gray-200">
                       <div className="aspect-square overflow-hidden bg-gray-50 relative">
                         <img
-                          src={product.thumbnailUrl || "/placeholder.svg?height=300&width=300&query=no+image"}
+                          src={product.thumbnailUrl || "/images/image.png"}
                           alt={product.name}
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                         />

@@ -10,14 +10,29 @@ export interface ApiResponse<T> {
   data: T
 }
 
+// Helper function to check if user is on maintenance page
+const isMaintenancePage = () => {
+  if (typeof window === "undefined") return false
+  return window.location.pathname === "/maintenance"
+}
+
+// Helper function to redirect to maintenance page
+const handleServerError = () => {
+  if (typeof window === "undefined" || isMaintenancePage()) return
+
+  console.log("[v0] Server connection failed - redirecting to maintenance page")
+  window.location.href = "/maintenance"
+}
+
 // Helper function to handle redirects on auth failure
 const handleAuthError = () => {
-  if (typeof window !== "undefined") {
-    const currentPath = window.location.pathname
-    const publicPaths = ["/login", "/signup", "/intro", "/forgot-password"]
-    if (!publicPaths.some((path) => currentPath.startsWith(path))) {
-      window.location.href = "/intro"
-    }
+  if (typeof window === "undefined" || isMaintenancePage()) return
+
+  const publicPaths = ["/intro", "/login", "/signup", "/forgot-password"]
+  const currentPath = window.location.pathname
+
+  if (!publicPaths.some((path) => currentPath.startsWith(path))) {
+    window.location.href = "/intro"
   }
 }
 
@@ -28,9 +43,13 @@ let refreshPromise: Promise<string> | null = null
 async function fetchAPI<T>(
   endpoint: string,
   options: RequestInit = {},
-  requiresAuth = true,
+  requiresAuth = false,
   isRetry = false,
 ): Promise<{ data: T; headers: Headers }> {
+  if (isMaintenancePage()) {
+    throw new Error("서버 점검 중입니다")
+  }
+
   const url = `${API_BASE_URL}${endpoint}`
 
   console.log("[v0] API Request:", { url, requiresAuth, isRetry })
@@ -67,6 +86,18 @@ async function fetchAPI<T>(
 
     const contentType = response.headers.get("content-type")
     console.log("[v0] Content-Type:", contentType)
+
+    if (response.status === 503) {
+      console.error("[v0] 503 Service Unavailable - server maintenance")
+      handleServerError()
+      throw new Error("서버 점검 중입니다")
+    }
+
+    if (response.status === 502) {
+      console.error("[v0] 502 Bad Gateway - server connection failed")
+      handleServerError()
+      throw new Error("서버 연결에 실패했습니다")
+    }
 
     if (response.status === 401 && hasToken && !isRetry) {
       console.log("[v0] 401 Unauthorized - attempting token refresh")
@@ -172,6 +203,13 @@ async function fetchAPI<T>(
     return { data: data.data, headers: response.headers }
   } catch (error: any) {
     console.error("[v0] API Error:", error)
+
+    if (error instanceof TypeError && error.message === "Failed to fetch") {
+      console.error("[v0] Network error - server may be down")
+      handleServerError()
+      throw new Error("서버에 연결할 수 없습니다")
+    }
+
     throw new Error(error.message || "요청 처리 중 오류가 발생했습니다")
   }
 }

@@ -276,7 +276,7 @@ export default function SellerPage() {
                       <div className="flex flex-col md:flex-row gap-4">
                         <div className="w-full md:w-24 h-48 md:h-24 bg-gray-50 rounded-lg overflow-hidden flex-shrink-0">
                           <img
-                            src={product.thumbnailUrl || "/placeholder.svg"}
+                            src={product.thumbnailUrl || "/images/image.png"}
                             alt={product.name}
                             className="w-full h-full object-cover"
                           />

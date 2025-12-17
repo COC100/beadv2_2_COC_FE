@@ -433,7 +433,7 @@ export default function ReservationPage() {
                       <div key={item.cartItemId} className="flex gap-4 pb-4 border-b last:border-0">
                         <div className="w-20 h-20 bg-gray-50 rounded-lg overflow-hidden flex-shrink-0">
                           <img
-                            src={thumbnailImage?.url || product?.images?.[0]?.url || "/placeholder.svg"}
+                            src={thumbnailImage?.url || product?.images?.[0]?.url || "/images/image.png"}
                             alt={product?.name || `상품 #${item.productId}`}
                             className="w-full h-full object-cover"
                           />
