@@ -330,7 +330,7 @@ export default function SellerPage() {
                               </Link>
                               <Link href={`/seller/product/${product.productId}/rentals/manage`}>
                                 <Button variant="outline" size="sm" className="rounded-lg bg-transparent">
-                                  상태 변경
+                                  렌탈 관리
                                 </Button>
                               </Link>
                               <Button

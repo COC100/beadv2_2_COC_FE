@@ -13,7 +13,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { useToast } from "@/hooks/use-toast"
-import { cartAPI } from "@/lib/api"
+import { cartAPI, productAPI } from "@/lib/api"
 import { useRequireAuth } from "@/hooks/use-auth"
 
 interface CartItem {
@@ -41,6 +41,7 @@ export default function CartPage() {
     startDate: "",
     endDate: "",
   })
+  const [productData, setProductData] = useState<Record<number, any>>({})
 
   useEffect(() => {
     const loadCart = async () => {
@@ -68,18 +69,39 @@ export default function CartPage() {
         const items = cartData.items || []
         console.log("[v0] Cart items array:", JSON.stringify(items, null, 2))
 
+        const productIds = [...new Set(items.map((item: any) => item.productId))]
+        const products: Record<number, any> = {}
+
+        await Promise.all(
+          productIds.map(async (productId) => {
+            try {
+              const productResponse = await productAPI.getDetail(productId)
+              products[productId] = productResponse.data
+            } catch (err) {
+              console.error(`[v0] Failed to load product ${productId}:`, err)
+            }
+          }),
+        )
+
+        setProductData(products)
+
         setCartItems(
-          items.map((item: any) => ({
-            id: item.cartItemId,
-            cartItemId: item.cartItemId,
-            productId: item.productId,
-            productName: item.productName || `상품 #${item.productId}`,
-            productImage: item.productImage || "/placeholder.svg?height=200&width=200",
-            pricePerDay: item.price || 0,
-            startDate: item.startDate,
-            endDate: item.endDate,
-            quantity: 1,
-          })),
+          items.map((item: any) => {
+            const product = products[item.productId]
+            const thumbnailImage = product?.images?.find((img: any) => img.imageId === product.thumbnailImageId)
+
+            return {
+              id: item.cartItemId,
+              cartItemId: item.cartItemId,
+              productId: item.productId,
+              productName: product?.name || `상품 #${item.productId}`,
+              productImage: thumbnailImage?.url || product?.images?.[0]?.url || "/placeholder.svg?height=200&width=200",
+              pricePerDay: product?.pricePerDay || item.price || 0,
+              startDate: item.startDate,
+              endDate: item.endDate,
+              quantity: 1,
+            }
+          }),
         )
 
         setError(null)
@@ -149,6 +171,7 @@ export default function CartPage() {
     if (!confirmed) return
 
     try {
+      console.log("[v0] Updating cart item:", { cartItemId, startDate, endDate })
       await cartAPI.updateItem(cartItemId, { startDate, endDate })
       setCartItems(cartItems.map((item) => (item.cartItemId === cartItemId ? { ...item, startDate, endDate } : item)))
       setEditingItemId(null)

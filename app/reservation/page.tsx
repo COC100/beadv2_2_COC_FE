@@ -5,7 +5,7 @@ import type React from "react"
 import { useState, useEffect } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
-import { ArrowLeft, MapPin, Plus } from "lucide-react"
+import { ArrowLeft, MapPin, Plus, AlertCircle } from "lucide-react"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { Button } from "@/components/ui/button"
@@ -21,9 +21,18 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { Input } from "@/components/ui/input"
 import { useToast } from "@/hooks/use-toast"
-import { memberAPI, rentalAPI, cartAPI } from "@/lib/api"
+import { memberAPI, rentalAPI, cartAPI, productAPI } from "@/lib/api"
 import { handlePhoneInput } from "@/lib/utils"
 
 export default function ReservationPage() {
@@ -35,6 +44,10 @@ export default function ReservationPage() {
   const [cartItems, setCartItems] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [errorDialog, setErrorDialog] = useState<{ open: boolean; message: string }>({
+    open: false,
+    message: "",
+  })
   const [formData, setFormData] = useState({
     name: "",
     recipient: "",
@@ -43,6 +56,7 @@ export default function ReservationPage() {
     detailAddress: "",
     zipCode: "",
   })
+  const [productData, setProductData] = useState<Record<number, any>>({})
 
   useEffect(() => {
     const loadData = async () => {
@@ -58,7 +72,6 @@ export default function ReservationPage() {
         const addressList = Array.isArray(addressData) ? addressData : addressData?.addressList || []
         setAddresses(addressList)
 
-        // Set default address
         const defaultAddr = addressList.find((a: any) => a.isDefault)
         if (defaultAddr) {
           setSelectedAddressId(defaultAddr.addressId)
@@ -68,7 +81,24 @@ export default function ReservationPage() {
 
         const cartResponse = await cartAPI.list()
         const cartData = cartResponse.data
-        setCartItems(Array.isArray(cartData) ? cartData : cartData?.items || [])
+        const items = Array.isArray(cartData) ? cartData : cartData?.items || []
+
+        const productIds = [...new Set(items.map((item: any) => item.productId))]
+        const products: Record<number, any> = {}
+
+        await Promise.all(
+          productIds.map(async (productId) => {
+            try {
+              const productResponse = await productAPI.getDetail(productId)
+              products[productId] = productResponse.data
+            } catch (err) {
+              console.error(`[v0] Failed to load product ${productId}:`, err)
+            }
+          }),
+        )
+
+        setProductData(products)
+        setCartItems(items)
       } catch (error: any) {
         console.error("[v0] Failed to load reservation data:", error)
         if (error.message.includes("401")) {
@@ -87,6 +117,12 @@ export default function ReservationPage() {
 
     loadData()
   }, [router, toast])
+
+  const calculateDays = (start: string, end: string) => {
+    const startDate = new Date(start)
+    const endDate = new Date(end)
+    return Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1
+  }
 
   const handleAddAddress = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -123,17 +159,24 @@ export default function ReservationPage() {
 
   const handleReservation = async () => {
     if (!selectedAddressId) {
-      toast({
-        title: "주소 선택 필요",
-        description: "배송받을 주소를 선택해주세요",
-        variant: "destructive",
+      setErrorDialog({
+        open: true,
+        message: "배송받을 주소를 선택해주세요.",
       })
       return
     }
 
     try {
       const cartItemIds = cartItems.map((item) => item.cartItemId)
+      console.log("[v0] Creating rental from cart with items:", cartItemIds)
       await rentalAPI.createFromCart(cartItemIds)
+
+      try {
+        await Promise.all(cartItemIds.map((itemId) => cartAPI.deleteItem(itemId)))
+        console.log("[v0] Cart cleared successfully")
+      } catch (clearError) {
+        console.warn("[v0] Failed to clear cart (non-critical):", clearError)
+      }
 
       toast({
         title: "예약 신청 완료",
@@ -142,15 +185,19 @@ export default function ReservationPage() {
       router.push("/mypage/rentals")
     } catch (error: any) {
       console.error("[v0] Failed to create rental:", error)
-      toast({
-        title: "예약 신청 실패",
-        description: error.message || "예약 신청에 실패했습니다",
-        variant: "destructive",
+      setErrorDialog({
+        open: true,
+        message: error.message || "예약 신청에 실패했습니다. 다시 시도해주세요.",
       })
     }
   }
 
-  const totalAmount = cartItems.reduce((sum, item) => sum + (item.price || 0), 0)
+  const totalAmount = cartItems.reduce((sum, item) => {
+    const product = productData[item.productId]
+    const pricePerDay = product?.pricePerDay || item.price || 0
+    const days = calculateDays(item.startDate, item.endDate)
+    return sum + pricePerDay * days
+  }, 0)
 
   const handlePostcodeSearch = () => {
     if (!(window as any).daum || !(window as any).daum.Postcode) {
@@ -187,6 +234,25 @@ export default function ReservationPage() {
   return (
     <div className="min-h-screen bg-white">
       <Header />
+
+      <AlertDialog open={errorDialog.open} onOpenChange={(open) => setErrorDialog({ ...errorDialog, open })}>
+        <AlertDialogContent className="rounded-2xl">
+          <AlertDialogHeader>
+            <div className="flex items-center gap-3 mb-2">
+              <div className="h-12 w-12 rounded-full bg-destructive/10 flex items-center justify-center">
+                <AlertCircle className="h-6 w-6 text-destructive" />
+              </div>
+              <AlertDialogTitle className="text-xl">예약 신청 실패</AlertDialogTitle>
+            </div>
+            <AlertDialogDescription className="text-base pt-2">{errorDialog.message}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={() => setErrorDialog({ open: false, message: "" })} className="rounded-xl">
+              확인
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <div className="container mx-auto px-4 py-8">
         <Link
@@ -357,17 +423,33 @@ export default function ReservationPage() {
               <CardContent className="p-6">
                 <h2 className="text-xl font-bold mb-4">주문 상품</h2>
                 <div className="space-y-4">
-                  {cartItems.map((item) => (
-                    <div key={item.cartItemId} className="flex justify-between items-start pb-4 border-b last:border-0">
-                      <div>
-                        <p className="font-semibold mb-1">상품 #{item.productId}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {item.startDate} ~ {item.endDate}
-                        </p>
+                  {cartItems.map((item) => {
+                    const product = productData[item.productId]
+                    const thumbnailImage = product?.images?.find((img: any) => img.imageId === product.thumbnailImageId)
+                    const pricePerDay = product?.pricePerDay || item.price || 0
+                    const days = calculateDays(item.startDate, item.endDate)
+
+                    return (
+                      <div key={item.cartItemId} className="flex gap-4 pb-4 border-b last:border-0">
+                        <div className="w-20 h-20 bg-gray-50 rounded-lg overflow-hidden flex-shrink-0">
+                          <img
+                            src={thumbnailImage?.url || product?.images?.[0]?.url || "/placeholder.svg"}
+                            alt={product?.name || `상품 #${item.productId}`}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                        <div className="flex-1">
+                          <p className="font-semibold mb-1">{product?.name || `상품 #${item.productId}`}</p>
+                          <p className="text-sm text-muted-foreground mb-1">
+                            {item.startDate} ~ {item.endDate} ({days}일)
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            ₩{pricePerDay.toLocaleString()} x {days}일 = ₩{(pricePerDay * days).toLocaleString()}
+                          </p>
+                        </div>
                       </div>
-                      <p className="font-bold text-primary">₩{item.price?.toLocaleString()}</p>
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
               </CardContent>
             </Card>

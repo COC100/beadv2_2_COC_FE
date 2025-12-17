@@ -285,7 +285,7 @@ function ManageProductRentalsContent({ productId }: { productId: string }) {
               </Button>
             </Link>
           </div>
-          <h1 className="text-3xl font-bold">상품 상태 관리</h1>
+          <h1 className="text-3xl font-bold">렌탈 관리</h1>
         </div>
       </section>
 
