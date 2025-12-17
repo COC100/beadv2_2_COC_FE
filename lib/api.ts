@@ -85,17 +85,13 @@ async function fetchAPI<T>(
 
     if (response.status === 503) {
       console.error("[v0] 503 Service Unavailable - server maintenance")
-      if (!isMaintenancePage()) {
-        handleServerError()
-      }
-      throw new Error("서버 점검 중입니다")
+      handleServerError()
+      throw new Error("서비스 점검 중입니다")
     }
 
     if (response.status === 502) {
       console.error("[v0] 502 Bad Gateway - server connection failed")
-      if (!isMaintenancePage()) {
-        handleServerError()
-      }
+      handleServerError()
       throw new Error("서버 연결에 실패했습니다")
     }
 
@@ -204,12 +200,10 @@ async function fetchAPI<T>(
   } catch (error: any) {
     console.error("[v0] API Error:", error)
 
+    // This was causing false positives with blob URLs and other resource loading
+    // Only actual API server errors (502, 503) will trigger maintenance page
     if (error instanceof TypeError && error.message === "Failed to fetch") {
-      console.error("[v0] Network error - server may be down")
-      if (!isMaintenancePage()) {
-        handleServerError()
-      }
-      throw new Error("서버에 연결할 수 없습니다")
+      console.error("[v0] Network error - but not redirecting to maintenance (could be resource loading)")
     }
 
     throw error
