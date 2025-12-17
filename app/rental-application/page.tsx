@@ -121,6 +121,9 @@ export default function RentalApplicationPage() {
       return
     }
 
+    const confirmed = window.confirm("렌탈 신청을 하시겠습니까?")
+    if (!confirmed) return
+
     try {
       setSubmitting(true)
       await rentalAPI.create({

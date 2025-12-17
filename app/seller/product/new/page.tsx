@@ -73,6 +73,10 @@ export default function NewProductPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+
+    const confirmed = window.confirm("상품을 등록하시겠습니까?")
+    if (!confirmed) return
+
     setIsSubmitting(true)
 
     try {

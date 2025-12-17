@@ -146,6 +146,14 @@ export default function AddressesPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
+    const action = editingAddress ? "수정" : "추가"
+    const confirmResult = await new Promise<boolean>((resolve) => {
+      const confirmed = window.confirm(`주소를 ${action}하시겠습니까?`)
+      resolve(confirmed)
+    })
+
+    if (!confirmResult) return
+
     try {
       if (editingAddress) {
         await memberAPI.updateAddress(editingAddress.addressId, {

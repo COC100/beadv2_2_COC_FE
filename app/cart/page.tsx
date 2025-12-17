@@ -121,6 +121,9 @@ export default function CartPage() {
   }
 
   const removeItem = async (cartItemId: number) => {
+    const confirmed = window.confirm("장바구니에서 상품을 삭제하시겠습니까?")
+    if (!confirmed) return
+
     try {
       await cartAPI.deleteItem(cartItemId)
       setCartItems(cartItems.filter((item) => item.cartItemId !== cartItemId))
@@ -139,6 +142,9 @@ export default function CartPage() {
   }
 
   const updateRentalPeriod = async (cartItemId: number, startDate: string, endDate: string) => {
+    const confirmed = window.confirm("렌탈 기간을 변경하시겠습니까?")
+    if (!confirmed) return
+
     try {
       await cartAPI.updateItem(cartItemId, { startDate, endDate })
       setCartItems(cartItems.map((item) => (item.cartItemId === cartItemId ? { ...item, startDate, endDate } : item)))

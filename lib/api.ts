@@ -40,14 +40,16 @@ async function fetchAPI<T>(
     ...options.headers,
   }
 
-  if (requiresAuth && typeof window !== "undefined") {
-    const token = localStorage.getItem("accessToken")
-    if (!token) {
-      console.error("[v0] No auth token found, redirecting to intro")
-      handleAuthError()
-      throw new Error("인증 토큰이 없습니다")
-    }
-    headers.Authorization = `Bearer ${token}`
+  const hasToken = typeof window !== "undefined" && localStorage.getItem("accessToken")
+
+  if (requiresAuth && !hasToken) {
+    console.error("[v0] No auth token found for protected endpoint, redirecting to intro")
+    handleAuthError()
+    throw new Error("인증 토큰이 없습니다")
+  }
+
+  if (hasToken) {
+    headers.Authorization = `Bearer ${localStorage.getItem("accessToken")}`
   }
 
   if (API_BASE_URL.includes("ngrok")) {
@@ -58,6 +60,7 @@ async function fetchAPI<T>(
     const response = await fetch(url, {
       ...options,
       headers,
+      credentials: "include",
     })
 
     console.log("[v0] API Response:", response.status, response.statusText)
@@ -65,50 +68,58 @@ async function fetchAPI<T>(
     const contentType = response.headers.get("content-type")
     console.log("[v0] Content-Type:", contentType)
 
-    if (response.status === 401) {
-      if (requiresAuth && !isRetry) {
-        console.log("[v0] 401 Unauthorized - attempting token refresh")
+    if (response.status === 401 && hasToken && !isRetry) {
+      console.log("[v0] 401 Unauthorized - attempting token refresh")
 
-        try {
-          // Use shared promise to prevent multiple simultaneous refresh attempts
-          if (!isRefreshing) {
-            isRefreshing = true
-            refreshPromise = authAPI
-              .reissueToken()
-              .then((result) => {
-                isRefreshing = false
-                refreshPromise = null
-                return result.accessToken
-              })
-              .catch((error) => {
-                isRefreshing = false
-                refreshPromise = null
-                throw error
-              })
-          }
-
-          if (refreshPromise) {
-            await refreshPromise
-            console.log("[v0] Token refreshed, retrying original request")
-
-            // Retry the original request with new token
-            return fetchAPI<T>(endpoint, options, requiresAuth, true)
-          }
-        } catch (refreshError) {
-          console.error("[v0] Token refresh failed:", refreshError)
-          if (typeof window !== "undefined") {
-            localStorage.removeItem("accessToken")
-          }
-          handleAuthError()
-          throw new Error("토큰 갱신에 실패했습니다. 다시 로그인해주세요.")
+      try {
+        // Use shared promise to prevent multiple simultaneous refresh attempts
+        if (!isRefreshing) {
+          isRefreshing = true
+          console.log("[v0] Starting token refresh...")
+          refreshPromise = authAPI
+            .reissueToken()
+            .then((result) => {
+              isRefreshing = false
+              refreshPromise = null
+              console.log("[v0] Token refresh successful")
+              return result.accessToken
+            })
+            .catch((error) => {
+              isRefreshing = false
+              refreshPromise = null
+              console.error("[v0] Token refresh failed in promise:", error)
+              throw error
+            })
+        } else {
+          console.log("[v0] Token refresh already in progress, waiting...")
         }
-      } else {
-        console.error("[v0] 401 Unauthorized after retry or on public endpoint, clearing token and redirecting")
+
+        if (refreshPromise) {
+          await refreshPromise
+          console.log("[v0] Token refreshed, retrying original request")
+
+          // Retry the original request with new token
+          return fetchAPI<T>(endpoint, options, requiresAuth, true)
+        }
+      } catch (refreshError) {
+        console.error("[v0] Token refresh failed:", refreshError)
+        const hasRefreshCookie = document.cookie.split(";").some((cookie) => cookie.trim().startsWith("refreshToken="))
+        console.log("[v0] Has refresh token cookie:", hasRefreshCookie)
+
         if (typeof window !== "undefined") {
           localStorage.removeItem("accessToken")
         }
         handleAuthError()
+        throw new Error("토큰 갱신에 실패했습니다. 다시 로그인해주세요.")
       }
+    }
+
+    if (response.status === 401) {
+      console.error("[v0] 401 Unauthorized - clearing token and redirecting")
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("accessToken")
+      }
+      handleAuthError()
       throw new Error("인증되지 않았습니다")
     }
 
@@ -811,6 +822,8 @@ export const authAPI = {
   reissueToken: async () => {
     const url = `${API_BASE_URL}/member-service/api/auth/reissue`
 
+    console.log("[v0] Reissue token request to:", url)
+
     const headers: HeadersInit = {
       "Content-Type": "application/json",
     }
@@ -819,6 +832,8 @@ export const authAPI = {
       headers["ngrok-skip-browser-warning"] = "true"
     }
 
+    console.log("[v0] Current cookies:", document.cookie)
+
     // Cookie with refresh token is automatically sent by browser
     const response = await fetch(url, {
       method: "POST",
@@ -826,23 +841,29 @@ export const authAPI = {
       credentials: "include", // Include cookies
     })
 
+    console.log("[v0] Reissue response status:", response.status)
+
     if (!response.ok) {
       let errorMessage = `${response.statusText}`
       try {
         const errorData = await response.json()
+        console.error("[v0] Reissue error data:", errorData)
         errorMessage = errorData.message || errorData.error || errorMessage
       } catch {
-        // Ignore parsing error
+        console.error("[v0] Failed to parse reissue error response")
       }
       throw new Error(errorMessage)
     }
 
     const responseData: ApiResponse<string> = await response.json()
+    console.log("[v0] Reissue response data received")
 
     // Update accessToken in localStorage
     if (responseData.data) {
       localStorage.setItem("accessToken", responseData.data)
-      console.log("[v0] Reissued accessToken")
+      console.log("[v0] Reissued accessToken saved to localStorage")
+    } else {
+      console.error("[v0] No accessToken in reissue response")
     }
 
     return {

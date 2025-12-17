@@ -68,6 +68,9 @@ export default function SellerSettingsPage() {
       return
     }
 
+    const confirmed = window.confirm("판매자 정보를 수정하시겠습니까?")
+    if (!confirmed) return
+
     setIsSaving(true)
     try {
       await sellerAPI.updateSelf({

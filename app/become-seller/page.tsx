@@ -1,7 +1,16 @@
 "use client"
 
 import type React from "react"
-
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { Header } from "@/components/header"
@@ -27,6 +36,7 @@ export default function BecomeSellerPage() {
   })
   const [agreed, setAgreed] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false)
   const router = useRouter()
   const { toast } = useToast()
 
@@ -42,7 +52,12 @@ export default function BecomeSellerPage() {
       return
     }
 
+    setShowConfirmDialog(true)
+  }
+
+  const handleConfirmedSubmit = async () => {
     setIsLoading(true)
+    setShowConfirmDialog(false)
     try {
       console.log("[v0] Submitting seller registration:", {
         storeName: formData.businessName,
@@ -231,6 +246,23 @@ export default function BecomeSellerPage() {
           </Card>
         </div>
       </div>
+
+      <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
+        <AlertDialogContent className="rounded-2xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>판매자로 등록하시겠습니까?</AlertDialogTitle>
+            <AlertDialogDescription>
+              판매자 등록을 진행합니다. 등록 후 상품을 등록하고 판매할 수 있습니다.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="rounded-xl">취소</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmedSubmit} className="rounded-xl">
+              등록하기
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <Footer />
     </div>
