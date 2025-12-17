@@ -197,6 +197,10 @@ export default function HomePage() {
                       src={slide.image || "/placeholder.svg"}
                       alt={slide.title}
                       className="w-full h-auto drop-shadow-2xl rounded-lg"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement
+                        target.src = "/placeholder.svg"
+                      }}
                     />
                   </div>
                 </div>
@@ -286,6 +290,10 @@ export default function HomePage() {
                         src={product.thumbnailUrl || "/images/image.png"}
                         alt={product.name}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement
+                          target.src = "/images/image.png"
+                        }}
                       />
                     </div>
                     <CardContent className="p-3">

@@ -46,10 +46,6 @@ async function fetchAPI<T>(
   requiresAuth = false,
   isRetry = false,
 ): Promise<{ data: T; headers: Headers }> {
-  if (isMaintenancePage()) {
-    throw new Error("서버 점검 중입니다")
-  }
-
   const url = `${API_BASE_URL}${endpoint}`
 
   console.log("[v0] API Request:", { url, requiresAuth, isRetry })
@@ -89,13 +85,17 @@ async function fetchAPI<T>(
 
     if (response.status === 503) {
       console.error("[v0] 503 Service Unavailable - server maintenance")
-      handleServerError()
+      if (!isMaintenancePage()) {
+        handleServerError()
+      }
       throw new Error("서버 점검 중입니다")
     }
 
     if (response.status === 502) {
       console.error("[v0] 502 Bad Gateway - server connection failed")
-      handleServerError()
+      if (!isMaintenancePage()) {
+        handleServerError()
+      }
       throw new Error("서버 연결에 실패했습니다")
     }
 
@@ -206,11 +206,13 @@ async function fetchAPI<T>(
 
     if (error instanceof TypeError && error.message === "Failed to fetch") {
       console.error("[v0] Network error - server may be down")
-      handleServerError()
+      if (!isMaintenancePage()) {
+        handleServerError()
+      }
       throw new Error("서버에 연결할 수 없습니다")
     }
 
-    throw new Error(error.message || "요청 처리 중 오류가 발생했습니다")
+    throw error
   }
 }
 
