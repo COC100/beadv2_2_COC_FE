@@ -10,8 +10,11 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { useToast } from "@/hooks/use-toast"
 import { memberAPI, accountAPI } from "@/lib/api"
+import { useRequireAuth } from "@/hooks/use-auth"
 
 export default function MyPage() {
+  useRequireAuth()
+
   const [profile, setProfile] = useState<any>(null)
   const [balance, setBalance] = useState(0)
   const [isLoading, setIsLoading] = useState(true)

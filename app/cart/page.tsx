@@ -14,6 +14,7 @@ import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { useToast } from "@/hooks/use-toast"
 import { cartAPI } from "@/lib/api"
+import { useRequireAuth } from "@/hooks/use-auth"
 
 interface CartItem {
   id: number
@@ -28,6 +29,8 @@ interface CartItem {
 }
 
 export default function CartPage() {
+  useRequireAuth()
+
   const router = useRouter()
   const { toast } = useToast()
   const [cartItems, setCartItems] = useState<CartItem[]>([])

@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Search } from "lucide-react"
 import { productAPI } from "@/lib/api"
 import { useToast } from "@/hooks/use-toast"
+import { useRequireAuth } from "@/hooks/use-auth"
 
 const CATEGORIES = [
   { value: "ALL", label: "전체" },
@@ -29,6 +30,8 @@ const CATEGORIES = [
 ]
 
 export default function ProductsPage() {
+  useRequireAuth()
+
   const router = useRouter()
   const searchParams = useSearchParams()
   const { toast } = useToast()

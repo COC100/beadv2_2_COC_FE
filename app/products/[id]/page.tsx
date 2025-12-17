@@ -2,19 +2,7 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
-import {
-  ArrowLeft,
-  ShoppingCart,
-  Calendar,
-  Edit,
-  Eye,
-  EyeOff,
-  Trash2,
-  AlertCircle,
-  Store,
-  Phone,
-  MapPin,
-} from "lucide-react"
+import { ArrowLeft, ShoppingCart, Calendar, Edit, Eye, EyeOff, Trash2, AlertCircle } from "lucide-react"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { Button } from "@/components/ui/button"
@@ -33,8 +21,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { useRequireAuth } from "@/hooks/use-auth"
 
 export default function ProductDetailPage({ params }: { params: { id: string } }) {
+  useRequireAuth()
+
   const router = useRouter()
   const { toast } = useToast()
   const [startDate, setStartDate] = useState("")
@@ -107,25 +98,39 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
         // Check if user is seller/owner
         try {
           const sellerResponse = await sellerAPI.getSelf()
-          const seller = sellerResponse.data
-          console.log("[v0 DEBUG] Seller data:", JSON.stringify(seller, null, 2))
-          const isProductOwner = seller?.sellerId === productData?.sellerId
+          const currentSeller = sellerResponse.data
+          console.log("[v0 DEBUG] Current user seller data:", JSON.stringify(currentSeller, null, 2))
+
+          const isProductOwner = currentSeller?.sellerId === productData?.sellerId
           console.log(
             "[v0 DEBUG] Is owner?",
             isProductOwner,
-            "Seller ID:",
-            seller?.sellerId,
+            "Current Seller ID:",
+            currentSeller?.sellerId,
             "Product Seller ID:",
             productData?.sellerId,
           )
           setIsOwner(isProductOwner)
 
+          // If owner, use current seller info
           if (isProductOwner) {
-            setSeller(seller)
+            setSeller(currentSeller)
           }
         } catch (error) {
           console.log("[v0 DEBUG] Not a seller or seller check failed:", error)
           setIsOwner(false)
+        }
+
+        // For non-owner products, try to get seller info from product
+        // Since we don't have a public API to get seller details by sellerId,
+        // we'll show basic seller ID information
+        if (!isOwner && productData?.sellerId) {
+          // Set basic seller info with just the sellerId
+          setSeller({
+            sellerId: productData.sellerId,
+            storeName: `판매자 #${productData.sellerId}`,
+            // Other fields would need a separate API call
+          })
         }
       } catch (error: any) {
         console.error("[v0 DEBUG] Failed to load product:", error)
@@ -484,44 +489,6 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
               <p className="text-muted-foreground leading-relaxed whitespace-pre-wrap">{product.description}</p>
             </CardContent>
           </Card>
-
-          {isOwner && seller && (
-            <Card>
-              <CardContent className="p-6">
-                <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-                  <Store className="h-5 w-5 text-primary" />
-                  판매자 정보
-                </h2>
-                <div className="space-y-3">
-                  <div className="flex items-center gap-3">
-                    <Store className="h-5 w-5 text-muted-foreground" />
-                    <div>
-                      <div className="text-sm text-muted-foreground">상호명</div>
-                      <div className="font-medium">{seller.storeName}</div>
-                    </div>
-                  </div>
-                  {seller.storePhone && (
-                    <div className="flex items-center gap-3">
-                      <Phone className="h-5 w-5 text-muted-foreground" />
-                      <div>
-                        <div className="text-sm text-muted-foreground">연락처</div>
-                        <div className="font-medium">{seller.storePhone}</div>
-                      </div>
-                    </div>
-                  )}
-                  {seller.bizRegNo && (
-                    <div className="flex items-center gap-3">
-                      <MapPin className="h-5 w-5 text-muted-foreground" />
-                      <div>
-                        <div className="text-sm text-muted-foreground">사업자 등록번호</div>
-                        <div className="font-medium">{seller.bizRegNo}</div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          )}
         </div>
       </div>
 

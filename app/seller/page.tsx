@@ -12,8 +12,11 @@ import { useRouter } from "next/navigation"
 import { useToast } from "@/hooks/use-toast"
 import { sellerAPI, productAPI } from "@/lib/api"
 import { getUserRoleFromToken } from "@/lib/utils"
+import { useRequireAuth } from "@/hooks/use-auth"
 
 export default function SellerPage() {
+  useRequireAuth()
+
   const router = useRouter()
   const { toast } = useToast()
   const [isLoading, setIsLoading] = useState(true)

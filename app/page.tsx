@@ -11,8 +11,11 @@ import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { productAPI } from "@/lib/api"
 import { useToast } from "@/hooks/use-toast"
+import { useRequireAuth } from "@/hooks/use-auth"
 
 export default function HomePage() {
+  useRequireAuth()
+
   const router = useRouter()
   const { toast } = useToast()
   const [products, setProducts] = useState<any[]>([])
