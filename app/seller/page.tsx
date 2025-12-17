@@ -343,8 +343,8 @@ export default function SellerPage() {
                                 {statusChanging[product.productId]
                                   ? "변경 중..."
                                   : product.status === "ACTIVE"
-                                    ? "예약 불가로 변경"
-                                    : "예약 가능으로 변경"}
+                                    ? "예약 불가"
+                                    : "예약 가능"}
                               </Button>
                             </div>
                           </div>

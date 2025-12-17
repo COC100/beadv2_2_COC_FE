@@ -39,9 +39,6 @@ export default function SettlementsPage() {
 
   const [showBatchDialog, setShowBatchDialog] = useState(false)
   const [batchPeriodYm, setBatchPeriodYm] = useState("")
-  const [batchStartDate, setBatchStartDate] = useState("")
-  const [batchEndDate, setBatchEndDate] = useState("")
-  const [batchPageSize, setBatchPageSize] = useState(100)
   const [showPayDialog, setShowPayDialog] = useState(false)
   const [showCancelDialog, setShowCancelDialog] = useState(false)
   const [actionSettlementId, setActionSettlementId] = useState<number | null>(null)
@@ -97,10 +94,19 @@ export default function SettlementsPage() {
   }, [])
 
   const handleRunBatch = async () => {
-    if (!batchPeriodYm || !batchStartDate || !batchEndDate) {
+    if (!batchPeriodYm) {
       toast({
         title: "입력 오류",
-        description: "모든 필드를 입력해주세요",
+        description: "정산 기간을 입력해주세요",
+        variant: "destructive",
+      })
+      return
+    }
+
+    if (!/^\d{4}-\d{2}$/.test(batchPeriodYm)) {
+      toast({
+        title: "입력 오류",
+        description: "yyyy-MM 형식으로 입력해주세요 (예: 2025-01)",
         variant: "destructive",
       })
       return
@@ -109,9 +115,6 @@ export default function SettlementsPage() {
     try {
       const result = await sellerAPI.runSettlementBatch({
         periodYm: batchPeriodYm,
-        startDate: batchStartDate,
-        endDate: batchEndDate,
-        pageSize: batchPageSize,
       })
 
       toast({
@@ -206,6 +209,17 @@ export default function SettlementsPage() {
       CANCELED: { text: "취소", className: "bg-gray-100 text-gray-800" },
     }
     return statusMap[status] || { text: status, className: "" }
+  }
+
+  const handlePeriodYmChange = (value: string) => {
+    const digitsOnly = value.replace(/\D/g, "")
+    if (digitsOnly.length <= 4) {
+      setBatchPeriodYm(digitsOnly)
+    } else if (digitsOnly.length <= 6) {
+      setBatchPeriodYm(`${digitsOnly.slice(0, 4)}-${digitsOnly.slice(4)}`)
+    } else {
+      setBatchPeriodYm(`${digitsOnly.slice(0, 4)}-${digitsOnly.slice(4, 6)}`)
+    }
   }
 
   if (isLoading) {
@@ -376,44 +390,19 @@ export default function SettlementsPage() {
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>정산 배치 실행</DialogTitle>
-            <DialogDescription>정산을 실행할 기간과 설정을 입력하세요</DialogDescription>
+            <DialogDescription>정산을 실행할 기간을 입력하세요</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div>
-              <Label>정산 기간 (yyyy-MM)</Label>
+              <Label>정산 기간</Label>
               <Input
                 placeholder="2025-01"
                 value={batchPeriodYm}
-                onChange={(e) => setBatchPeriodYm(e.target.value)}
+                onChange={(e) => handlePeriodYmChange(e.target.value)}
                 className="mt-2"
+                maxLength={7}
               />
-            </div>
-            <div>
-              <Label>시작일 (yyyy-MM-dd)</Label>
-              <Input
-                type="date"
-                value={batchStartDate}
-                onChange={(e) => setBatchStartDate(e.target.value)}
-                className="mt-2"
-              />
-            </div>
-            <div>
-              <Label>종료일 (yyyy-MM-dd)</Label>
-              <Input
-                type="date"
-                value={batchEndDate}
-                onChange={(e) => setBatchEndDate(e.target.value)}
-                className="mt-2"
-              />
-            </div>
-            <div>
-              <Label>페이지 크기</Label>
-              <Input
-                type="number"
-                value={batchPageSize}
-                onChange={(e) => setBatchPageSize(Number.parseInt(e.target.value))}
-                className="mt-2"
-              />
+              <p className="text-xs text-muted-foreground mt-1">숫자만 입력하세요. 하이픈은 자동으로 추가됩니다.</p>
             </div>
           </div>
           <div className="flex gap-2">
