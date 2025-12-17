@@ -273,8 +273,8 @@ export default function SellerPage() {
                 {products.map((product) => (
                   <Card key={product.productId}>
                     <CardContent className="p-5">
-                      <div className="flex gap-4">
-                        <div className="w-24 h-24 bg-gray-50 rounded-lg overflow-hidden flex-shrink-0">
+                      <div className="flex flex-col md:flex-row gap-4">
+                        <div className="w-full md:w-24 h-48 md:h-24 bg-gray-50 rounded-lg overflow-hidden flex-shrink-0">
                           <img
                             src={product.thumbnailUrl || "/placeholder.svg"}
                             alt={product.name}
@@ -282,20 +282,22 @@ export default function SellerPage() {
                           />
                         </div>
                         <div className="flex-1">
-                          <div className="flex items-start justify-between mb-2">
-                            <div>
-                              <h3 className="font-semibold mb-1">{product.name}</h3>
-                              <p className="text-sm text-muted-foreground mb-2">{product.category}</p>
-                              <div className="flex items-center gap-2">
-                                <Badge className="bg-accent text-white hover:bg-accent">
-                                  ₩{product.pricePerDay?.toLocaleString()}/일
-                                </Badge>
-                                <Badge variant={product.status === "ACTIVE" ? "default" : "secondary"}>
-                                  {product.status === "ACTIVE" ? "예약 가능" : "예약 불가"}
-                                </Badge>
-                              </div>
+                          <div className="mb-3">
+                            <h3 className="font-semibold mb-1">{product.name}</h3>
+                            <p className="text-sm text-muted-foreground mb-2">{product.category}</p>
+                            <div className="flex items-center gap-2">
+                              <Badge className="bg-accent text-white hover:bg-accent">
+                                ₩{product.pricePerDay?.toLocaleString()}/일
+                              </Badge>
+                              <Badge variant={product.status === "ACTIVE" ? "default" : "secondary"}>
+                                {product.status === "ACTIVE" ? "예약 가능" : "예약 불가"}
+                              </Badge>
                             </div>
-                            <div className="flex gap-2">
+                          </div>
+
+                          <div className="flex flex-col gap-2">
+                            {/* Primary actions row */}
+                            <div className="flex flex-wrap gap-2">
                               <Link href={`/seller/product/${product.productId}/edit`}>
                                 <Button variant="outline" size="sm" className="rounded-lg bg-transparent">
                                   <Edit className="h-4 w-4 mr-1" />
@@ -307,9 +309,23 @@ export default function SellerPage() {
                                   보기
                                 </Button>
                               </Link>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="rounded-lg text-destructive hover:bg-destructive hover:text-destructive-foreground bg-transparent"
+                                onClick={() => handleDeleteProduct(product.productId, product.name)}
+                                disabled={deleting[product.productId]}
+                              >
+                                <Trash2 className="h-4 w-4 mr-1" />
+                                {deleting[product.productId] ? "삭제 중..." : "삭제"}
+                              </Button>
+                            </div>
+
+                            {/* Rental management row */}
+                            <div className="flex flex-wrap gap-2">
                               <Link href={`/seller/product/${product.productId}/rentals`}>
                                 <Button variant="outline" size="sm" className="rounded-lg bg-transparent">
-                                  상품 예약 내역
+                                  예약 내역
                                 </Button>
                               </Link>
                               <Link href={`/seller/product/${product.productId}/rentals/manage`}>
@@ -329,16 +345,6 @@ export default function SellerPage() {
                                   : product.status === "ACTIVE"
                                     ? "예약 불가로 변경"
                                     : "예약 가능으로 변경"}
-                              </Button>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="rounded-lg text-destructive hover:bg-destructive hover:text-destructive-foreground bg-transparent"
-                                onClick={() => handleDeleteProduct(product.productId, product.name)}
-                                disabled={deleting[product.productId]}
-                              >
-                                <Trash2 className="h-4 w-4 mr-1" />
-                                {deleting[product.productId] ? "삭제 중..." : "삭제"}
                               </Button>
                             </div>
                           </div>
