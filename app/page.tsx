@@ -3,7 +3,22 @@
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { Camera, Laptop, Tablet, Headphones, ChevronRight, Package, Shield, Clock, ChevronLeft } from "lucide-react"
+import {
+  Camera,
+  Laptop,
+  Tablet,
+  Headphones,
+  ChevronRight,
+  Package,
+  Shield,
+  Clock,
+  ChevronLeft,
+  Monitor,
+  Smartphone,
+  Projector,
+  Glasses,
+  Cpu,
+} from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -28,21 +43,21 @@ export default function HomePage() {
       title: "필요한 순간만",
       highlight: "스마트하게 렌탈",
       description: "최신 전자기기를 합리적인 가격에\n원하는 기간만큼 이용하세요",
-      bgColor: "bg-blue-50",
+      bgColor: "bg-blue-50 dark:bg-blue-900/20",
       image: "/modern-laptop-workspace.jpg",
     },
     {
       title: "최신 기기를",
       highlight: "부담 없이 경험",
       description: "고가의 전자제품도\n렌탈로 부담 없이 사용해보세요",
-      bgColor: "bg-purple-50",
+      bgColor: "bg-purple-50 dark:bg-purple-900/20",
       image: "/professional-camera-equipment.jpg",
     },
     {
       title: "안전한 거래",
       highlight: "신뢰할 수 있는 플랫폼",
       description: "예치금 시스템으로\n안전하고 편리한 렌탈 경험을 제공합니다",
-      bgColor: "bg-green-50",
+      bgColor: "bg-green-50 dark:bg-green-900/20",
       image: "/secure-tablet-device.jpg",
     },
   ]
@@ -107,21 +122,21 @@ export default function HomePage() {
   }, [router, toast])
 
   const categories = [
-    { name: "노트북", icon: Laptop, href: "/products?category=LAPTOP" },
-    { name: "데스크탑", icon: Package, href: "/products?category=DESKTOP" },
-    { name: "카메라", icon: Camera, href: "/products?category=CAMERA" },
-    { name: "태블릿", icon: Tablet, href: "/products?category=TABLET" },
-    { name: "모바일", icon: Shield, href: "/products?category=MOBILE" },
-    { name: "모니터", icon: Package, href: "/products?category=MONITOR" },
-    { name: "액세서리", icon: Package, href: "/products?category=ACCESSORY" },
-    { name: "드론", icon: Package, href: "/products?category=DRONE" },
-    { name: "오디오", icon: Headphones, href: "/products?category=AUDIO" },
-    { name: "프로젝터", icon: Package, href: "/products?category=PROJECTOR" },
+    { name: "노트북", icon: Laptop, category: "LAPTOP" },
+    { name: "데스크탑", icon: Cpu, category: "DESKTOP" },
+    { name: "카메라", icon: Camera, category: "CAMERA" },
+    { name: "태블릿", icon: Tablet, category: "TABLET" },
+    { name: "모바일", icon: Smartphone, category: "MOBILE" },
+    { name: "모니터", icon: Monitor, category: "MONITOR" },
+    { name: "액세서리", icon: Glasses, category: "ACCESSORY" },
+    { name: "드론", icon: Package, category: "DRONE" },
+    { name: "오디오", icon: Headphones, category: "AUDIO" },
+    { name: "프로젝터", icon: Projector, category: "PROJECTOR" },
   ]
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-white">
+      <div className="min-h-screen">
         <Header />
         <div className="flex items-center justify-center py-20">
           <p className="text-muted-foreground">로딩 중...</p>
@@ -132,7 +147,7 @@ export default function HomePage() {
   }
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white dark:bg-gray-950">
       <Header />
 
       <section className="relative overflow-hidden">
@@ -191,17 +206,17 @@ export default function HomePage() {
 
           <button
             onClick={prevSlide}
-            className="absolute left-4 top-1/2 -translate-y-1/2 z-20 bg-white/80 hover:bg-white p-2 rounded-full shadow-lg transition-all"
+            className="absolute left-4 top-1/2 -translate-y-1/2 z-20 bg-white/80 dark:bg-gray-800/80 hover:bg-white dark:hover:bg-gray-700 p-2 rounded-full shadow-lg transition-all"
             aria-label="Previous slide"
           >
-            <ChevronLeft className="h-6 w-6" />
+            <ChevronLeft className="h-6 w-6 dark:text-white" />
           </button>
           <button
             onClick={nextSlide}
-            className="absolute right-4 top-1/2 -translate-y-1/2 z-20 bg-white/80 hover:bg-white p-2 rounded-full shadow-lg transition-all"
+            className="absolute right-4 top-1/2 -translate-y-1/2 z-20 bg-white/80 dark:bg-gray-800/80 hover:bg-white dark:hover:bg-gray-700 p-2 rounded-full shadow-lg transition-all"
             aria-label="Next slide"
           >
-            <ChevronRight className="h-6 w-6" />
+            <ChevronRight className="h-6 w-6 dark:text-white" />
           </button>
 
           <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-20 flex gap-2">
@@ -210,7 +225,7 @@ export default function HomePage() {
                 key={index}
                 onClick={() => setCurrentSlide(index)}
                 className={`h-2 rounded-full transition-all ${
-                  index === currentSlide ? "w-8 bg-primary" : "w-2 bg-white/60"
+                  index === currentSlide ? "w-8 bg-primary" : "w-2 bg-white/60 dark:bg-gray-400/60"
                 }`}
                 aria-label={`Go to slide ${index + 1}`}
               />
@@ -219,7 +234,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="py-8 border-b">
+      <section className="py-8 border-b dark:border-gray-800">
         <div className="container mx-auto px-4">
           <div className="grid grid-cols-5 md:grid-cols-10 gap-4 md:gap-6">
             {categories.map((category) => {
@@ -227,10 +242,10 @@ export default function HomePage() {
               return (
                 <Link
                   key={category.name}
-                  href={category.href}
+                  href={`/products?category=${category.category}`}
                   className="flex flex-col items-center gap-2 group hover:text-primary transition-colors"
                 >
-                  <div className="w-12 h-12 md:w-14 md:h-14 rounded-full bg-blue-50 flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-colors">
+                  <div className="w-12 h-12 md:w-14 md:h-14 rounded-full bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-colors">
                     <Icon className="h-5 w-5 md:h-6 md:w-6" />
                   </div>
                   <span className="text-xs md:text-sm font-medium text-center">{category.name}</span>
@@ -290,7 +305,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="py-16 bg-gray-50">
+      <section className="py-16 bg-gray-50 dark:bg-gray-900">
         <div className="container mx-auto px-4">
           <h2 className="text-2xl font-bold mb-10 text-center">Modi만의 장점</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl mx-auto">
@@ -325,7 +340,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="py-16 bg-primary text-white">
+      <section className="py-16 bg-primary text-white dark:bg-primary/90">
         <div className="container mx-auto px-4 text-center">
           <h2 className="text-3xl font-bold mb-4">판매자로 수익 창출하기</h2>
           <p className="text-lg mb-6 opacity-90 max-w-2xl mx-auto">

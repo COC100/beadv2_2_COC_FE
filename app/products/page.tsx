@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Search } from "lucide-react"
+import { Search, X } from "lucide-react"
 import { productAPI } from "@/lib/api"
 import { useToast } from "@/hooks/use-toast"
 import { useRequireAuth } from "@/hooks/use-auth"
@@ -38,6 +38,7 @@ export default function ProductsPage() {
 
   const [searchQuery, setSearchQuery] = useState("")
   const [sortBy, setSortBy] = useState("LATEST")
+  const [selectedCategory, setSelectedCategory] = useState("ALL")
   const [products, setProducts] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
   const [nextCursor, setNextCursor] = useState<string | null>(null)
@@ -48,13 +49,14 @@ export default function ProductsPage() {
   useEffect(() => {
     const categoryParam = searchParams.get("category")
     if (categoryParam && CATEGORIES.some((c) => c.value === categoryParam)) {
-      fetchProductsWithParams("", "LATEST")
+      setSelectedCategory(categoryParam)
+      fetchProductsWithParams("", "LATEST", categoryParam)
     } else {
-      fetchProductsWithParams("", "LATEST")
+      fetchProductsWithParams("", "LATEST", "ALL")
     }
   }, [])
 
-  const fetchProductsWithParams = async (keyword: string, sort: string, cursor?: string) => {
+  const fetchProductsWithParams = async (keyword: string, sort: string, category: string, cursor?: string) => {
     if (typeof window !== "undefined") {
       const token = localStorage.getItem("accessToken")
       if (!token) {
@@ -74,6 +76,7 @@ export default function ProductsPage() {
 
       if (cursor) params.cursor = cursor
       if (keyword) params.keyword = keyword
+      if (category && category !== "ALL") params.category = category
 
       const response = await productAPI.list(params)
       const data = response.data
@@ -103,9 +106,9 @@ export default function ProductsPage() {
 
   const fetchProducts = useCallback(
     async (cursor?: string) => {
-      await fetchProductsWithParams(searchQuery, sortBy, cursor)
+      await fetchProductsWithParams(searchQuery, sortBy, selectedCategory, cursor)
     },
-    [searchQuery, sortBy],
+    [searchQuery, sortBy, selectedCategory],
   )
 
   useEffect(() => {
@@ -133,23 +136,32 @@ export default function ProductsPage() {
     setProducts([])
     setNextCursor(null)
     setHasNext(true)
-    fetchProductsWithParams(searchQuery, sortBy)
+    fetchProductsWithParams(searchQuery, sortBy, selectedCategory)
+  }
+
+  const handleCategoryChange = (category: string) => {
+    setSelectedCategory(category)
+    setProducts([])
+    setNextCursor(null)
+    setHasNext(true)
+    fetchProductsWithParams(searchQuery, sortBy, category)
   }
 
   const handleResetFilters = () => {
     setSearchQuery("")
     setSortBy("LATEST")
+    setSelectedCategory("ALL")
     setProducts([])
     setNextCursor(null)
     setHasNext(true)
-    fetchProductsWithParams("", "LATEST")
+    fetchProductsWithParams("", "LATEST", "ALL")
   }
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white dark:bg-gray-950">
       <Header />
 
-      <section className="bg-blue-50 py-12">
+      <section className="bg-blue-50 dark:bg-blue-950/30 py-12">
         <div className="container mx-auto px-4">
           <div className="max-w-4xl mx-auto text-center">
             <h1 className="text-3xl md:text-4xl font-bold mb-3">전체 상품</h1>
@@ -158,12 +170,25 @@ export default function ProductsPage() {
         </div>
       </section>
 
-      <section className="border-b bg-gray-50 py-6">
+      <section className="border-b bg-gray-50 dark:bg-gray-900 py-6">
         <div className="container mx-auto px-4">
           <div className="max-w-7xl mx-auto">
-            <div className="flex gap-2">
+            <div className="flex flex-col md:flex-row gap-2">
+              <Select value={selectedCategory} onValueChange={handleCategoryChange}>
+                <SelectTrigger className="w-full md:w-[140px] bg-white dark:bg-gray-800">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {CATEGORIES.map((cat) => (
+                    <SelectItem key={cat.value} value={cat.value}>
+                      {cat.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
               <Select value={sortBy} onValueChange={setSortBy}>
-                <SelectTrigger className="w-[140px] bg-white">
+                <SelectTrigger className="w-full md:w-[140px] bg-white dark:bg-gray-800">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -178,7 +203,7 @@ export default function ProductsPage() {
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <Input
                   placeholder="상품명을 검색하세요"
-                  className="pl-10 bg-white"
+                  className="pl-10 bg-white dark:bg-gray-800"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && handleSearch()}
@@ -189,6 +214,13 @@ export default function ProductsPage() {
                 <Search className="h-4 w-4" />
                 검색
               </Button>
+
+              {(selectedCategory !== "ALL" || searchQuery || sortBy !== "LATEST") && (
+                <Button onClick={handleResetFilters} variant="outline" className="gap-2 bg-transparent">
+                  <X className="h-4 w-4" />
+                  초기화
+                </Button>
+              )}
             </div>
           </div>
         </div>
