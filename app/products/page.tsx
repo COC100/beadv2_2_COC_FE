@@ -213,8 +213,8 @@ export default function ProductsPage() {
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
                 {products.map((product) => (
                   <Link key={product.productId} href={`/products/${product.productId}`}>
-                    <Card className="overflow-hidden hover:shadow-lg transition-shadow group border-gray-200">
-                      <div className="aspect-square overflow-hidden bg-gray-50 relative">
+                    <Card className="hover:shadow-lg transition-shadow group border-gray-200 pt-0 pb-4 px-0 overflow-hidden">
+                      <div className="aspect-square bg-gray-50 relative">
                         <img
                           src={product.thumbnailUrl || "/images/image.png"}
                           alt={product.name}

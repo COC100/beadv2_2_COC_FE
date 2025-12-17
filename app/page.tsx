@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { Camera, Laptop, Tablet, Headphones, ChevronRight, Package, Shield, Clock } from "lucide-react"
+import { Camera, Laptop, Tablet, Headphones, ChevronRight, Package, Shield, Clock, ChevronLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -21,6 +21,46 @@ export default function HomePage() {
   const [products, setProducts] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [currentSlide, setCurrentSlide] = useState(0)
+
+  const slides = [
+    {
+      title: "필요한 순간만",
+      highlight: "스마트하게 렌탈",
+      description: "최신 전자기기를 합리적인 가격에\n원하는 기간만큼 이용하세요",
+      bgColor: "bg-blue-50",
+      image: "/modern-laptop-workspace.jpg",
+    },
+    {
+      title: "최신 기기를",
+      highlight: "부담 없이 경험",
+      description: "고가의 전자제품도\n렌탈로 부담 없이 사용해보세요",
+      bgColor: "bg-purple-50",
+      image: "/professional-camera-equipment.jpg",
+    },
+    {
+      title: "안전한 거래",
+      highlight: "신뢰할 수 있는 플랫폼",
+      description: "예치금 시스템으로\n안전하고 편리한 렌탈 경험을 제공합니다",
+      bgColor: "bg-green-50",
+      image: "/secure-tablet-device.jpg",
+    },
+  ]
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % slides.length)
+    }, 5000)
+    return () => clearInterval(timer)
+  }, [slides.length])
+
+  const nextSlide = () => {
+    setCurrentSlide((prev) => (prev + 1) % slides.length)
+  }
+
+  const prevSlide = () => {
+    setCurrentSlide((prev) => (prev - 1 + slides.length) % slides.length)
+  }
 
   useEffect(() => {
     const checkAuth = () => {
@@ -37,11 +77,9 @@ export default function HomePage() {
         setLoading(true)
         const authenticated = checkAuth()
 
-        // Try to fetch products
         const response = await productAPI.list({ size: 8, sortType: "LATEST" })
         console.log("[v0] Products API response:", response)
 
-        // fetchAPI returns { data, headers }, so extract data.products
         const productsData = response.data?.products || []
         console.log("[v0] Products data:", productsData)
 
@@ -54,7 +92,6 @@ export default function HomePage() {
           console.log("[v0] Product list requires authentication, showing empty state")
           setProducts([])
         } else {
-          // Only show toast for non-auth errors
           toast({
             title: "상품 로딩 실패",
             description: "상품 목록을 불러올 수 없습니다.",
@@ -98,45 +135,86 @@ export default function HomePage() {
     <div className="min-h-screen bg-white">
       <Header />
 
-      <section className="relative bg-blue-50 overflow-hidden">
-        <div className="container mx-auto px-4 py-16 md:py-24">
-          <div className="max-w-6xl mx-auto grid md:grid-cols-2 gap-8 items-center">
-            <div>
-              <Badge className="mb-4 bg-primary/10 text-primary hover:bg-primary/20">전자기기 렌탈 플랫폼</Badge>
-              <h1 className="text-4xl md:text-5xl font-bold mb-4 leading-tight">
-                필요한 순간만
-                <br />
-                <span className="text-primary">스마트하게 렌탈</span>
-              </h1>
-              <p className="text-lg text-muted-foreground mb-6 leading-relaxed">
-                최신 전자기기를 합리적인 가격에
-                <br />
-                원하는 기간만큼 이용하세요
-              </p>
-              <div className="flex gap-3">
-                {isAuthenticated ? (
-                  <Link href="/products">
-                    <Button size="lg" className="rounded-lg">
-                      상품 둘러보기
-                    </Button>
-                  </Link>
-                ) : (
-                  <Link href="/intro">
-                    <Button size="lg" className="rounded-lg">
-                      시작하기
-                    </Button>
-                  </Link>
-                )}
-                <Link href="/seller">
-                  <Button size="lg" variant="outline" className="rounded-lg bg-transparent">
-                    판매자 되기
-                  </Button>
-                </Link>
+      <section className="relative overflow-hidden">
+        <div className="relative h-[500px] md:h-[600px]">
+          {slides.map((slide, index) => (
+            <div
+              key={index}
+              className={`absolute inset-0 transition-opacity duration-700 ${
+                index === currentSlide ? "opacity-100" : "opacity-0"
+              } ${slide.bgColor}`}
+            >
+              <div className="container mx-auto px-4 py-16 md:py-24 h-full">
+                <div className="max-w-6xl mx-auto grid md:grid-cols-2 gap-8 items-center h-full">
+                  <div className="z-10">
+                    <Badge className="mb-4 bg-primary/10 text-primary hover:bg-primary/20">전자기기 렌탈 플랫폼</Badge>
+                    <h1 className="text-4xl md:text-5xl font-bold mb-4 leading-tight">
+                      {slide.title}
+                      <br />
+                      <span className="text-primary">{slide.highlight}</span>
+                    </h1>
+                    <p className="text-lg text-muted-foreground mb-6 leading-relaxed whitespace-pre-line">
+                      {slide.description}
+                    </p>
+                    <div className="flex gap-3">
+                      {isAuthenticated ? (
+                        <Link href="/products">
+                          <Button size="lg" className="rounded-lg">
+                            상품 둘러보기
+                          </Button>
+                        </Link>
+                      ) : (
+                        <Link href="/intro">
+                          <Button size="lg" className="rounded-lg">
+                            시작하기
+                          </Button>
+                        </Link>
+                      )}
+                      <Link href="/seller">
+                        <Button size="lg" variant="outline" className="rounded-lg bg-white/80">
+                          판매자 되기
+                        </Button>
+                      </Link>
+                    </div>
+                  </div>
+                  <div className="relative">
+                    <img
+                      src={slide.image || "/placeholder.svg"}
+                      alt={slide.title}
+                      className="w-full h-auto drop-shadow-2xl rounded-lg"
+                    />
+                  </div>
+                </div>
               </div>
             </div>
-            <div className="relative">
-              <img src="/macbook-pro-laptop.png" alt="MacBook Pro" className="w-full h-auto drop-shadow-2xl" />
-            </div>
+          ))}
+
+          <button
+            onClick={prevSlide}
+            className="absolute left-4 top-1/2 -translate-y-1/2 z-20 bg-white/80 hover:bg-white p-2 rounded-full shadow-lg transition-all"
+            aria-label="Previous slide"
+          >
+            <ChevronLeft className="h-6 w-6" />
+          </button>
+          <button
+            onClick={nextSlide}
+            className="absolute right-4 top-1/2 -translate-y-1/2 z-20 bg-white/80 hover:bg-white p-2 rounded-full shadow-lg transition-all"
+            aria-label="Next slide"
+          >
+            <ChevronRight className="h-6 w-6" />
+          </button>
+
+          <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-20 flex gap-2">
+            {slides.map((_, index) => (
+              <button
+                key={index}
+                onClick={() => setCurrentSlide(index)}
+                className={`h-2 rounded-full transition-all ${
+                  index === currentSlide ? "w-8 bg-primary" : "w-2 bg-white/60"
+                }`}
+                aria-label={`Go to slide ${index + 1}`}
+              />
+            ))}
           </div>
         </div>
       </section>
@@ -187,8 +265,8 @@ export default function HomePage() {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
               {products.map((product) => (
                 <Link key={product.productId} href={`/products/${product.productId}`}>
-                  <Card className="overflow-hidden hover:shadow-lg transition-shadow group border-gray-200">
-                    <div className="aspect-square overflow-hidden bg-gray-50 relative">
+                  <Card className="hover:shadow-lg transition-shadow group border-gray-200 pt-0 pb-4 px-0 overflow-hidden">
+                    <div className="aspect-square bg-gray-50 relative">
                       <img
                         src={product.thumbnailUrl || "/images/image.png"}
                         alt={product.name}
