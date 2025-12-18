@@ -37,6 +37,12 @@ export default function SettlementsPage() {
   const [settlementLines, setSettlementLines] = useState<any[]>([])
   const [showDetailDialog, setShowDetailDialog] = useState(false)
 
+  const [summaryData, setSummaryData] = useState<{
+    totalRentalAmount: number
+    totalFeeAmount: number
+    settlementAmount: number
+  } | null>(null)
+
   const [showBatchDialog, setShowBatchDialog] = useState(false)
   const [batchPeriodYm, setBatchPeriodYm] = useState("")
   const [showPayDialog, setShowPayDialog] = useState(false)
@@ -54,6 +60,19 @@ export default function SettlementsPage() {
       setTotalPages(response.totalPages || 0)
       setTotalElements(response.totalElements || 0)
       setCurrentPage(page)
+
+      if (response.content && response.content.length > 0) {
+        const totalRental = response.content.reduce((sum: number, s: any) => sum + (s.totalRentalAmount || 0), 0)
+        const totalFee = response.content.reduce((sum: number, s: any) => sum + (s.totalFeeAmount || 0), 0)
+        const settlement = response.content.reduce((sum: number, s: any) => sum + (s.settlementAmount || 0), 0)
+        setSummaryData({
+          totalRentalAmount: totalRental,
+          totalFeeAmount: totalFee,
+          settlementAmount: settlement,
+        })
+      } else {
+        setSummaryData(null)
+      }
     } catch (error: any) {
       toast({
         title: "정산 목록 조회 실패",
@@ -211,14 +230,14 @@ export default function SettlementsPage() {
     return statusMap[status] || { text: status, className: "" }
   }
 
-  const handlePeriodYmChange = (value: string) => {
+  const handleSearchPeriodYmChange = (value: string) => {
     const digitsOnly = value.replace(/\D/g, "")
     if (digitsOnly.length <= 4) {
-      setBatchPeriodYm(digitsOnly)
+      setPeriodYm(digitsOnly)
     } else if (digitsOnly.length <= 6) {
-      setBatchPeriodYm(`${digitsOnly.slice(0, 4)}-${digitsOnly.slice(4)}`)
+      setPeriodYm(`${digitsOnly.slice(0, 4)}-${digitsOnly.slice(4)}`)
     } else {
-      setBatchPeriodYm(`${digitsOnly.slice(0, 4)}-${digitsOnly.slice(4, 6)}`)
+      setPeriodYm(`${digitsOnly.slice(0, 4)}-${digitsOnly.slice(4, 6)}`)
     }
   }
 
@@ -259,6 +278,30 @@ export default function SettlementsPage() {
           </Button>
         </div>
 
+        {summaryData && (
+          <Card className="mb-6 bg-gradient-to-br from-blue-50 to-indigo-50">
+            <CardHeader>
+              <CardTitle>정산 요약</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="text-center p-4 bg-white rounded-lg shadow-sm">
+                  <p className="text-sm text-muted-foreground mb-1">전체 대여 금액</p>
+                  <p className="text-2xl font-bold text-blue-600">₩{summaryData.totalRentalAmount.toLocaleString()}</p>
+                </div>
+                <div className="text-center p-4 bg-white rounded-lg shadow-sm">
+                  <p className="text-sm text-muted-foreground mb-1">총 수수료</p>
+                  <p className="text-2xl font-bold text-red-600">-₩{summaryData.totalFeeAmount.toLocaleString()}</p>
+                </div>
+                <div className="text-center p-4 bg-white rounded-lg shadow-sm">
+                  <p className="text-sm text-muted-foreground mb-1">총 정산 금액</p>
+                  <p className="text-2xl font-bold text-green-600">₩{summaryData.settlementAmount.toLocaleString()}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         <Card className="mb-6">
           <CardHeader>
             <CardTitle>정산 기간 조회</CardTitle>
@@ -266,21 +309,23 @@ export default function SettlementsPage() {
           <CardContent>
             <div className="flex gap-4 items-end">
               <div className="flex-1">
-                <Label htmlFor="periodYm">기간 (yyyy-MM)</Label>
+                <Label htmlFor="periodYm">기간</Label>
                 <div className="flex gap-2 mt-2">
                   <Input
                     id="periodYm"
                     type="text"
                     placeholder="2025-01"
                     value={periodYm}
-                    onChange={(e) => setPeriodYm(e.target.value)}
+                    onChange={(e) => handleSearchPeriodYmChange(e.target.value)}
                     className="rounded-lg"
+                    maxLength={7}
                   />
                   <Button onClick={handleSearch} className="rounded-lg">
                     <Calendar className="h-4 w-4 mr-2" />
                     조회
                   </Button>
                 </div>
+                <p className="text-xs text-muted-foreground mt-1">숫자만 입력하세요. 하이픈은 자동으로 추가됩니다.</p>
               </div>
             </div>
           </CardContent>
@@ -398,7 +443,7 @@ export default function SettlementsPage() {
               <Input
                 placeholder="2025-01"
                 value={batchPeriodYm}
-                onChange={(e) => handlePeriodYmChange(e.target.value)}
+                onChange={(e) => setBatchPeriodYm(e.target.value)}
                 className="mt-2"
                 maxLength={7}
               />
@@ -451,9 +496,9 @@ export default function SettlementsPage() {
 
           {selectedSettlement && (
             <div className="space-y-4">
-              <Card>
+              <Card className="bg-gradient-to-br from-blue-50 to-indigo-50">
                 <CardContent className="p-4">
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     <div>
                       <p className="text-sm text-muted-foreground mb-1">정산 기간</p>
                       <p className="font-medium">{selectedSettlement.periodYm}</p>
@@ -465,9 +510,21 @@ export default function SettlementsPage() {
                       </Badge>
                     </div>
                     <div>
+                      <p className="text-sm text-muted-foreground mb-1">전체 대여 금액</p>
+                      <p className="font-bold text-blue-600">
+                        ₩{selectedSettlement.totalRentalAmount?.toLocaleString() || "0"}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-1">수수료</p>
+                      <p className="font-bold text-red-600">
+                        -₩{selectedSettlement.totalFeeAmount?.toLocaleString() || "0"}
+                      </p>
+                    </div>
+                    <div>
                       <p className="text-sm text-muted-foreground mb-1">정산 금액</p>
-                      <p className="font-bold text-lg text-primary">
-                        ₩{selectedSettlement.amount?.toLocaleString() || "0"}
+                      <p className="font-bold text-lg text-green-600">
+                        ₩{selectedSettlement.settlementAmount?.toLocaleString() || "0"}
                       </p>
                     </div>
                     {selectedSettlement.paidAt && (
