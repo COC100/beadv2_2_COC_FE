@@ -146,7 +146,7 @@ export default function RentalsPage() {
           }
         }
 
-        setOrders(Array.from(orderMap.values()))
+        setOrders(Array.from(orderMap.values()).sort((a, b) => b.rentalId - a.rentalId))
       } catch (error: any) {
         console.error("[v0] Failed to fetch rentals:", error)
         toast({
