@@ -56,15 +56,17 @@ export default function SettlementsPage() {
       if (period) params.periodYm = period
 
       const response = await sellerAPI.getSettlements(params)
-      setSettlements(response.content || [])
-      setTotalPages(response.totalPages || 0)
-      setTotalElements(response.totalElements || 0)
+      const settlementsData = response.data
+
+      setSettlements(settlementsData.content || [])
+      setTotalPages(settlementsData.totalPages || 0)
+      setTotalElements(settlementsData.totalElements || 0)
       setCurrentPage(page)
 
-      if (response.content && response.content.length > 0) {
-        const totalRental = response.content.reduce((sum: number, s: any) => sum + (s.totalRentalAmount || 0), 0)
-        const totalFee = response.content.reduce((sum: number, s: any) => sum + (s.totalFeeAmount || 0), 0)
-        const settlement = response.content.reduce((sum: number, s: any) => sum + (s.settlementAmount || 0), 0)
+      if (settlementsData.content && settlementsData.content.length > 0) {
+        const totalRental = settlementsData.content.reduce((sum: number, s: any) => sum + (s.totalRentalAmount || 0), 0)
+        const totalFee = settlementsData.content.reduce((sum: number, s: any) => sum + (s.totalFeeAmount || 0), 0)
+        const settlement = settlementsData.content.reduce((sum: number, s: any) => sum + (s.settlementAmount || 0), 0)
         setSummaryData({
           totalRentalAmount: totalRental,
           totalFeeAmount: totalFee,
@@ -86,12 +88,12 @@ export default function SettlementsPage() {
 
   const loadSettlementDetail = async (sellerSettlementId: number) => {
     try {
-      const [detail, lines] = await Promise.all([
+      const [detailResponse, linesResponse] = await Promise.all([
         sellerAPI.getSettlementDetail(sellerSettlementId),
         sellerAPI.getSettlementLines(sellerSettlementId),
       ])
-      setSelectedSettlement(detail)
-      setSettlementLines(lines || [])
+      setSelectedSettlement(detailResponse.data)
+      setSettlementLines(linesResponse.data || [])
       setShowDetailDialog(true)
     } catch (error: any) {
       toast({
@@ -132,9 +134,10 @@ export default function SettlementsPage() {
     }
 
     try {
-      const result = await sellerAPI.runSettlementBatch({
+      const response = await sellerAPI.runSettlementBatch({
         periodYm: batchPeriodYm,
       })
+      const result = response.data
 
       toast({
         title: "정산 배치 실행",
@@ -238,6 +241,17 @@ export default function SettlementsPage() {
       setPeriodYm(`${digitsOnly.slice(0, 4)}-${digitsOnly.slice(4)}`)
     } else {
       setPeriodYm(`${digitsOnly.slice(0, 4)}-${digitsOnly.slice(4, 6)}`)
+    }
+  }
+
+  const handleBatchPeriodYmChange = (value: string) => {
+    const digitsOnly = value.replace(/\D/g, "")
+    if (digitsOnly.length <= 4) {
+      setBatchPeriodYm(digitsOnly)
+    } else if (digitsOnly.length <= 6) {
+      setBatchPeriodYm(`${digitsOnly.slice(0, 4)}-${digitsOnly.slice(4)}`)
+    } else {
+      setBatchPeriodYm(`${digitsOnly.slice(0, 4)}-${digitsOnly.slice(4, 6)}`)
     }
   }
 
@@ -443,7 +457,7 @@ export default function SettlementsPage() {
               <Input
                 placeholder="2025-01"
                 value={batchPeriodYm}
-                onChange={(e) => setBatchPeriodYm(e.target.value)}
+                onChange={(e) => handleBatchPeriodYmChange(e.target.value)}
                 className="mt-2"
                 maxLength={7}
               />

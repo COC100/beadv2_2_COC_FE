@@ -758,7 +758,7 @@ export const sellerAPI = {
     return fetchAPI<any[]>(url, {}, true)
   },
 
-  runSettlementBatch: (data: { periodYm: string; startDate: string; endDate: string; pageSize: number }) =>
+  runSettlementBatch: (data: { periodYm: string }) =>
     fetchAPI<{ id: number; status: string }>(
       "/seller-service/api/settlements/sellers/self/batches/run",
       {
