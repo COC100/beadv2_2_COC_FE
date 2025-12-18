@@ -26,11 +26,8 @@ import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { productAPI } from "@/lib/api"
 import { useToast } from "@/hooks/use-toast"
-import { useRequireAuth } from "@/hooks/use-auth"
 
 export default function HomePage() {
-  useRequireAuth()
-
   const router = useRouter()
   const { toast } = useToast()
   const [products, setProducts] = useState<any[]>([])
@@ -78,20 +75,22 @@ export default function HomePage() {
   }
 
   useEffect(() => {
-    const checkAuth = () => {
-      if (typeof window !== "undefined") {
-        const token = localStorage.getItem("accessToken")
-        setIsAuthenticated(!!token)
-        return !!token
+    if (typeof window !== "undefined") {
+      const token = localStorage.getItem("accessToken")
+      console.log("[v0] Access token check:", token ? "found" : "not found")
+
+      if (!token) {
+        console.log("[v0] No access token found, redirecting to /intro")
+        router.push("/intro")
+        return // Stop execution, don't call fetchProducts
       }
-      return false
+
+      setIsAuthenticated(true)
     }
 
     const fetchProducts = async () => {
       try {
         setLoading(true)
-        const authenticated = checkAuth()
-
         const response = await productAPI.list({ size: 8, sortType: "LATEST" })
         console.log("[v0] Products API response:", response)
 
