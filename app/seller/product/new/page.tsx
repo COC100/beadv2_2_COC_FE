@@ -18,6 +18,7 @@ import { useToast } from "@/hooks/use-toast"
 import { productAPI } from "@/lib/api"
 import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd"
 import { Badge } from "@/components/ui/badge"
+import { optimizeImageToWebP } from "@/lib/image-utils"
 
 export default function NewProductPage() {
   const router = useRouter()
@@ -49,14 +50,46 @@ export default function NewProductPage() {
     if (!files) return
 
     const uploadingToast = toast({
-      title: "이미지 업로드 중",
-      description: `${files.length}개의 이미지를 업로드하고 있습니다...`,
+      title: "이미지 최적화 중",
+      description: `${files.length}개의 이미지를 최적화하고 있습니다...`,
     })
 
     try {
-      const uploadPromises = Array.from(files).map((file) => productAPI.uploadImage(file, "products"))
+      const optimizedFiles: File[] = []
+
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i]
+        console.log(`[v0] Optimizing image ${i + 1}/${files.length}: ${file.name}`)
+
+        try {
+          const result = await optimizeImageToWebP(file)
+          optimizedFiles.push(result.file)
+
+          console.log(`[v0] Optimization result:`, {
+            original: `${(result.originalSize / 1024).toFixed(2)}KB`,
+            optimized: `${(result.optimizedSize / 1024).toFixed(2)}KB`,
+            saved: `${result.compressionRatio.toFixed(1)}%`,
+          })
+        } catch (error: any) {
+          console.error(`[v0] Failed to optimize ${file.name}:`, error)
+          toast({
+            title: "이미지 최적화 실패",
+            description: error.message || `${file.name} 최적화에 실패했습니다`,
+            variant: "destructive",
+          })
+          return
+        }
+      }
+
+      toast({
+        title: "이미지 업로드 중",
+        description: `${optimizedFiles.length}개의 최적화된 이미지를 업로드하고 있습니다...`,
+      })
+
+      const uploadPromises = optimizedFiles.map((file) => productAPI.uploadImage(file, "products"))
       const uploadedUrls = await Promise.all(uploadPromises)
       setImages([...images, ...uploadedUrls])
+
       toast({
         title: "이미지 업로드 완료",
         description: `${uploadedUrls.length}개의 이미지가 업로드되었습니다`,
