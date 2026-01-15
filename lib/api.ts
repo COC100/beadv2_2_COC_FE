@@ -191,6 +191,7 @@ export const memberAPI = {
     password: string
     name: string
     phone: string
+    verificationToken: string // Added verificationToken parameter
   }) =>
     fetchAPI(
       "/member-service/api/members/signup",
@@ -839,7 +840,7 @@ export const authAPI = {
     ),
 
   confirmVerificationCode: (email: string, code: string) =>
-    fetchAPI(
+    fetchAPI<{ verified: boolean; verificationToken: string }>(
       "/member-service/api/auth/email/verify/confirm",
       {
         method: "POST",
