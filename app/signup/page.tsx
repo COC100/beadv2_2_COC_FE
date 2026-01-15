@@ -466,11 +466,14 @@ export default function SignupPage() {
                 )}
               </div>
               <div className="flex items-center space-x-2">
-                <Checkbox id="terms" checked={agreed} onCheckedChange={(checked) => setAgreed(checked as boolean)} />
-                <label
-                  htmlFor="terms"
-                  className="text-sm leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                >
+                <Checkbox
+                  id="terms"
+                  checked={agreed}
+                  onCheckedChange={(checked) => setAgreed(checked as boolean)}
+                  className="border-2"
+                />
+                <label htmlFor="terms" className="text-sm leading-none cursor-pointer">
+                  <span className="text-destructive">(필수)</span>{" "}
                   <Link href="/terms" className="text-primary hover:underline">
                     이용약관
                   </Link>{" "}
