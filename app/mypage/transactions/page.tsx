@@ -247,13 +247,18 @@ export default function TransactionsPage() {
                       <div>
                         <p className="font-medium">{getTransactionLabel(transaction.txType)}</p>
                         <p className="text-sm text-muted-foreground">
-                          {new Date(transaction.createdAt).toLocaleString("ko-KR", {
-                            year: "numeric",
-                            month: "2-digit",
-                            day: "2-digit",
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
+                          {(() => {
+                            const date = new Date(transaction.createdAt)
+                            date.setHours(date.getHours() + 9)
+                            return date.toLocaleString("ko-KR", {
+                              year: "numeric",
+                              month: "2-digit",
+                              day: "2-digit",
+                              hour: "2-digit",
+                              minute: "2-digit",
+                              second: "2-digit",
+                            })
+                          })()}
                         </p>
                         {transaction.description && (
                           <p className="text-sm text-muted-foreground mt-1">{transaction.description}</p>

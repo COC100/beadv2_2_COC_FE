@@ -122,7 +122,19 @@ export default function DepositSuccessPage() {
                     <span className="text-muted-foreground">승인일시</span>
                     <span className="text-sm">
                       {depositInfo.data?.approvedAt || depositInfo.approvedAt
-                        ? new Date(depositInfo.data?.approvedAt || depositInfo.approvedAt).toLocaleString("ko-KR")
+                        ? (() => {
+                            const date = new Date(depositInfo.data?.approvedAt || depositInfo.approvedAt)
+                            const kstDate = new Date(date.getTime() + 9 * 60 * 60 * 1000)
+                            return kstDate.toLocaleString("ko-KR", {
+                              year: "numeric",
+                              month: "2-digit",
+                              day: "2-digit",
+                              hour: "2-digit",
+                              minute: "2-digit",
+                              second: "2-digit",
+                              hour12: false,
+                            })
+                          })()
                         : "승인 완료"}
                     </span>
                   </div>
