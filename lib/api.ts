@@ -827,6 +827,27 @@ export const sellerAPI = {
 
 // Auth Service APIs
 export const authAPI = {
+  // Email verification for signup
+  sendVerificationEmail: (email: string) =>
+    fetchAPI(
+      "/member-service/api/auth/email/verify/send",
+      {
+        method: "POST",
+        body: JSON.stringify({ email }),
+      },
+      false,
+    ),
+
+  confirmVerificationCode: (email: string, code: string) =>
+    fetchAPI(
+      "/member-service/api/auth/email/verify/confirm",
+      {
+        method: "POST",
+        body: JSON.stringify({ email, code }),
+      },
+      false,
+    ),
+
   reissueToken: async () => {
     const url = `${API_BASE_URL}/member-service/api/auth/reissue`
 

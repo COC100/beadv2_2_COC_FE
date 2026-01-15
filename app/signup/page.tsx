@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
-import { memberAPI } from "@/lib/api"
+import { memberAPI, authAPI } from "@/lib/api"
 import { useToast } from "@/hooks/use-toast"
 import { handlePhoneInput } from "@/lib/utils"
 import { Check, X } from "lucide-react"
@@ -42,6 +42,13 @@ export default function SignupPage() {
     message: "",
   })
 
+  const [verificationCode, setVerificationCode] = useState("")
+  const [verificationToken, setVerificationToken] = useState("")
+  const [isEmailVerified, setIsEmailVerified] = useState(false)
+  const [isVerificationSending, setIsVerificationSending] = useState(false)
+  const [isVerificationConfirming, setIsVerificationConfirming] = useState(false)
+  const [emailSent, setEmailSent] = useState(false)
+
   const passwordValidation = {
     hasSpecial: /[!@#$%^&*(),.?":{}|<>]/.test(formData.password),
     hasNumber: /\d/.test(formData.password),
@@ -65,7 +72,80 @@ export default function SignupPage() {
     formData.confirmPassword &&
     allPasswordValid &&
     passwordsMatch &&
-    agreed
+    agreed &&
+    isEmailVerified
+
+  const handleSendVerificationEmail = async () => {
+    if (!formData.email) {
+      toast({
+        title: "이메일 입력 필요",
+        description: "이메일을 먼저 입력해주세요.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    setIsVerificationSending(true)
+    try {
+      const response = await authAPI.sendVerificationEmail(formData.email)
+      console.log("[v0] Verification email sent:", response)
+      setEmailSent(true)
+      toast({
+        title: "인증 메일 발송",
+        description: "이메일로 인증번호가 발송되었습니다.",
+      })
+    } catch (error: any) {
+      console.error("[v0] Send verification email failed:", error)
+      toast({
+        title: "인증 메일 발송 실패",
+        description: error.message || "인증 메일 발송에 실패했습니다.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsVerificationSending(false)
+    }
+  }
+
+  const handleConfirmVerificationCode = async () => {
+    if (!verificationCode || verificationCode.length !== 6) {
+      toast({
+        title: "인증번호 입력 필요",
+        description: "6자리 인증번호를 입력해주세요.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    setIsVerificationConfirming(true)
+    try {
+      const response = await authAPI.confirmVerificationCode(formData.email, verificationCode)
+      console.log("[v0] Verification confirm response:", response)
+
+      if (response.data.verified && response.data.verificationToken) {
+        setIsEmailVerified(true)
+        setVerificationToken(response.data.verificationToken)
+        toast({
+          title: "이메일 인증 완료",
+          description: "이메일 인증이 완료되었습니다.",
+        })
+      } else {
+        toast({
+          title: "인증 실패",
+          description: "인증번호가 일치하지 않습니다.",
+          variant: "destructive",
+        })
+      }
+    } catch (error: any) {
+      console.error("[v0] Confirm verification code failed:", error)
+      toast({
+        title: "인증 실패",
+        description: error.message || "인증번호 확인에 실패했습니다.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsVerificationConfirming(false)
+    }
+  }
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -88,6 +168,15 @@ export default function SignupPage() {
       return
     }
 
+    if (!isEmailVerified || !verificationToken) {
+      setErrorDialog({
+        open: true,
+        title: "이메일 인증 필요",
+        message: "이메일 인증을 완료해주세요.",
+      })
+      return
+    }
+
     setIsLoading(true)
     try {
       await memberAPI.signup({
@@ -95,6 +184,7 @@ export default function SignupPage() {
         password: formData.password,
         name: formData.name,
         phone: formData.phone,
+        verificationToken: verificationToken,
       })
 
       toast({
@@ -159,15 +249,63 @@ export default function SignupPage() {
                 <Label htmlFor="email">
                   이메일 <span className="text-destructive">*</span>
                 </Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="user@example.com"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  required
-                />
+                <div className="flex gap-2">
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="user@example.com"
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    disabled={emailSent}
+                    required
+                    className="flex-1"
+                  />
+                  <Button
+                    type="button"
+                    onClick={handleSendVerificationEmail}
+                    disabled={!formData.email || isVerificationSending || emailSent}
+                    variant="outline"
+                  >
+                    {isVerificationSending ? "전송 중..." : emailSent ? "전송 완료" : "인증 메일 전송"}
+                  </Button>
+                </div>
               </div>
+
+              {emailSent && !isEmailVerified && (
+                <div className="space-y-2">
+                  <Label htmlFor="verificationCode">
+                    인증번호 <span className="text-destructive">*</span>
+                  </Label>
+                  <div className="flex gap-2">
+                    <Input
+                      id="verificationCode"
+                      type="text"
+                      placeholder="6자리 인증번호"
+                      value={verificationCode}
+                      onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                      maxLength={6}
+                      required
+                      className="flex-1"
+                    />
+                    <Button
+                      type="button"
+                      onClick={handleConfirmVerificationCode}
+                      disabled={verificationCode.length !== 6 || isVerificationConfirming}
+                      variant="outline"
+                    >
+                      {isVerificationConfirming ? "확인 중..." : "인증 확인"}
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {isEmailVerified && (
+                <p className="text-sm text-green-600 flex items-center gap-1">
+                  <Check className="h-4 w-4" />
+                  이메일 인증 완료
+                </p>
+              )}
+
               <div className="space-y-2">
                 <Label htmlFor="name">
                   이름 <span className="text-destructive">*</span>
