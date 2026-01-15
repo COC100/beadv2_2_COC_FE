@@ -18,7 +18,6 @@ import { Footer } from "@/components/footer"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Store, DollarSign, Shield, TrendingUp } from "lucide-react"
@@ -31,8 +30,6 @@ export default function BecomeSellerPage() {
     businessName: "",
     businessNumber: "",
     phone: "",
-    email: "",
-    description: "",
   })
   const [agreed, setAgreed] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
@@ -199,34 +196,6 @@ export default function BecomeSellerPage() {
                     value={formData.phone}
                     onChange={(e) => setFormData({ ...formData, phone: handlePhoneInput(e.target.value) })}
                     className="rounded-xl"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="email">
-                    이메일 <span className="text-destructive">*</span>
-                  </Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="seller@example.com"
-                    value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    required
-                    className="rounded-xl"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="description">
-                    사업 소개 <span className="text-destructive">*</span>
-                  </Label>
-                  <Textarea
-                    id="description"
-                    placeholder="판매하실 전자기기와 사업에 대해 간단히 소개해주세요"
-                    value={formData.description}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    rows={4}
-                    className="rounded-xl"
-                    required
                   />
                 </div>
                 <div className="flex items-center space-x-2">

@@ -20,7 +20,7 @@ declare global {
 }
 
 export default function DepositPage() {
-  const [amount, setAmount] = useState("")
+  const [amount, setAmount] = useState(0) // changed to accumulative amount instead of selection
   const [currentBalance, setCurrentBalance] = useState(0)
   const [loading, setLoading] = useState(false)
   const [tossPayments, setTossPayments] = useState<any>(null)
@@ -89,23 +89,40 @@ export default function DepositPage() {
   }
 
   const handleAmountChange = (value: string) => {
-    const numValue = Number.parseInt(value)
+    const numValue = Number.parseInt(value) || 0
 
-    if (numValue > MAX_DEPOSIT_AMOUNT) {
+    const totalAmount = numValue
+
+    if (totalAmount > MAX_DEPOSIT_AMOUNT) {
       toast({
         title: "충전 금액 제한",
         description: "1회 최대 충전 가능 금액은 1억원입니다.",
         variant: "destructive",
       })
-      setAmount(MAX_DEPOSIT_AMOUNT.toString())
+      setAmount(0)
       return
     }
 
-    setAmount(value)
+    setAmount(numValue)
+  }
+
+  const handlePresetAmount = (preset: number) => {
+    const newAmount = amount + preset
+
+    if (currentBalance + newAmount > MAX_DEPOSIT_AMOUNT) {
+      toast({
+        title: "충전 금액 제한",
+        description: "1회 최대 충전 가능 금액은 1억원입니다.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    setAmount(newAmount)
   }
 
   const handleCharge = async () => {
-    if (!amount || Number.parseInt(amount) <= 0) {
+    if (!amount || amount <= 0) {
       toast({
         title: "충전 금액 오류",
         description: "충전할 금액을 입력해주세요.",
@@ -114,20 +131,20 @@ export default function DepositPage() {
       return
     }
 
-    if (Number.parseInt(amount) > MAX_DEPOSIT_AMOUNT) {
+    const totalAmount = currentBalance + amount
+    if (totalAmount > MAX_DEPOSIT_AMOUNT) {
       toast({
         title: "충전 금액 제한",
         description: "1회 최대 충전 가능 금액은 1억원입니다.",
         variant: "destructive",
       })
-      setAmount(MAX_DEPOSIT_AMOUNT.toString())
       return
     }
 
     setLoading(true)
 
     try {
-      const response = await accountAPI.requestDeposit(Number.parseInt(amount))
+      const response = await accountAPI.requestDeposit(amount)
       const order = response.data
       console.log("[v0] Deposit order:", order)
 
@@ -194,19 +211,19 @@ export default function DepositPage() {
             <Card className="rounded-2xl shadow-lg">
               <CardHeader>
                 <CardTitle className="text-2xl">충전 금액</CardTitle>
-                <CardDescription>충전할 금액을 선택하거나 직접 입력하세요</CardDescription>
+                <CardDescription>충전할 금액을 선택하면 누적됩니다</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                   {presetAmounts.map((preset) => (
                     <Button
                       key={preset}
-                      variant={amount === preset.toString() ? "default" : "outline"}
-                      onClick={() => setAmount(preset.toString())}
+                      variant="outline"
+                      onClick={() => handlePresetAmount(preset)}
                       className="h-16 text-lg rounded-xl"
                       disabled={loading}
                     >
-                      ₩{(preset / 10000).toFixed(0)}만
+                      +₩{(preset / 10000).toFixed(0)}만
                     </Button>
                   ))}
                 </div>
@@ -224,20 +241,24 @@ export default function DepositPage() {
                     className="h-14 text-lg rounded-xl"
                     disabled={loading}
                   />
-                  <p className="text-xs text-muted-foreground mt-1">* 1회 최대 충전 가능 금액: 1억원</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    * 최대 충전 가능 금액: ₩{(MAX_DEPOSIT_AMOUNT - currentBalance).toLocaleString()}
+                  </p>
                 </div>
 
-                {amount && (
+                {amount > 0 && (
                   <div className="bg-muted p-4 rounded-xl">
                     <div className="flex justify-between text-sm mb-2">
+                      <span className="text-muted-foreground">현재 예치금</span>
+                      <span className="font-medium">₩{currentBalance.toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between text-sm mb-2">
                       <span className="text-muted-foreground">충전 금액</span>
-                      <span className="font-medium">₩{Number.parseInt(amount).toLocaleString()}</span>
+                      <span className="font-medium">₩{amount.toLocaleString()}</span>
                     </div>
                     <div className="flex justify-between text-lg font-bold">
                       <span>충전 후 잔액</span>
-                      <span className="text-primary">
-                        ₩{(currentBalance + Number.parseInt(amount)).toLocaleString()}
-                      </span>
+                      <span className="text-primary">₩{(currentBalance + amount).toLocaleString()}</span>
                     </div>
                   </div>
                 )}
@@ -252,10 +273,10 @@ export default function DepositPage() {
               </Link>
               <Button
                 className="flex-1 h-14 rounded-xl text-lg"
-                disabled={!amount || Number.parseInt(amount) <= 0 || loading}
+                disabled={!amount || amount <= 0 || loading}
                 onClick={handleCharge}
               >
-                {loading ? "결제 진행 중..." : `₩${amount ? Number.parseInt(amount).toLocaleString() : "0"} 충전하기`}
+                {loading ? "결제 진행 중..." : `₩${amount ? amount.toLocaleString() : "0"} 충전하기`}
               </Button>
             </div>
           </div>
