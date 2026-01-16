@@ -942,7 +942,7 @@ export const reviewAPI = {
     rating: number
     content: string
   }): Promise<{ data: any; headers: Headers }> => {
-    return fetchAPI("/api/reviews", {
+    return fetchAPI("/review-service/api/reviews", {
       method: "POST",
       body: JSON.stringify(data),
     })
@@ -952,26 +952,26 @@ export const reviewAPI = {
     reviewId: number,
     data: { rating?: number; content?: string },
   ): Promise<{ data: any; headers: Headers }> => {
-    return fetchAPI(`/api/reviews/${reviewId}`, {
+    return fetchAPI(`/review-service/api/reviews/${reviewId}`, {
       method: "PATCH",
       body: JSON.stringify(data),
     })
   },
 
   delete: async (reviewId: number): Promise<{ data: any; headers: Headers }> => {
-    return fetchAPI(`/api/reviews/${reviewId}`, { method: "DELETE" })
+    return fetchAPI(`/review-service/api/reviews/${reviewId}`, { method: "DELETE" })
   },
 
   list: async (sellerId: number): Promise<{ data: any; headers: Headers }> => {
-    return fetchAPI(`/api/reviews?sellerId=${sellerId}`, { method: "GET" })
+    return fetchAPI(`/review-service/api/reviews?sellerId=${sellerId}`, { method: "GET" })
   },
 
   myReviews: async (): Promise<{ data: any; headers: Headers }> => {
-    return fetchAPI("/api/reviews/me", { method: "GET" }, true)
+    return fetchAPI("/review-service/api/reviews/me", { method: "GET" }, true)
   },
 
   getSummary: async (sellerId: number): Promise<{ data: any; headers: Headers }> => {
-    return fetchAPI(`/api/reviews/summary?sellerId=${sellerId}`, { method: "GET" })
+    return fetchAPI(`/review-service/api/reviews/summary?sellerId=${sellerId}`, { method: "GET" })
   },
 }
 
