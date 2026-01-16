@@ -978,34 +978,21 @@ export const reviewAPI = {
 // Delivery Service APIs
 export const deliveryAPI = {
   // 배송 등록
-  register: async (data: { rentalItemId: number; carrierCode: string; trackingNumber: string }) => {
-    return fetchAPI<{
+  register: (data: { rentalId: number; trackingNumber: string }) =>
+    fetchAPI<{
       deliveryId: number
-      rentalItemId: number
-      carrierCode: string
+      rentalId: number
       trackingNumber: string
       status: string
     }>(
-      "/api/deliveries",
+      "/delivery-service/api/deliveries",
       {
         method: "POST",
         body: JSON.stringify(data),
       },
       true,
-    )
-  },
+    ),
 
   // 배송 조회
-  getDetail: async (deliveryId: number) => {
-    return fetchAPI<{
-      deliveryId: number
-      rentalItemId: number
-      carrierCode: string
-      trackingNumber: string
-      status: string
-      statusRaw: string
-      createdAt: string
-      updatedAt: string
-    }>(`/api/deliveries/${deliveryId}`, {}, false)
-  },
+  getDetail: (deliveryId: number) => fetchAPI<any>(`/delivery-service/api/deliveries/${deliveryId}`, {}, true),
 }
