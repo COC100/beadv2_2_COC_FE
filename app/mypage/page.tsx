@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { User, Wallet, Settings, LogOut, MapPin, Receipt } from "lucide-react"
+import { User, Wallet, Settings, LogOut, MapPin, Receipt, Star } from "lucide-react"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { Button } from "@/components/ui/button"
@@ -125,6 +125,11 @@ export default function MyPage() {
                       주소지 관리
                     </Button>
                   </Link>
+                  <Link href="/mypage/reviews">
+                    <Button variant="ghost" className="w-full justify-start rounded-xl">
+                      <Star className="h-4 w-4 mr-2" />내 리뷰 관리
+                    </Button>
+                  </Link>
                   <Link href="/mypage/settings">
                     <Button variant="ghost" className="w-full justify-start rounded-xl">
                       <Settings className="h-4 w-4 mr-2" />
@@ -191,6 +196,15 @@ export default function MyPage() {
                   <CardContent className="p-6">
                     <h3 className="font-semibold text-lg mb-2">주소지 관리</h3>
                     <p className="text-sm text-muted-foreground">배송 주소를 관리하세요</p>
+                  </CardContent>
+                </Card>
+              </Link>
+
+              <Link href="/mypage/reviews">
+                <Card className="rounded-2xl hover:shadow-lg transition-shadow cursor-pointer">
+                  <CardContent className="p-6">
+                    <h3 className="font-semibold text-lg mb-2">내 리뷰 관리</h3>
+                    <p className="text-sm text-muted-foreground">작성한 리뷰를 관리하세요</p>
                   </CardContent>
                 </Card>
               </Link>

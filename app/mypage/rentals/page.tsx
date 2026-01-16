@@ -4,14 +4,14 @@ import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useToast } from "@/hooks/use-toast"
-import { ArrowLeft, ChevronDown, ChevronUp, Package, Calendar, DollarSign } from "lucide-react"
+import { ArrowLeft, ChevronDown, ChevronUp, Package, Calendar, DollarSign, Truck } from "lucide-react"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
-import { rentalAPI, productAPI } from "@/lib/api"
+import { rentalAPI, productAPI, deliveryAPI } from "@/lib/api"
 
 interface RentalDetail {
   id: number
@@ -42,6 +42,7 @@ export default function RentalsPage() {
   const [loading, setLoading] = useState(true)
   const router = useRouter()
   const { toast } = useToast()
+  const [deliveryInfo, setDeliveryInfo] = useState<Record<number, any>>({})
 
   const formatDateTime = (dateStr: string) => {
     if (!dateStr) return ""
@@ -71,6 +72,37 @@ export default function RentalsPage() {
     const end = new Date(endDate)
     const days = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1
     return days > 0 ? days * product.pricePerDay : 0
+  }
+
+  const getDeliveryStatusText = (status: string) => {
+    const statusMap: Record<string, string> = {
+      REGISTERED: "송장 등록",
+      PICKED_UP: "집하",
+      IN_TRANSIT: "이동중",
+      OUT_FOR_DELIVERY: "배송출발",
+      DELIVERED: "배송 완료",
+      EXCEPTION: "예외",
+      CANCELLED: "취소",
+    }
+    return statusMap[status] || status
+  }
+
+  const CARRIER_CODES = [
+    { code: "kr.cjlogistics", name: "CJ대한통운" },
+    { code: "kr.epost", name: "우체국택배" },
+    { code: "kr.hanjin", name: "한진택배" },
+    { code: "kr.lotte", name: "롯데택배" },
+    { code: "kr.logen", name: "로젠택배" },
+    // ... rest of codes same as manage page
+  ]
+
+  const loadDeliveryInfo = async (rentalItemId: number) => {
+    try {
+      const response = await deliveryAPI.getDetail(rentalItemId)
+      setDeliveryInfo((prev) => ({ ...prev, [rentalItemId]: response.data }))
+    } catch (error: any) {
+      console.log(`[v0] No delivery info for rental ${rentalItemId}:`, error)
+    }
   }
 
   useEffect(() => {
@@ -143,6 +175,14 @@ export default function RentalsPage() {
             })
 
             order.totalAmount += totalAmount
+          }
+        }
+
+        for (const rental of rentals) {
+          for (const item of rental.items) {
+            if (item.status === "PAID") {
+              await loadDeliveryInfo(item.rentalItemId)
+            }
           }
         }
 
@@ -365,84 +405,143 @@ export default function RentalsPage() {
 
                   {expandedOrders.has(order.orderId) && (
                     <div className="p-5 space-y-4">
-                      {order.details.map((detail, index) => (
-                        <div key={detail.id}>
-                          {index > 0 && <Separator className="mb-4" />}
-                          <div className="flex gap-4">
-                            <div className="w-20 h-20 bg-gray-50 rounded-lg overflow-hidden flex-shrink-0">
-                              <img
-                                src={detail.productImage || "/placeholder.svg"}
-                                alt={detail.productName}
-                                className="w-full h-full object-cover"
-                              />
-                            </div>
-                            <div className="flex-1">
-                              <div className="flex items-start justify-between mb-2">
-                                <div>
-                                  <Link
-                                    href={`/products/${detail.productId}`}
-                                    className="font-semibold hover:text-primary transition-colors"
-                                  >
-                                    {detail.productName}
-                                  </Link>
-                                  <p className="text-sm text-muted-foreground mt-1">
-                                    렌탈 시작일: {formatDate(detail.startDate)}
-                                  </p>
-                                  <p className="text-sm text-muted-foreground">
-                                    렌탈 마감일: {formatDate(detail.endDate)}
-                                  </p>
-                                  <p className="text-xs text-muted-foreground mt-1">({detail.totalDays}일)</p>
+                      {order.details.map((detail, index) => {
+                        const delivery = deliveryInfo[detail.id]
+
+                        return (
+                          <div key={detail.id}>
+                            {index > 0 && <Separator className="mb-4" />}
+                            <div className="flex gap-4">
+                              <div className="w-20 h-20 bg-gray-50 rounded-lg overflow-hidden flex-shrink-0">
+                                <img
+                                  src={detail.productImage || "/placeholder.svg"}
+                                  alt={detail.productName}
+                                  className="w-full h-full object-cover"
+                                />
+                              </div>
+                              <div className="flex-1">
+                                <div className="flex items-start justify-between mb-2">
+                                  <div>
+                                    <Link
+                                      href={`/products/${detail.productId}`}
+                                      className="font-semibold hover:text-primary transition-colors"
+                                    >
+                                      {detail.productName}
+                                    </Link>
+                                    <p className="text-sm text-muted-foreground mt-1">
+                                      렌탈 시작일: {formatDate(detail.startDate)}
+                                    </p>
+                                    <p className="text-sm text-muted-foreground">
+                                      렌탈 마감일: {formatDate(detail.endDate)}
+                                    </p>
+                                    <p className="text-xs text-muted-foreground mt-1">({detail.totalDays}일)</p>
+                                  </div>
+                                  <Badge className={getStatusText(detail.status).color}>
+                                    {getStatusText(detail.status).text}
+                                  </Badge>
                                 </div>
-                                <Badge className={getStatusText(detail.status).color}>
-                                  {getStatusText(detail.status).text}
-                                </Badge>
-                              </div>
-                              <div className="flex items-center justify-between mt-3">
-                                <p className="text-sm text-muted-foreground">
-                                  {detail.pricePerDay.toLocaleString()}원 x {detail.totalDays}일
-                                </p>
-                                <p className="font-bold text-primary">₩{detail.totalAmount.toLocaleString()}</p>
-                              </div>
-                              <div className="flex gap-2 mt-3">
-                                {detail.status === "ACCEPTED" && (
-                                  <Button
-                                    size="sm"
-                                    className="rounded-lg"
-                                    onClick={() => handlePayment(order.rentalId)}
-                                  >
-                                    결제하기
-                                  </Button>
-                                )}
-                                {(detail.status === "REQUESTED" || detail.status === "ACCEPTED") && (
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    className="rounded-lg bg-transparent"
-                                    onClick={() => handleCancel(detail.id)}
-                                  >
-                                    렌탈 취소하기
-                                  </Button>
-                                )}
-                                {detail.status === "RENTING" && (
-                                  <>
+                                <div className="flex items-center justify-between mt-3">
+                                  <p className="text-sm text-muted-foreground">
+                                    {detail.pricePerDay.toLocaleString()}원 x {detail.totalDays}일
+                                  </p>
+                                  <p className="font-bold text-primary">₩{detail.totalAmount.toLocaleString()}</p>
+                                </div>
+                                <div className="flex gap-2 mt-3">
+                                  {detail.status === "ACCEPTED" && (
+                                    <Button
+                                      size="sm"
+                                      className="rounded-lg"
+                                      onClick={() => handlePayment(order.rentalId)}
+                                    >
+                                      결제하기
+                                    </Button>
+                                  )}
+                                  {detail.status === "RETURNED" && (
+                                    <Button
+                                      size="sm"
+                                      className="rounded-lg"
+                                      onClick={() => router.push(`/reviews/create?rentalItemId=${detail.id}`)}
+                                    >
+                                      후기 작성
+                                    </Button>
+                                  )}
+                                  {(detail.status === "REQUESTED" || detail.status === "ACCEPTED") && (
                                     <Button
                                       size="sm"
                                       variant="outline"
                                       className="rounded-lg bg-transparent"
-                                      onClick={() => handleExtend(detail.id)}
+                                      onClick={() => handleCancel(detail.id)}
                                     >
-                                      렌탈 연장
+                                      렌탈 취소하기
                                     </Button>
-                                    <Button size="sm" className="rounded-lg" onClick={() => handleReturn(detail.id)}>
-                                      반납 신청
-                                    </Button>
-                                  </>
+                                  )}
+                                  {detail.status === "RENTING" && (
+                                    <>
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        className="rounded-lg bg-transparent"
+                                        onClick={() => handleExtend(detail.id)}
+                                      >
+                                        렌탈 연장
+                                      </Button>
+                                      <Button size="sm" className="rounded-lg" onClick={() => handleReturn(detail.id)}>
+                                        반납 신청
+                                      </Button>
+                                    </>
+                                  )}
+                                </div>
+                                {detail.status === "PAID" && (
+                                  <div className="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                                    <div className="flex items-center gap-2 mb-2">
+                                      <Truck className="h-4 w-4 text-blue-600" />
+                                      <span className="font-semibold text-sm">배송 정보</span>
+                                    </div>
+                                    {delivery ? (
+                                      <div className="space-y-1 text-sm">
+                                        <div className="flex justify-between">
+                                          <span className="text-muted-foreground">배송 상태:</span>
+                                          <Badge className="bg-blue-600 text-white">
+                                            {getDeliveryStatusText(delivery.status)}
+                                          </Badge>
+                                        </div>
+                                        <div className="flex justify-between">
+                                          <span className="text-muted-foreground">택배사:</span>
+                                          <span>
+                                            {CARRIER_CODES.find((c) => c.code === delivery.carrierCode)?.name ||
+                                              delivery.carrierCode}
+                                          </span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                          <span className="text-muted-foreground">운송장번호:</span>
+                                          <span className="font-mono">{delivery.trackingNumber}</span>
+                                        </div>
+                                        <Button
+                                          size="sm"
+                                          variant="outline"
+                                          className="w-full mt-2 bg-transparent"
+                                          onClick={() =>
+                                            window.open(
+                                              `https://tracker.delivery/#/${delivery.carrierCode}/${delivery.trackingNumber}`,
+                                              "_blank",
+                                            )
+                                          }
+                                        >
+                                          배송 조회
+                                        </Button>
+                                      </div>
+                                    ) : (
+                                      <div className="text-center">
+                                        <p className="text-sm text-muted-foreground">송장번호 등록 전</p>
+                                      </div>
+                                    )}
+                                  </div>
                                 )}
                               </div>
                             </div>
                           </div>
-                        </div>
-                      ))}
+                        )
+                      })}
                     </div>
                   )}
                 </CardContent>

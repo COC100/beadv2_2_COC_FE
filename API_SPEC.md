@@ -1,6 +1,6 @@
 # MODI 서비스 API 명세
 
-본 문서는 member-service, account-service, seller-service, product-service, rental-service, review-service, notification-service, delivery-service, ai-service의 컨트롤러 기반 API 명세입니다. 기본 응답은 `ApiResponse<T>`(`success:boolean, code:string, message:string, data:T`)이며, 내부 지갑/상품/대여/판매자/회원 컨트롤러는 래퍼 없이 원본을 반환하고 리뷰 삭제는 204 No Content, 알림 스트림은 `text/event-stream`을 반환합니다. 인증/재발급/로그아웃 과정에서 리프레시 토큰은 HttpOnly 쿠키로 전달됩니다.
+본 문서는 member-service, account-service, seller-service, product-service, rental-service, review-service, notification-service, delivery-service, ai-service의 컨트롤러 기반 API 명세입니다. 기본 응답은 `ApiResponse<T>`(`success:boolean, code:string, message:string, data:T`)이며, 일부 내부/관리자 API는 래퍼 없이 원본을 반환합니다. 리뷰 삭제는 204 No Content, 알림 스트림은 `text/event-stream`을 반환하며 채팅 메시지는 WebSocket(STOMP)로 전송됩니다. 인증/재발급/로그아웃 과정에서 리프레시 토큰은 HttpOnly 쿠키로 전달됩니다.
 
 ## 인증/권한
 - JWT Bearer: 헤더 `Authorization: Bearer <accessToken>`
@@ -128,11 +128,14 @@
   - Res: `SellerDetailResponse { sellerId, memberId, storeName, bizRegNo, storePhone, status:SellerStatus, createdAt, updatedAt }`
 - **GET /api/sellers/self** — 내 판매자 (Auth)
   - Res: `SellerDetailResponse`
+- **GET /api/sellers/{sellerId}** — 판매자 정보 조회
+  - Path: `sellerId:long`
+  - Res: `SellerInfoResponse { sellerId, storeName, bizRegNo, storePhone }`
 - **GET /api/sellers/self/rentals** — 내 대여 목록 (Auth)
   - Query: `productId?:long`, `status:string`, `startDate:yyyy-MM-dd`, `endDate:yyyy-MM-dd`, `page?:int`, `size?:int`
   - Res: `SellerRentalResponse[] { rentalItemId, productId, memberId, sellerId, status, totalAmount:decimal, startDate, endDate, paidAt }`
 - **PUT /api/sellers/self** — 내 판매자 수정 (Auth)
-  - Req: `storeName`, `bizRegNo?`, `storePhone?`, `status:SellerStatus`
+  - Req: `storeName:string<=50`, `bizRegNo?:string<=20`, `storePhone?:string<=20`
   - Res: `SellerDetailResponse`
 - **GET /api/sellers/products/{productId}** — 상품 요약 조회 (Auth)
   - Res: `ProductSummaryResponse { productId, productName, thumbnailImageUrl }`
@@ -312,20 +315,20 @@
 
 - **POST /api/reviews** — 판매자 리뷰 작성 (Auth)
   - Req: `rentalItemId:long`, `sellerId:long`, `rating:short(1~5)`, `content:string`
-  - Res: `ReviewResponse { id, rentalItemId, sellerId, memberId, rating, content, createdAt, updatedAt }` (201)
+  - Res: `ReviewResponse { reviewId, rentalItemId, sellerId, memberId, rating, content, createdAt, updatedAt }` (201)
 - **PATCH /api/reviews/{reviewId}** — 리뷰 수정 (Auth)
   - Req: `rating?:short(1~5)`, `content?:string`
   - Res: `ReviewResponse`
-- **DELETE /api/reviews/{reviewId}** — 리뷰 삭제(소프트)
+- **DELETE /api/reviews/{reviewId}** — 리뷰 삭제(소프트) (Auth)
   - Res: `204 No Content` (래퍼 없음)
-- **GET /api/reviews/{reviewId}** — 리뷰 상세
-  - Res: `ReviewResponse`
 - **GET /api/reviews** — 판매자 리뷰 목록
-  - Query: `sellerId:long`, `pageable(sort=createdAt,desc 기본)`
-  - Res: `ReviewSummaryResponse[] { id, rentalItemId, sellerId, memberId, rating, content, createdAt }`
+  - Query: `sellerId:long`
+  - Res: `ReviewListResponse[] { reviewId, rentalItemId, sellerId, memberId, rating, content, createdAt }`
 - **GET /api/reviews/me** — 내가 작성한 리뷰 목록 (Auth)
-  - Query: `pageable(sort=createdAt,desc 기본)`
-  - Res: `ReviewSummaryResponse[]`
+  - Res: `ReviewListResponse[]`
+- **GET /api/reviews/summary** — 리뷰 요약 조회
+  - Query: `sellerId:long`
+  - Res: `ReviewSummaryResponse { sellerId, averageRating:decimal, reviewCount:int }` or `204 No Content`
 
 ---
 ## notification-service

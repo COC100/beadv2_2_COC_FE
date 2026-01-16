@@ -576,6 +576,13 @@ export const rentalAPI = {
 
   getDetail: (rentalId: number) => fetchAPI<any>(`/rental-service/api/rentals/${rentalId}`, {}, true),
 
+  getUnavailableDates: (productId: number, ym: string) =>
+    fetchAPI<{ productId: number; ym: string; dates: string[] }>(
+      `/rental-service/api/rentals/${productId}/unavailable-dates?ym=${ym}`,
+      {},
+      false,
+    ),
+
   accept: (rentalItemId: number) =>
     fetchAPI(
       `/rental-service/api/rentals/${rentalItemId}/accept`,
@@ -824,6 +831,10 @@ export const sellerAPI = {
       },
       true,
     ),
+
+  getInfo: async (sellerId: number): Promise<{ data: any; headers: Headers }> => {
+    return fetchAPI(`/api/sellers/${sellerId}`, { method: "GET" })
+  },
 }
 
 // Auth Service APIs
@@ -920,5 +931,81 @@ export const authAPI = {
 
     // Clear local storage
     localStorage.removeItem("accessToken")
+  },
+}
+
+// Review Service APIs
+export const reviewAPI = {
+  create: async (data: {
+    rentalItemId: number
+    sellerId: number
+    rating: number
+    content: string
+  }): Promise<{ data: any; headers: Headers }> => {
+    return fetchAPI("/api/reviews", {
+      method: "POST",
+      body: JSON.stringify(data),
+    })
+  },
+
+  update: async (
+    reviewId: number,
+    data: { rating?: number; content?: string },
+  ): Promise<{ data: any; headers: Headers }> => {
+    return fetchAPI(`/api/reviews/${reviewId}`, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    })
+  },
+
+  delete: async (reviewId: number): Promise<{ data: any; headers: Headers }> => {
+    return fetchAPI(`/api/reviews/${reviewId}`, { method: "DELETE" })
+  },
+
+  list: async (sellerId: number): Promise<{ data: any; headers: Headers }> => {
+    return fetchAPI(`/api/reviews?sellerId=${sellerId}`, { method: "GET" })
+  },
+
+  myReviews: async (): Promise<{ data: any; headers: Headers }> => {
+    return fetchAPI("/api/reviews/me", { method: "GET" }, true)
+  },
+
+  getSummary: async (sellerId: number): Promise<{ data: any; headers: Headers }> => {
+    return fetchAPI(`/api/reviews/summary?sellerId=${sellerId}`, { method: "GET" })
+  },
+}
+
+// Delivery Service APIs
+export const deliveryAPI = {
+  // 배송 등록
+  register: async (data: { rentalItemId: number; carrierCode: string; trackingNumber: string }) => {
+    return fetchAPI<{
+      deliveryId: number
+      rentalItemId: number
+      carrierCode: string
+      trackingNumber: string
+      status: string
+    }>(
+      "/api/deliveries",
+      {
+        method: "POST",
+        body: JSON.stringify(data),
+      },
+      true,
+    )
+  },
+
+  // 배송 조회
+  getDetail: async (deliveryId: number) => {
+    return fetchAPI<{
+      deliveryId: number
+      rentalItemId: number
+      carrierCode: string
+      trackingNumber: string
+      status: string
+      statusRaw: string
+      createdAt: string
+      updatedAt: string
+    }>(`/api/deliveries/${deliveryId}`, {}, false)
   },
 }

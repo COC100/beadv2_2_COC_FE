@@ -108,7 +108,7 @@ export default function RentalApplicationPage() {
     if (!product || !startDate || !endDate) return 0
     const start = new Date(startDate)
     const end = new Date(endDate)
-    const days = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24))
+    const days = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1 // +1 to include end date
     return days > 0 ? days * product.pricePerDay : 0
   }
 
@@ -282,7 +282,7 @@ export default function RentalApplicationPage() {
   const total = calculateTotal()
   const days =
     startDate && endDate
-      ? Math.ceil((new Date(endDate).getTime() - new Date(startDate).getTime()) / (1000 * 60 * 60 * 24))
+      ? Math.ceil((new Date(endDate).getTime() - new Date(startDate).getTime()) / (1000 * 60 * 60 * 24)) + 1
       : 0
 
   return (

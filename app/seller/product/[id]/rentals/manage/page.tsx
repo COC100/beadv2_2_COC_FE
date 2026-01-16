@@ -3,7 +3,7 @@ import { useState, useEffect } from "react"
 import type React from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { ArrowLeft, Calendar, Check, X, Play, Package } from "lucide-react"
+import { ArrowLeft, Calendar, Check, X, Play, Package, Truck } from "lucide-react"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { Button } from "@/components/ui/button"
@@ -20,10 +20,19 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useToast } from "@/hooks/use-toast"
-import { sellerAPI, rentalAPI, productAPI } from "@/lib/api"
+import { sellerAPI, rentalAPI, productAPI, deliveryAPI } from "@/lib/api"
 
 export default async function ManageProductRentalsPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = await params
@@ -32,11 +41,40 @@ export default async function ManageProductRentalsPage({ params }: { params: Pro
   return <ManageProductRentalsContent productId={productId} />
 }
 
-function getDefaultDates() {
-  return {
-    startDate: "2000-01-01",
-    endDate: "2099-12-31",
+const CARRIER_CODES = [
+  { code: "kr.cjlogistics", name: "CJ대한통운" },
+  { code: "kr.epost", name: "우체국택배" },
+  { code: "kr.hanjin", name: "한진택배" },
+  { code: "kr.lotte", name: "롯데택배" },
+  { code: "kr.logen", name: "로젠택배" },
+  { code: "kr.kdexp", name: "경동택배" },
+  { code: "kr.coupangls", name: "쿠팡 로지스틱스" },
+  { code: "kr.cupost", name: "CU 편의점택배" },
+  { code: "kr.cvsnet", name: "GS Postbox" },
+  { code: "kr.daesin", name: "대신택배" },
+  { code: "kr.chunilps", name: "천일택배" },
+  { code: "kr.goodstoluck", name: "굿투럭" },
+  { code: "kr.homepick", name: "홈픽" },
+  { code: "kr.honamlogis", name: "한서호남택배" },
+  { code: "kr.ilyanglogis", name: "일양로지스" },
+  { code: "kr.kunyoung", name: "건영택배" },
+  { code: "kr.cway", name: "CWAY" },
+  { code: "de.dhl", name: "DHL" },
+  { code: "us.fedex", name: "FedEx" },
+  { code: "us.ups", name: "UPS" },
+]
+
+const getDeliveryStatusText = (status: string) => {
+  const statusMap: Record<string, string> = {
+    REGISTERED: "송장 등록",
+    PICKED_UP: "집하",
+    IN_TRANSIT: "이동중",
+    OUT_FOR_DELIVERY: "배송출발",
+    DELIVERED: "배송 완료",
+    EXCEPTION: "예외",
+    CANCELLED: "취소",
   }
+  return statusMap[status] || status
 }
 
 function ManageProductRentalsContent({ productId }: { productId: string }) {
@@ -60,9 +98,25 @@ function ManageProductRentalsContent({ productId }: { productId: string }) {
     lateReason: "",
     memo: "",
   })
-  const defaultDates = getDefaultDates()
+  const defaultDates = { startDate: "2000-01-01", endDate: "2099-12-31" }
   const [startDate] = useState(defaultDates.startDate)
   const [endDate] = useState(defaultDates.endDate)
+  const [deliveryInfo, setDeliveryInfo] = useState<Record<number, any>>({})
+  const [showDeliveryDialog, setShowDeliveryDialog] = useState(false)
+  const [deliveryForm, setDeliveryForm] = useState({
+    rentalItemId: 0,
+    carrierCode: "",
+    trackingNumber: "",
+  })
+
+  const loadDeliveryInfo = async (rentalItemId: number) => {
+    try {
+      const response = await deliveryAPI.getDetail(rentalItemId)
+      setDeliveryInfo((prev) => ({ ...prev, [rentalItemId]: response.data }))
+    } catch (error: any) {
+      console.log(`[v0] No delivery info for rental ${rentalItemId}:`, error)
+    }
+  }
 
   const loadRentals = async () => {
     try {
@@ -104,6 +158,9 @@ function ManageProductRentalsContent({ productId }: { productId: string }) {
       console.log("[v0] Paid rentals response:", paidResponse)
       const paidData = paidResponse.data || []
       setPaidRentals(Array.isArray(paidData) ? paidData : [])
+      for (const rental of paidData) {
+        await loadDeliveryInfo(rental.rentalItemId)
+      }
 
       const rentingResponse = await sellerAPI.getRentals({
         productId: Number(productId),
@@ -228,36 +285,123 @@ function ManageProductRentalsContent({ productId }: { productId: string }) {
     }
   }
 
-  const RentalCard = ({ rental, actions }: { rental: any; actions: React.ReactNode }) => (
-    <Card>
-      <CardContent className="p-5">
-        <div className="flex items-start justify-between mb-3">
-          <div className="flex-1">
-            <div className="flex items-center gap-2 mb-2">
-              <span className="text-sm text-muted-foreground">#{rental.rentalItemId}</span>
-            </div>
-            <div className="space-y-1">
-              <div className="flex items-center gap-2 text-sm">
-                <Calendar className="h-4 w-4 text-muted-foreground" />
-                <span>
-                  {rental.startDate} ~ {rental.endDate}
-                </span>
+  const handleRegisterDelivery = async () => {
+    if (!deliveryForm.carrierCode || !deliveryForm.trackingNumber) {
+      toast({
+        title: "입력 오류",
+        description: "택배사와 운송장번호를 입력해주세요",
+        variant: "destructive",
+      })
+      return
+    }
+
+    try {
+      await deliveryAPI.register(deliveryForm)
+      toast({
+        title: "운송장 등록 완료",
+        description: "운송장번호가 등록되었습니다",
+      })
+      setShowDeliveryDialog(false)
+      setDeliveryForm({ rentalItemId: 0, carrierCode: "", trackingNumber: "" })
+      await loadDeliveryInfo(deliveryForm.rentalItemId)
+    } catch (error: any) {
+      toast({
+        title: "운송장 등록 실패",
+        description: error.message || "운송장번호 등록에 실패했습니다",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const RentalCard = ({ rental, actions }: { rental: any; actions: React.ReactNode }) => {
+    const delivery = deliveryInfo[rental.rentalItemId]
+
+    return (
+      <Card>
+        <CardContent className="p-5">
+          <div className="flex items-start justify-between mb-3">
+            <div className="flex-1">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-sm text-muted-foreground">#{rental.rentalItemId}</span>
               </div>
-              {rental.paidAt && (
-                <div className="text-sm text-muted-foreground">
-                  결제일: {new Date(rental.paidAt).toLocaleString("ko-KR")}
+              <div className="space-y-1">
+                <div className="flex items-center gap-2 text-sm">
+                  <Calendar className="h-4 w-4 text-muted-foreground" />
+                  <span>
+                    {rental.startDate} ~ {rental.endDate}
+                  </span>
+                </div>
+                {rental.paidAt && (
+                  <div className="text-sm text-muted-foreground">
+                    결제일: {new Date(rental.paidAt).toLocaleString("ko-KR")}
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="text-right">
+              <p className="text-lg font-bold text-primary">₩{rental.totalAmount?.toLocaleString()}</p>
+            </div>
+          </div>
+
+          {rental.status === "PAID" && (
+            <div className="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
+              <div className="flex items-center gap-2 mb-2">
+                <Truck className="h-4 w-4 text-blue-600" />
+                <span className="font-semibold text-sm">배송 정보</span>
+              </div>
+              {delivery ? (
+                <div className="space-y-1 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">배송 상태:</span>
+                    <Badge className="bg-blue-600 text-white">{getDeliveryStatusText(delivery.status)}</Badge>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">택배사:</span>
+                    <span>
+                      {CARRIER_CODES.find((c) => c.code === delivery.carrierCode)?.name || delivery.carrierCode}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">운송장번호:</span>
+                    <span className="font-mono">{delivery.trackingNumber}</span>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="w-full mt-2 bg-transparent"
+                    onClick={() =>
+                      window.open(
+                        `https://tracker.delivery/#/${delivery.carrierCode}/${delivery.trackingNumber}`,
+                        "_blank",
+                      )
+                    }
+                  >
+                    배송 조회
+                  </Button>
+                </div>
+              ) : (
+                <div className="text-center">
+                  <p className="text-sm text-muted-foreground mb-2">등록된 송장번호가 없습니다</p>
+                  <Button
+                    size="sm"
+                    className="w-full"
+                    onClick={() => {
+                      setDeliveryForm({ rentalItemId: rental.rentalItemId, carrierCode: "", trackingNumber: "" })
+                      setShowDeliveryDialog(true)
+                    }}
+                  >
+                    운송장번호 등록
+                  </Button>
                 </div>
               )}
             </div>
-          </div>
-          <div className="text-right">
-            <p className="text-lg font-bold text-primary">₩{rental.totalAmount?.toLocaleString()}</p>
-          </div>
-        </div>
-        {actions && <div className="flex gap-2 pt-3 border-t">{actions}</div>}
-      </CardContent>
-    </Card>
-  )
+          )}
+
+          {actions && <div className="flex gap-2 pt-3 border-t">{actions}</div>}
+        </CardContent>
+      </Card>
+    )
+  }
 
   if (isLoading) {
     return (
@@ -449,6 +593,53 @@ function ManageProductRentalsContent({ productId }: { productId: string }) {
           </TabsContent>
         </Tabs>
       </div>
+
+      <Dialog open={showDeliveryDialog} onOpenChange={setShowDeliveryDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>운송장번호 등록</DialogTitle>
+            <DialogDescription>택배사와 운송장번호를 입력하여 배송을 시작하세요</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="carrier">택배사</Label>
+              <Select
+                value={deliveryForm.carrierCode}
+                onValueChange={(value) => setDeliveryForm({ ...deliveryForm, carrierCode: value })}
+              >
+                <SelectTrigger id="carrier">
+                  <SelectValue placeholder="택배사를 선택하세요" />
+                </SelectTrigger>
+                <SelectContent>
+                  {CARRIER_CODES.map((carrier) => (
+                    <SelectItem key={carrier.code} value={carrier.code}>
+                      {carrier.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="trackingNumber">운송장번호</Label>
+              <Input
+                id="trackingNumber"
+                placeholder="숫자만 입력"
+                value={deliveryForm.trackingNumber}
+                onChange={(e) => {
+                  const value = e.target.value.replace(/\D/g, "")
+                  setDeliveryForm({ ...deliveryForm, trackingNumber: value })
+                }}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowDeliveryDialog(false)}>
+              취소
+            </Button>
+            <Button onClick={handleRegisterDelivery}>등록하기</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <AlertDialog open={showAcceptDialog} onOpenChange={setShowAcceptDialog}>
         <AlertDialogContent>

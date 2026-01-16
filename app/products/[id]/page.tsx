@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useRouter } from "next/navigation"
 import { useToast } from "@/hooks/use-toast"
-import { productAPI, cartAPI, sellerAPI } from "@/lib/api"
+import { productAPI, cartAPI, sellerAPI, rentalAPI } from "@/lib/api"
 import {
   Dialog,
   DialogContent,
@@ -42,6 +42,7 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
     message: "",
   })
   const [seller, setSeller] = useState<any>(null)
+  const [unavailableDates, setUnavailableDates] = useState<string[]>([])
 
   useEffect(() => {
     const resolveParams = async () => {
@@ -121,16 +122,17 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
           setIsOwner(false)
         }
 
-        // For non-owner products, try to get seller info from product
-        // Since we don't have a public API to get seller details by sellerId,
-        // we'll show basic seller ID information
         if (!isOwner && productData?.sellerId) {
-          // Set basic seller info with just the sellerId
-          setSeller({
-            sellerId: productData.sellerId,
-            storeName: `판매자 #${productData.sellerId}`,
-            // Other fields would need a separate API call
-          })
+          try {
+            const sellerInfoResponse = await sellerAPI.getInfo(productData.sellerId)
+            setSeller(sellerInfoResponse.data)
+          } catch (error) {
+            console.log("[v0 DEBUG] Failed to fetch seller info:", error)
+            setSeller({
+              sellerId: productData.sellerId,
+              storeName: `판매자 #${productData.sellerId}`,
+            })
+          }
         }
       } catch (error: any) {
         console.error("[v0 DEBUG] Failed to load product:", error)
@@ -146,13 +148,29 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
     }
 
     loadProduct()
-  }, [productId, router, toast])
+  }, [productId, router, toast, isOwner])
+
+  useEffect(() => {
+    if (!productId || !startDate) return
+
+    const fetchUnavailableDates = async () => {
+      try {
+        const ym = startDate.substring(0, 7) // Extract yyyy-MM from startDate
+        const response = await rentalAPI.getUnavailableDates(productId, ym)
+        setUnavailableDates(response.data?.dates || [])
+      } catch (error) {
+        console.error("[v0] Failed to fetch unavailable dates:", error)
+      }
+    }
+
+    fetchUnavailableDates()
+  }, [productId, startDate])
 
   const calculateTotal = () => {
     if (!startDate || !endDate || !product) return 0
     const start = new Date(startDate)
     const end = new Date(endDate)
-    const days = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1
+    const days = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1 // +1 to include end date
     return days > 0 ? days * product.pricePerDay : 0
   }
 
@@ -161,6 +179,10 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
     startDate && endDate
       ? Math.ceil((new Date(endDate).getTime() - new Date(startDate).getTime()) / (1000 * 60 * 60 * 24)) + 1
       : 0
+
+  const isDateUnavailable = (dateString: string) => {
+    return unavailableDates.includes(dateString)
+  }
 
   const handleAddToCart = async () => {
     if (isOwner) {
@@ -423,7 +445,18 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
                       id="startDate"
                       type="date"
                       value={startDate}
-                      onChange={(e) => setStartDate(e.target.value)}
+                      onChange={(e) => {
+                        const selectedDate = e.target.value
+                        if (isDateUnavailable(selectedDate)) {
+                          toast({
+                            title: "예약 불가 날짜",
+                            description: "선택하신 날짜는 이미 예약되어 있습니다. 다른 날짜를 선택해주세요.",
+                            variant: "destructive",
+                          })
+                          return
+                        }
+                        setStartDate(selectedDate)
+                      }}
                       min={new Date().toISOString().split("T")[0]}
                       className="rounded-lg"
                     />
@@ -436,12 +469,29 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
                       id="endDate"
                       type="date"
                       value={endDate}
-                      onChange={(e) => setEndDate(e.target.value)}
+                      onChange={(e) => {
+                        const selectedDate = e.target.value
+                        if (isDateUnavailable(selectedDate)) {
+                          toast({
+                            title: "예약 불가 날짜",
+                            description: "선택하신 날짜는 이미 예약되어 있습니다. 다른 날짜를 선택해주세요.",
+                            variant: "destructive",
+                          })
+                          return
+                        }
+                        setEndDate(selectedDate)
+                      }}
                       min={startDate || new Date().toISOString().split("T")[0]}
                       className="rounded-lg"
                     />
                   </div>
                 </div>
+
+                {unavailableDates.length > 0 && (
+                  <div className="text-xs text-muted-foreground bg-yellow-50 p-2 rounded">
+                    ⚠️ 일부 날짜는 예약이 불가능합니다. 날짜 선택 시 확인해주세요.
+                  </div>
+                )}
 
                 {rentalDays > 0 && (
                   <div className="border-t pt-4 space-y-2">
@@ -487,6 +537,34 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
               <p className="text-muted-foreground leading-relaxed whitespace-pre-wrap">{product.description}</p>
             </CardContent>
           </Card>
+
+          {seller && (
+            <Card>
+              <CardContent className="p-6">
+                <h2 className="text-xl font-bold mb-4">판매자 정보</h2>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-muted-foreground">판매자:</span>
+                    <Link href={`/seller/${seller.sellerId}`} className="font-semibold text-primary hover:underline">
+                      {seller.storeName}
+                    </Link>
+                  </div>
+                  {seller.storePhone && (
+                    <div className="flex items-center gap-2">
+                      <span className="text-muted-foreground">연락처:</span>
+                      <span>{seller.storePhone}</span>
+                    </div>
+                  )}
+                  {seller.bizRegNo && (
+                    <div className="flex items-center gap-2">
+                      <span className="text-muted-foreground">사업자번호:</span>
+                      <span>{seller.bizRegNo}</span>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
 
