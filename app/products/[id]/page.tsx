@@ -538,6 +538,22 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
             </CardContent>
           </Card>
 
+          {product.specs && Object.keys(product.specs).length > 0 && (
+            <Card>
+              <CardContent className="p-6">
+                <h2 className="text-xl font-bold mb-4">상품 스펙</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {Object.entries(product.specs).map(([key, value]) => (
+                    <div key={key} className="flex border rounded-lg p-3 bg-gray-50">
+                      <span className="font-semibold text-muted-foreground min-w-[120px]">{key}</span>
+                      <span className="font-medium">{String(value)}</span>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           {seller && (
             <Card>
               <CardContent className="p-6">

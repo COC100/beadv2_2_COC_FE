@@ -31,6 +31,7 @@ export default function NewProductPage() {
     pricePerDay: "",
     description: "",
   })
+  const [specs, setSpecs] = useState<{ key: string; value: string }[]>([{ key: "", value: "" }])
 
   const categories = [
     { value: "LAPTOP", label: "노트북" },
@@ -104,6 +105,20 @@ export default function NewProductPage() {
     }
   }
 
+  const addSpec = () => {
+    setSpecs([...specs, { key: "", value: "" }])
+  }
+
+  const removeSpec = (index: number) => {
+    setSpecs(specs.filter((_, i) => i !== index))
+  }
+
+  const updateSpec = (index: number, field: "key" | "value", value: string) => {
+    const newSpecs = [...specs]
+    newSpecs[index][field] = value
+    setSpecs(newSpecs)
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
@@ -113,12 +128,21 @@ export default function NewProductPage() {
     setIsSubmitting(true)
 
     try {
+      // 스펙을 map<string,string> 형식으로 변환
+      const specsMap: Record<string, string> = {}
+      specs.forEach((spec) => {
+        if (spec.key.trim() && spec.value.trim()) {
+          specsMap[spec.key.trim()] = spec.value.trim()
+        }
+      })
+
       await productAPI.create({
         name: formData.name,
         description: formData.description,
         pricePerDay: Number(formData.pricePerDay),
         category: formData.category,
         images: images.length > 0 ? images : undefined,
+        specs: Object.keys(specsMap).length > 0 ? specsMap : undefined,
       })
 
       toast({
@@ -236,6 +260,43 @@ export default function NewProductPage() {
                       onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                       required
                     />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>상품 스펙</Label>
+                    <p className="text-xs text-muted-foreground mb-2">
+                      상품의 주요 사양을 입력하세요 (예: 프로세서, RAM, 용량 등)
+                    </p>
+                    {specs.map((spec, index) => (
+                      <div key={index} className="flex gap-2">
+                        <Input
+                          placeholder="스펙명 (예: 프로세서)"
+                          value={spec.key}
+                          onChange={(e) => updateSpec(index, "key", e.target.value)}
+                          className="flex-1"
+                        />
+                        <Input
+                          placeholder="내용 (예: Apple M3 Pro)"
+                          value={spec.value}
+                          onChange={(e) => updateSpec(index, "value", e.target.value)}
+                          className="flex-1"
+                        />
+                        {specs.length > 1 && (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="icon"
+                            onClick={() => removeSpec(index)}
+                            className="bg-transparent"
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                    ))}
+                    <Button type="button" variant="outline" onClick={addSpec} className="w-full bg-transparent">
+                      + 스펙 추가
+                    </Button>
                   </div>
 
                   <div className="space-y-2">
