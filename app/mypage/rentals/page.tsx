@@ -98,7 +98,7 @@ export default function RentalsPage() {
 
   const loadDeliveryInfo = async (rentalItemId: number) => {
     try {
-      const response = await deliveryAPI.getDetail(rentalItemId)
+      const response = await deliveryAPI.getByRentalItem(rentalItemId)
       setDeliveryInfo((prev) => ({ ...prev, [rentalItemId]: response.data }))
     } catch (error: any) {
       console.log(`[v0] No delivery info for rental ${rentalItemId}:`, error)
@@ -362,7 +362,7 @@ export default function RentalsPage() {
             </Card>
           ) : (
             orders.map((order) => (
-              <Card key={order.orderId} className="overflow-hidden">
+              <Card key={order.orderId} className="overflow-hidden py-0">
                 <CardContent className="p-0">
                   <div className="p-5 bg-gray-50 border-b cursor-pointer" onClick={() => toggleOrder(order.orderId)}>
                     <div className="flex items-center justify-between mb-3">

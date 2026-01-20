@@ -978,10 +978,11 @@ export const reviewAPI = {
 // Delivery Service APIs
 export const deliveryAPI = {
   // 배송 등록
-  register: (data: { rentalId: number; trackingNumber: string }) =>
+  register: (data: { rentalItemId: number; carrierCode: string; trackingNumber: string }) =>
     fetchAPI<{
       deliveryId: number
-      rentalId: number
+      rentalItemId: number
+      carrierCode: string
       trackingNumber: string
       status: string
     }>(
@@ -993,6 +994,19 @@ export const deliveryAPI = {
       true,
     ),
 
-  // 배송 조회
+  // 배송 조회 (deliveryId로)
   getDetail: (deliveryId: number) => fetchAPI<any>(`/delivery-service/api/deliveries/${deliveryId}`, {}, true),
+
+  // 대여 아이템 배송 단건 조회 (rentalItemId로)
+  getByRentalItem: (rentalItemId: number) =>
+    fetchAPI<{
+      deliveryId: number
+      rentalItemId: number
+      carrierCode: string
+      trackingNumber: string
+      status: string
+      statusRaw: string
+      createdAt: string
+      updatedAt: string
+    }>(`/delivery-service/api/deliveries/rental-items/${rentalItemId}`, {}, true),
 }

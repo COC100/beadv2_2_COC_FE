@@ -111,7 +111,7 @@ function ManageProductRentalsContent({ productId }: { productId: string }) {
 
   const loadDeliveryInfo = async (rentalItemId: number) => {
     try {
-      const response = await deliveryAPI.getDetail(rentalItemId)
+      const response = await deliveryAPI.getByRentalItem(rentalItemId)
       setDeliveryInfo((prev) => ({ ...prev, [rentalItemId]: response.data }))
     } catch (error: any) {
       console.log(`[v0] No delivery info for rental ${rentalItemId}:`, error)
