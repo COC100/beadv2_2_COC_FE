@@ -903,6 +903,21 @@ export const adminAPI = {
     ),
 
   // 판매자 승인/거절
+  getSellerRegistrations: (params?: { status?: string; page?: number; size?: number; sort?: string }) => {
+    const queryParams = new URLSearchParams()
+    if (params) {
+      if (params.status) queryParams.append("status", params.status)
+      if (params.page !== undefined) queryParams.append("page", params.page.toString())
+      if (params.size !== undefined) queryParams.append("size", params.size.toString())
+      if (params.sort) queryParams.append("sort", params.sort)
+    }
+    return fetchAPI<{
+      content: any[]
+      totalElements: number
+      totalPages: number
+    }>(`/seller-service/api/admin/sellers/registrations${queryParams.toString() ? `?${queryParams.toString()}` : ""}`, {}, true)
+  },
+
   approveSeller: (memberId: number) =>
     fetchAPI(
       `/seller-service/api/admin/sellers/${memberId}/approve`,
