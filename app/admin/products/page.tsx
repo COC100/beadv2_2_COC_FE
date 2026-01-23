@@ -16,7 +16,6 @@ import { Search, Package, CheckCircle, XCircle, AlertCircle } from "lucide-react
 import { format } from "date-fns"
 import { ko } from "date-fns/locale"
 import { useSearchParams } from "next/navigation"
-import Loading from "@/components/loading" // Import Loading component
 
 type ProductModerationStatus = "PENDING" | "CLEAR" | "REVIEW" | "BLOCKED"
 type ProductStatus = "ACTIVE" | "INACTIVE" | "DELETE"
@@ -61,7 +60,6 @@ export default function AdminProductsPage() {
   const [moderationStatus, setModerationStatus] = useState<string>("PENDING")
   const [searchQuery, setSearchQuery] = useState("")
   const { toast } = useToast()
-  const [authorized, setAuthorized] = useState(false)
 
   const fetchProducts = async () => {
     try {
@@ -80,11 +78,7 @@ export default function AdminProductsPage() {
       }
     } catch (error: any) {
       console.error("Failed to fetch products:", error)
-      toast({
-        title: "조회 실패",
-        description: error.message || "상품 목록을 불러오는데 실패했습니다.",
-        variant: "destructive",
-      })
+      router.push("/intro")
     } finally {
       setLoading(false)
     }
@@ -158,7 +152,9 @@ export default function AdminProductsPage() {
             </CardHeader>
             <CardContent>
               {loading ? (
-                <Loading />
+                <div className="flex justify-center py-8">
+                  <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+                </div>
               ) : filteredProducts.length === 0 ? (
                 <div className="text-center py-8">
                   <Package className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
