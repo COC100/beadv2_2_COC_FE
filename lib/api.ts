@@ -1060,6 +1060,27 @@ export const adminAPI = {
     ),
 }
 
+// 공지사항 API
+export const noticeAPI = {
+  getNotices: (params?: { keyword?: string; page?: number; size?: number; sort?: string }) => {
+    const queryParams = new URLSearchParams()
+    if (params) {
+      if (params.keyword) queryParams.append("keyword", params.keyword)
+      if (params.page !== undefined) queryParams.append("page", params.page.toString())
+      if (params.size !== undefined) queryParams.append("size", params.size.toString())
+      if (params.sort) queryParams.append("sort", params.sort)
+    }
+    return fetchAPI<{
+      content: any[]
+      totalElements: number
+      totalPages: number
+    }>(`/support-service/api/notices${queryParams.toString() ? `?${queryParams.toString()}` : ""}`)
+  },
+
+  getNoticeDetail: (noticeId: number) =>
+    fetchAPI<any>(`/support-service/api/notices/${noticeId}`),
+}
+
 // Auth Service APIs
 export const authAPI = {
   // Email verification for signup

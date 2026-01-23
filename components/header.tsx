@@ -66,6 +66,9 @@ export function Header() {
             <Link href="/how-it-works" className="hover:text-primary transition-colors">
               이용 방법
             </Link>
+            <Link href="/notices" className="hover:text-primary transition-colors">
+              공지사항
+            </Link>
           </nav>
 
           <div className="flex items-center gap-2">
@@ -166,6 +169,9 @@ export function Header() {
               </Link>
               <Link href="/how-it-works" className="hover:text-primary transition-colors py-2">
                 이용 방법
+              </Link>
+              <Link href="/notices" className="hover:text-primary transition-colors py-2">
+                공지사항
               </Link>
               <Link href="/mypage" className="hover:text-primary transition-colors py-2">
                 마이페이지
