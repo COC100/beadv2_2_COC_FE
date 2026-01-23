@@ -833,8 +833,231 @@ export const sellerAPI = {
     ),
 
   getInfo: async (sellerId: number): Promise<{ data: any; headers: Headers }> => {
-    return fetchAPI(`/api/sellers/${sellerId}`, { method: "GET" })
+    return fetchAPI(`/seller-service/api/sellers/${sellerId}`, { method: "GET" })
   },
+}
+
+// Admin APIs
+export const adminAPI = {
+  // 회원 관리
+  getMembers: (params?: { page?: number; size?: number }) => {
+    const queryParams = new URLSearchParams()
+    if (params) {
+      if (params.page !== undefined) queryParams.append("page", params.page.toString())
+      if (params.size !== undefined) queryParams.append("size", params.size.toString())
+    }
+    return fetchAPI<{
+      content: any[]
+      totalElements: number
+      totalPages: number
+      number: number
+      size: number
+    }>(`/member-service/internal/members${queryParams.toString() ? `?${queryParams.toString()}` : ""}`, {}, true)
+  },
+
+  searchMemberByEmail: (email: string) =>
+    fetchAPI<any>(`/member-service/internal/members/search?email=${encodeURIComponent(email)}`, {}, true),
+
+  getMemberDetail: (memberId: number) =>
+    fetchAPI<any>(`/member-service/internal/members/${memberId}`, {}, true),
+
+  // 블랙리스트 관리
+  getBlacklists: (params?: { status?: string; page?: number; size?: number }) => {
+    const queryParams = new URLSearchParams()
+    if (params) {
+      if (params.status) queryParams.append("status", params.status)
+      if (params.page !== undefined) queryParams.append("page", params.page.toString())
+      if (params.size !== undefined) queryParams.append("size", params.size.toString())
+    }
+    return fetchAPI<{
+      content: any[]
+      totalElements: number
+      totalPages: number
+    }>(`/support-service/api/admin/blacklists${queryParams.toString() ? `?${queryParams.toString()}` : ""}`, {}, true)
+  },
+
+  searchBlacklist: (email: string) =>
+    fetchAPI<any>(`/support-service/api/admin/blacklists/search?email=${encodeURIComponent(email)}`, {}, true),
+
+  getBlacklistDetail: (memberId: number) =>
+    fetchAPI<any>(`/support-service/api/admin/blacklists/${memberId}`, {}, true),
+
+  addBlacklist: (data: { memberId: number; reason: string; memo?: string }) =>
+    fetchAPI(
+      "/support-service/api/admin/blacklists",
+      {
+        method: "POST",
+        body: JSON.stringify(data),
+      },
+      true,
+    ),
+
+  releaseBlacklist: (memberId: number, data?: { memo?: string }) =>
+    fetchAPI(
+      `/support-service/api/admin/blacklists/${memberId}/release`,
+      {
+        method: "PATCH",
+        body: JSON.stringify(data || {}),
+      },
+      true,
+    ),
+
+  // 판매자 승인/거절
+  approveSeller: (memberId: number) =>
+    fetchAPI(
+      `/seller-service/api/admin/sellers/${memberId}/approve`,
+      {
+        method: "PATCH",
+      },
+      true,
+    ),
+
+  rejectSeller: (memberId: number) =>
+    fetchAPI(
+      `/seller-service/api/admin/sellers/${memberId}/reject`,
+      {
+        method: "PATCH",
+      },
+      true,
+    ),
+
+  // 정산 관리
+  getSellerSettlements: (params?: { periodYm?: string; sellerId?: number; status?: string; page?: number; size?: number }) => {
+    const queryParams = new URLSearchParams()
+    if (params) {
+      if (params.periodYm) queryParams.append("periodYm", params.periodYm)
+      if (params.sellerId) queryParams.append("sellerId", params.sellerId.toString())
+      if (params.status) queryParams.append("status", params.status)
+      if (params.page !== undefined) queryParams.append("page", params.page.toString())
+      if (params.size !== undefined) queryParams.append("size", params.size.toString())
+    }
+    return fetchAPI<{
+      content: any[]
+      totalElements: number
+      totalPages: number
+    }>(`/seller-service/api/admin/settlements/seller-settlements${queryParams.toString() ? `?${queryParams.toString()}` : ""}`, {}, true)
+  },
+
+  paySellerSettlement: (sellerSettlementId: number, paidAt?: string) => {
+    const queryParams = paidAt ? `?paidAt=${encodeURIComponent(paidAt)}` : ""
+    return fetchAPI(
+      `/seller-service/api/admin/settlements/seller-settlements/${sellerSettlementId}/pay${queryParams}`,
+      {
+        method: "POST",
+      },
+      true,
+    )
+  },
+
+  payBulkSettlements: (data: { sellerId?: number; periodYm?: string; status?: string; paidAt?: string }) =>
+    fetchAPI(
+      "/seller-service/api/admin/settlements/seller-settlements/pay-bulk",
+      {
+        method: "POST",
+        body: JSON.stringify(data),
+      },
+      true,
+    ),
+
+  runSettlementBatch: (data: { periodYm: string; startDate?: string; endDate?: string; sellerId?: number; pageSize?: number }) =>
+    fetchAPI(
+      "/seller-service/api/admin/settlements/batches/run",
+      {
+        method: "POST",
+        body: JSON.stringify(data),
+      },
+      true,
+    ),
+
+  // 공지사항 관리
+  getNotices: (params?: { keyword?: string; page?: number; size?: number }) => {
+    const queryParams = new URLSearchParams()
+    if (params) {
+      if (params.keyword) queryParams.append("keyword", params.keyword)
+      if (params.page !== undefined) queryParams.append("page", params.page.toString())
+      if (params.size !== undefined) queryParams.append("size", params.size.toString())
+    }
+    return fetchAPI<{
+      content: any[]
+      totalElements: number
+      totalPages: number
+    }>(`/support-service/api/notices${queryParams.toString() ? `?${queryParams.toString()}` : ""}`, {}, false)
+  },
+
+  getNoticeDetail: (noticeId: number) =>
+    fetchAPI<any>(`/support-service/api/notices/${noticeId}`, {}, false),
+
+  createNotice: (data: { title: string; content: string; pinned?: boolean; status?: string; displayStartAt?: string; displayEndAt?: string }) =>
+    fetchAPI(
+      "/support-service/api/admin/notices",
+      {
+        method: "POST",
+        body: JSON.stringify(data),
+      },
+      true,
+    ),
+
+  updateNotice: (noticeId: number, data: { title?: string; content?: string; pinned?: boolean; displayStartAt?: string; displayEndAt?: string }) =>
+    fetchAPI(
+      `/support-service/api/admin/notices/${noticeId}`,
+      {
+        method: "PATCH",
+        body: JSON.stringify(data),
+      },
+      true,
+    ),
+
+  deleteNotice: (noticeId: number) =>
+    fetchAPI(
+      `/support-service/api/admin/notices/${noticeId}`,
+      {
+        method: "DELETE",
+      },
+      true,
+    ),
+
+  publishNotice: (noticeId: number) =>
+    fetchAPI(
+      `/support-service/api/admin/notices/${noticeId}/publish`,
+      {
+        method: "PATCH",
+      },
+      true,
+    ),
+
+  draftNotice: (noticeId: number) =>
+    fetchAPI(
+      `/support-service/api/admin/notices/${noticeId}/draft`,
+      {
+        method: "PATCH",
+      },
+      true,
+    ),
+
+  // 상품 검수 관리
+  getProductModerationRequests: (params?: { moderationStatus?: string; page?: number; size?: number; sort?: string }) => {
+    const queryParams = new URLSearchParams()
+    if (params) {
+      if (params.moderationStatus) queryParams.append("moderationStatus", params.moderationStatus)
+      if (params.page !== undefined) queryParams.append("page", params.page.toString())
+      if (params.size !== undefined) queryParams.append("size", params.size.toString())
+      if (params.sort) queryParams.append("sort", params.sort)
+    }
+    return fetchAPI<{
+      content: any[]
+      totalElements: number
+      totalPages: number
+    }>(`/product-service/api/admin/products/moderation-requests${queryParams.toString() ? `?${queryParams.toString()}` : ""}`, {}, true)
+  },
+
+  createProductModerationRequest: (productId: number) =>
+    fetchAPI(
+      `/product-service/api/admin/products/${productId}/moderation-requests`,
+      {
+        method: "POST",
+      },
+      true,
+    ),
 }
 
 // Auth Service APIs
