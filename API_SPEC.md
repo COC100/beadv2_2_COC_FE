@@ -4,7 +4,20 @@
 
 ## 인증/권한
 - JWT Bearer: 헤더 `Authorization: Bearer <accessToken>`
-- 토큰 예외: 회원가입 `POST /api/members/signup`, 인증 구간 `/api/auth/**`, Swagger(`/swagger-ui/**`, `/v3/api-docs/**`), Actuator(`/actuator/**`), 내부용 `/internal/**`
+- 토큰 예외:
+  - 회원가입 `POST /api/members/signup`
+  - 인증 구간 `POST /api/auth/**` (단, `POST /api/auth/oauth2/connect`는 인증 필요)
+  - OAuth2 구간 `/oauth2/**`, `/login/oauth2/**`
+  - 결제/정적 페이지 `/toss-payment.html`, `/payments/**`
+  - 판매자 조회 `GET /api/sellers/{sellerId}`
+  - 상품 조회
+    - `GET /product-service/api/products/search`
+    - `GET /product-service/api/products/popular-keywords`
+    - `GET /product-service/api/products/popular-products`
+    - `GET /product-service/api/products/{productId}`
+  - Swagger(`/swagger-ui/**`, `/v3/api-docs/**`)
+  - Actuator(`/actuator/**`)
+  - 내부용 `/internal/**`
 - 기본 role 클레임: `MemberRole` 값(`MEMBER` 기본, `SELLER`)이 `role`로 담김. principal(CustomMember.memberId) 필요 API는 토큰 필수.
 - 내부 API 인증: `/internal/**` 요청 시 내부 토큰 헤더 필요. 헤더명 `X-Internal-Token`(설정: `internal.api.header`), 값은 `internal.api.token`.
 
@@ -66,11 +79,26 @@
 - **POST /api/auth/password/reset/confirm**
   - Req: `email`, `code:string(6)`, `newPassword:string(규칙 동일)`
   - Res: `Void`
+- **POST /api/auth/oauth2/signup**
+  - Req: `OAuth2SignupRequest`
+  - Res: `String accessToken` (body), 리프레시 토큰 HttpOnly 쿠키 발급
+- **POST /api/auth/oauth2/connect** — OAuth2 계정 연결 (Auth)
+  - Req: `OAuth2ConnectRequest`
+  - Res: `Void`
+
+### 관리자
+- **POST /api/admin/members** — 관리자 계정 생성 (Auth)
+    - Req: `email:string(email)`, `password:string(8-20, 영문+숫자+특수문자)`, `name:string<=20`, `phone:string(휴대폰)`
+    - Res: `AdminMemberCreateResponse { memberId, email, role }`
 
 ### 내부
 - Auth: 내부 토큰 헤더 `X-Internal-Token: <token>` (설정: `internal.api.header`, `internal.api.token`)
 - **PATCH /internal/members/{memberId}/role** — 판매자 롤로 변경 및 새 액세스 토큰 발급
   - Res: `String accessToken` (래퍼 없음)
+- **GET /internal/members/{memberId}/authz** — 역할 목록 조회
+  - Res: `MemberAuthzResponse { memberId, roles:string[] }`
+- **GET /internal/members/{memberId}/email** — 이메일 조회
+  - Res: `MemberEmailResponse { memberId, email }`
 
 ---
 ## account-service
@@ -82,12 +110,12 @@
 - **GET /api/accounts/balance** — 내 예치금 (Auth)
   - Res: `MemberWalletResponse { balance:decimal, createdAt:datetime }`
 - **GET /api/accounts/transactions** — 내 거래내역 (Auth)
-  - Res: `WalletTransactionResponse[] { txType:WalletTransactionType, amount, balanceAfter, relatedRentalId?:long, relatedPgDepositId?:long, relatedSettlementId?:long, description, createdAt, paymentKey?:string }`
+  - Res: `WalletTransactionResponse[] { txType:WalletTransactionType, amount, balanceAfter, relatedRentalId?:long, relatedSettlementId?:long, description, createdAt, paymentKey?:string, pgTid?:string }`
 
 ### PG 예치금
 - **POST /api/deposits/pg/request** — 충전 요청 (Auth)
   - Req: `amount:decimal>0`
-  - Res: `DepositResponse { id, memberId, amount, status:PgDepositStatus, pgProvider, orderId, requestedAt, approvedAt, failedReason, paymentKey }`
+  - Res: `DepositResponse { id, memberId, amount, feeAmount, totalAmount, status:PgDepositStatus, pgProvider, orderId, requestedAt, approvedAt, failedReason, paymentKey }`
 - **POST /api/deposits/pg/approve** — 결제 승인
   - Req: `paymentKey`, `orderId`, `amount:decimal`
   - Res: `DepositResponse`
@@ -102,9 +130,6 @@
 
 ### 내부 지갑 (래퍼 없음)
 - Auth: 내부 토큰 헤더 `X-Internal-Token: <token>` (설정: `internal.api.header`, `internal.api.token`)
-- **POST /internal/wallets/{memberId}** — 지갑 생성
-  - Path: `memberId:long`
-  - Res: `Void`
 - **GET /internal/wallets/{memberId}/balance** — 지갑 잔액 조회
   - Path: `memberId:long`
   - Res: `MemberWalletResponse { balance:decimal, createdAt:datetime }`
@@ -128,9 +153,9 @@
   - Res: `SellerDetailResponse { sellerId, memberId, storeName, bizRegNo, storePhone, status:SellerStatus, createdAt, updatedAt }`
 - **GET /api/sellers/self** — 내 판매자 (Auth)
   - Res: `SellerDetailResponse`
-- **GET /api/sellers/{sellerId}** — 판매자 정보 조회
+- **GET /api/sellers/{sellerId}** — 판매자 조회 (Auth)
   - Path: `sellerId:long`
-  - Res: `SellerInfoResponse { sellerId, storeName, bizRegNo, storePhone }`
+  - Res: `SellerDetailResponse`
 - **GET /api/sellers/self/rentals** — 내 대여 목록 (Auth)
   - Query: `productId?:long`, `status:string`, `startDate:yyyy-MM-dd`, `endDate:yyyy-MM-dd`, `page?:int`, `size?:int`
   - Res: `SellerRentalResponse[] { rentalItemId, productId, memberId, sellerId, status, totalAmount:decimal, startDate, endDate, paidAt }`
@@ -147,17 +172,36 @@
 - **GET /internal/sellers/{sellerId}** — 판매자 조회
   - Res: `SellerDetailResponse`
 
+### 관리자
+- **PATCH /api/admin/sellers/{sellerId}/approve** — 판매자 승인 (Auth)
+  - Res: `SellerDetailResponse` (래퍼 없음)
+- **PATCH /api/admin/sellers/{sellerId}/reject** — 판매자 반려 (Auth)
+  - Res: `SellerDetailResponse` (래퍼 없음)
+
+### 채팅
+- **POST /api/chat/rooms** — 채팅방 생성 (Auth)
+  - Req: `sellerId:long`, `memberId:long`
+  - Res: `ChatRoomResponse { roomId, roomKey, sellerId, memberId, createdAt, updatedAt }`
+- **GET /api/chat/rooms/{roomId}** — 채팅방 조회 (Auth)
+  - Res: `ChatRoomResponse`
+- **GET /api/chat/rooms/{roomId}/messages** — 채팅 메시지 조회 (Auth)
+  - Query: `cursorId?:long`, `size?:int`
+  - Res: `ChatMessageSliceResponse { messages:ChatMessageResponse[], nextCursorId, hasNext }`
+  - `ChatMessageResponse { messageId, roomId, senderId, senderRole, content, sentAt }`
+
+### 채팅(WebSocket/STOMP)
+- **SEND /app/chat/rooms/{roomId}/send** — 메시지 전송
+  - Payload: `ChatMessageSendRequest { content }`
+  - Res: `Void`
+
 ### 판매자 정산(셀프)
 - **GET /api/settlements/sellers/self** — 내 정산 목록 (Auth)
   - Query: `periodYm?:yyyy-MM`, `pageable`
-  - Res: `Page<SellerSettlementResponse { id, batchId, sellerId, periodYm, totalRentalAmount, totalFeeAmount, settlementAmount, status:SellerSettlementStatus, paidAt, createdAt, updatedAt }>`
+  - Res: `Page<SellerSettlementResponse { id, batchId, sellerId, periodYm, totalRentalAmount, totalFeeAmount, settlementAmount, status:SellerSettlementStatus, paidAt, failureReason, createdAt, updatedAt }>`
 - **GET /api/settlements/sellers/self/{sellerSettlementId}** — 단건 (Auth)
   - Res: `SellerSettlementResponse`
 - **GET /api/settlements/sellers/self/{sellerSettlementId}/lines** — 라인 상세 (Auth)
   - Res: `SellerSettlementLineResponse[] { id, sellerSettlementId, sellerId, rentalItemId, memberId, productId, rentalAmount, feeAmount }`
-- **POST /api/settlements/sellers/self/{sellerSettlementId}/pay** — 지급 처리 (Auth)
-  - Query: `paidAt?:ISO_LOCAL_DATE_TIME`(기본 now)
-  - Res: `SellerSettlementResponse`
 - **POST /api/settlements/sellers/self/{sellerSettlementId}/cancel** — 정산 취소 (Auth)
   - Res: `SellerSettlementResponse`
 
@@ -168,18 +212,23 @@
 
 ### 정산 배치 내부 (래퍼 ApiResponse)
 - Auth: 내부 토큰 헤더 `X-Internal-Token: <token>` (설정: `internal.api.header`, `internal.api.token`)
-- **POST /internal/settlements/batches** — 배치 생성
-  - Req: `periodYm:string`
-  - Res: `SettlementBatchResponse`
-- **POST /internal/settlements/batches/{batchId}/start** — 배치 시작 표시
-  - Res: `SettlementBatchResponse`
-- **POST /internal/settlements/batches/{batchId}/complete** — 배치 완료 표시
+- **POST /internal/settlements/batches/monthly/run** — 월 정산 배치 실행
+  - Req: `SettlementBatchMonthlyRunRequest { periodYm?:yyyy-MM }`
   - Res: `SettlementBatchResponse`
 - **GET /internal/settlements/batches** — 배치 목록
   - Query: `periodYm?:string`, `pageable`
   - Res: `Page<SettlementBatchResponse>`
 - **GET /internal/settlements/batches/{batchId}** — 배치 단건
   - Res: `SettlementBatchResponse`
+
+### 정산 관리자 (래퍼 ApiResponse)
+- Auth: 내부 토큰 헤더 `X-Internal-Token: <token>` (설정: `internal.api.header`, `internal.api.token`)
+- **GET /internal/settlements/seller-settlements** — 판매자 정산 전체 조회
+  - Query: `periodYm?:yyyy-MM`, `pageable`
+  - Res: `Page<SellerSettlementResponse>`
+- **POST /internal/settlements/seller-settlements/{sellerSettlementId}/pay** — 관리자 지급 처리
+  - Query: `paidAt?:ISO_LOCAL_DATE_TIME`(기본 now)
+  - Res: `SellerSettlementResponse`
 
 ---
 ## product-service
@@ -189,12 +238,23 @@
 - ProductSortType: `LATEST`, `OLDEST`, `PRICE_HIGH`, `PRICE_LOW`
 
 ### 상품
-- **GET /api/products** — 상품 스크롤 목록
+- **GET /api/products/search** — 상품 스크롤 목록
   - Query: `keyword?`, `category?:ProductCategory`, `minPrice?:decimal`, `maxPrice?:decimal`, `sellerId?:long`, `startDate?:date`, `endDate?:date`, `cursor?:string`, `size:int=20`, `sortType:ProductSortType=LATEST`
   - Res: `ProductScrollResponse { products:ProductListResponse[], nextCursor:string, hasNext:boolean }`, `ProductListResponse { productId, name, pricePerDay, status:ProductStatus, sellerId, thumbnailUrl }`
+- **POST /api/products/bulk** — 상품 다건 조회
+  - Req: `ProductBulkRequest { productIds:long[] }`
+  - Res: `ProductListResponse[]`
 - **GET /api/products/recent-searches** — 최근 검색어 (Auth)
   - Query: `size?:int=10`
   - Res: `string[]`
+- **GET /api/products/popular-keywords** — 인기 검색어
+  - Query: `size?:int=10`, `startDate?:date(yyyy-MM-dd)`, `endDate?:date(yyyy-MM-dd)`
+  - Note: `startDate`와 `endDate`가 모두 없으면 오늘 하루 기준으로 집계
+  - Res: `PopularKeywordResponse[] { keyword:string, count:long }`
+- **GET /api/products/popular-products** — 인기 상품
+  - Query: `size?:int=10`, `startDate?:date(yyyy-MM-dd)`, `endDate?:date(yyyy-MM-dd)`
+  - Note: `startDate`와 `endDate`가 모두 없으면 오늘 하루 기준으로 집계
+  - Res: `PopularProductResponse[] { productId:long, productName:string, viewCount:long }`
 - **GET /api/products/seller** — 내 상품 목록 (Auth)
   - Query: `pageable`(size=20, sort=createdAt,desc 기본)
   - Res: `Page<ProductListResponse>`
@@ -308,6 +368,8 @@
 - **POST /internal/rentals/unavailable-products** — 기간 중 대여 불가 상품
   - Req: `startDate:date(오늘 이후)`, `endDate:date(오늘 이후)`, `productIds:long[]`
   - Res: `UnavailableProductsResponse { unavailableProductIds:long[] }`
+- **GET /internal/rentals/items/{rentalItemId}** — 대여 아이템 판매자 정보
+  - Res: `RentalItemSellerResponse`
 
 ---
 ## review-service
@@ -328,7 +390,12 @@
   - Res: `ReviewListResponse[]`
 - **GET /api/reviews/summary** — 리뷰 요약 조회
   - Query: `sellerId:long`
-  - Res: `ReviewSummaryResponse { sellerId, averageRating:decimal, reviewCount:int }` or `204 No Content`
+  - Res: `ReviewSummaryResponse { sellerId, summary, reviewCount, summarizedAt }` or `204 No Content`
+
+### 내부
+- Auth: 내부 토큰 헤더 `X-Internal-Token: <token>` (설정: `internal.api.header`, `internal.api.token`)
+- **GET /internal/rentals/items/{rentalItemId}/info** (rental-service)
+  - Res: `RentalItemReviewInfo { rentalItemId, memberId, sellerId, status }`
 
 ---
 ## notification-service
@@ -347,9 +414,16 @@
 - **POST /api/deliveries** — 배송 등록
   - Req: `rentalItemId:long`, `carrierCode:string<=30`, `trackingNumber:string<=50`
   - Res: `DeliveryCreateResponse { deliveryId, rentalItemId, carrierCode, trackingNumber, status:DeliveryStatus }` (201)
+- **PATCH /api/deliveries/{rentalItemId}** — 배송 수정
+  - Path: `rentalItemId:long`
+  - Req: `carrierCode:string<=30`, `trackingNumber:string<=50`
+  - Res: `DeliveryDetailResponse { deliveryId, rentalItemId, carrierCode, trackingNumber, status:DeliveryStatus, statusRaw, createdAt:datetime, updatedAt:datetime }`
 - **GET /api/deliveries/{deliveryId}** — 배송 단건 조회
   - Path: `deliveryId:long`
   - Res: `DeliveryDetailResponse { deliveryId, rentalItemId, carrierCode, trackingNumber, status:DeliveryStatus, statusRaw, createdAt:datetime, updatedAt:datetime }`
+- **GET /api/deliveries/rental-items/{rentalItemId}** — 대여 아이템 배송 단건 조회
+  - Path: `rentalItemId:long`
+  - Res: `DeliveryDetailResponse`
 
 ---
 ## ai-service
@@ -365,3 +439,10 @@
 - **POST /api/ai/ai/chat-test** — AI 채팅 테스트
   - Req: `message:string`
   - Res: `String`
+- **POST /api/ai/descriptions** — 상품 설명 추천
+  - Req: `ProductDescriptionRequest`
+  - Res: `String`
+- **POST /api/ai/embeddings/reindex** — 임베딩 미생성 건 재색인
+  - Res: `Integer`(재색인 개수)
+- **POST /api/ai/{productId}/embedding** — 단건 임베딩 미생성 재색인
+  - Res: `Boolean`

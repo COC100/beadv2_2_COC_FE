@@ -5,7 +5,7 @@ import type React from "react"
 import { useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { ArrowLeft, Upload, X } from "lucide-react"
+import { ArrowLeft, Upload, X, Sparkles } from "lucide-react"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { Button } from "@/components/ui/button"
@@ -16,6 +16,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useToast } from "@/hooks/use-toast"
 import { productAPI } from "@/lib/api"
+import { aiAPI } from "@/lib/api-extensions"
 import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd"
 import { Badge } from "@/components/ui/badge"
 import { optimizeImageToWebP } from "@/lib/image-utils"
@@ -25,6 +26,7 @@ export default function NewProductPage() {
   const { toast } = useToast()
   const [images, setImages] = useState<string[]>([])
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isGeneratingDescription, setIsGeneratingDescription] = useState(false)
   const [formData, setFormData] = useState({
     name: "",
     category: "",
@@ -117,6 +119,50 @@ export default function NewProductPage() {
     const newSpecs = [...specs]
     newSpecs[index][field] = value
     setSpecs(newSpecs)
+  }
+
+  const handleGenerateDescription = async () => {
+    if (!formData.name || !formData.category) {
+      toast({
+        title: "정보 부족",
+        description: "상품명과 카테고리를 먼저 입력해주세요.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    setIsGeneratingDescription(true)
+
+    try {
+      const specsMap: Record<string, string> = {}
+      specs.forEach((spec) => {
+        if (spec.key.trim() && spec.value.trim()) {
+          specsMap[spec.key.trim()] = spec.value.trim()
+        }
+      })
+
+      const response = await aiAPI.generateDescription({
+        productName: formData.name,
+        category: formData.category,
+        specs: Object.keys(specsMap).length > 0 ? specsMap : undefined,
+        pricePerDay: formData.pricePerDay ? Number(formData.pricePerDay) : undefined,
+      })
+
+      setFormData({ ...formData, description: response.data.description })
+      toast({
+        title: "AI 설명 생성 완료",
+        description: "생성된 설명을 확인하고 수정할 수 있습니다.",
+      })
+    } catch (error: any) {
+      console.error("[v0] Failed to generate description:", error)
+      toast({
+        title: "설명 생성 실패",
+        description: error.message || "AI 설명 생성에 실패했습니다.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsGeneratingDescription(false)
+    }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -248,9 +294,22 @@ export default function NewProductPage() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="description">
-                      상세 설명 <span className="text-red-500">*</span>
-                    </Label>
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="description">
+                        상세 설명 <span className="text-red-500">*</span>
+                      </Label>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={handleGenerateDescription}
+                        disabled={isGeneratingDescription || !formData.name || !formData.category}
+                        className="bg-transparent"
+                      >
+                        <Sparkles className="h-4 w-4 mr-2" />
+                        {isGeneratingDescription ? "생성 중..." : "AI 추천"}
+                      </Button>
+                    </div>
                     <Textarea
                       id="description"
                       placeholder="상품의 상세 정보를 입력하세요"
