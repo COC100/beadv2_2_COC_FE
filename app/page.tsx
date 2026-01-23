@@ -25,14 +25,12 @@ import { Badge } from "@/components/ui/badge"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { productAPI } from "@/lib/api"
-import { aiAPI } from "@/lib/api-extensions"
 import { useToast } from "@/hooks/use-toast"
 
 export default function HomePage() {
   const router = useRouter()
   const { toast } = useToast()
   const [products, setProducts] = useState<any[]>([])
-  const [recommendations, setRecommendations] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [currentSlide, setCurrentSlide] = useState(0)
@@ -101,18 +99,6 @@ export default function HomePage() {
 
         const activeProducts = productsData.filter((product: any) => product.status === "ACTIVE")
         setProducts(activeProducts)
-
-        // Fetch AI recommendations if authenticated
-        if (isAuthenticated) {
-          try {
-            const recResponse = await aiAPI.getRecentRecommendations({ size: 8 })
-            console.log("[v0] Recommendations response:", recResponse)
-            setRecommendations(recResponse.data || [])
-          } catch (error: any) {
-            console.log("[v0] Failed to fetch recommendations:", error)
-            // Silent fail for recommendations
-          }
-        }
       } catch (error: any) {
         console.error("[v0] Failed to fetch products:", error)
 
@@ -132,7 +118,7 @@ export default function HomePage() {
     }
 
     fetchProducts()
-  }, [router, toast, isAuthenticated])
+  }, [router, toast])
 
   const categories = [
     { name: "노트북", icon: Laptop, category: "LAPTOP" },
@@ -274,14 +260,14 @@ export default function HomePage() {
       </section>
 
       <section className="py-12">
-          <div className="container mx-auto px-4">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold">최신 상품</h2>
-              <Link href="/products" className="flex items-center gap-1 text-sm text-muted-foreground hover:text-primary">
-                전체보기
-                <ChevronRight className="h-4 w-4" />
-              </Link>
-            </div>
+        <div className="container mx-auto px-4">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-2xl font-bold">인기 상품</h2>
+            <Link href="/products" className="flex items-center gap-1 text-sm text-muted-foreground hover:text-primary">
+              전체보기
+              <ChevronRight className="h-4 w-4" />
+            </Link>
+          </div>
 
           {products.length === 0 ? (
             <div className="text-center py-12">
@@ -325,56 +311,6 @@ export default function HomePage() {
           )}
         </div>
       </section>
-
-      {isAuthenticated && recommendations.length > 0 && (
-        <section className="py-16">
-          <div className="container mx-auto px-4">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold">추천 상품</h2>
-              <Link
-                href="/products/recommendations"
-                className="flex items-center gap-1 text-sm text-muted-foreground hover:text-primary"
-              >
-                더 많은 추천
-                <ChevronRight className="h-4 w-4" />
-              </Link>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {recommendations.slice(0, 8).map((item: any) => (
-                <Link key={item.productId} href={`/products/${item.productId}`}>
-                  <Card className="overflow-hidden hover:shadow-lg transition-shadow cursor-pointer h-full">
-                    <CardContent className="p-4 flex flex-col h-full">
-                      <div className="mb-3">
-                        <Badge className="bg-blue-100 text-primary hover:bg-blue-100">
-                          {item.category}
-                        </Badge>
-                      </div>
-                      <h3 className="font-bold text-lg mb-2 line-clamp-2">{item.name}</h3>
-                      {item.specs && Object.keys(item.specs).length > 0 && (
-                        <div className="text-sm text-muted-foreground mb-3 flex-1">
-                          {Object.entries(item.specs)
-                            .slice(0, 2)
-                            .map(([key, value]) => (
-                              <div key={key} className="truncate">
-                                <span className="font-medium">{key}:</span> {String(value)}
-                              </div>
-                            ))}
-                        </div>
-                      )}
-                      <div className="mt-auto">
-                        <Button variant="outline" className="w-full bg-transparent text-sm">
-                          상세보기
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </Link>
-              ))}
-            </div>
-          </div>
-        </section>
-      )}
 
       <section className="py-16 bg-gray-50 dark:bg-gray-900">
         <div className="container mx-auto px-4">

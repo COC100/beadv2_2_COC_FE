@@ -26,7 +26,7 @@ let isRefreshing = false
 let refreshPromise: Promise<string> | null = null
 
 // Helper function for API calls
-export async function fetchAPI<T>(
+async function fetchAPI<T>(
   endpoint: string,
   options: RequestInit = {},
   requiresAuth = false,
@@ -276,8 +276,7 @@ export const memberAPI = {
       true,
     ),
 
-  // Password Reset - Send code
-  sendPasswordResetCode: (email: string) =>
+  requestPasswordReset: (email: string) =>
     fetchAPI(
       "/member-service/api/auth/password/reset/send",
       {
@@ -287,21 +286,9 @@ export const memberAPI = {
       false,
     ),
 
-  // Password Reset - Confirm code (returns resetToken)
-  confirmPasswordResetCode: (email: string, code: string) =>
-    fetchAPI<{ resetToken: string }>(
-      "/member-service/api/auth/password/reset/confirm",
-      {
-        method: "POST",
-        body: JSON.stringify({ email, code }),
-      },
-      false,
-    ),
-
-  // Password Reset - Final password change
-  resetPassword: (data: { email: string; newPassword: string; resetToken: string }) =>
+  confirmPasswordReset: (data: { email: string; code: string; newPassword: string }) =>
     fetchAPI(
-      "/member-service/api/auth/password/reset",
+      "/member-service/api/auth/password/reset/confirm",
       {
         method: "POST",
         body: JSON.stringify(data),
@@ -846,7 +833,7 @@ export const sellerAPI = {
     ),
 
   getInfo: async (sellerId: number): Promise<{ data: any; headers: Headers }> => {
-    return fetchAPI(`/seller-service/api/sellers/${sellerId}`, { method: "GET" })
+    return fetchAPI(`/api/sellers/${sellerId}`, { method: "GET" })
   },
 }
 

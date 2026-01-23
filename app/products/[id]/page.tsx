@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
-import { ArrowLeft, ShoppingCart, Calendar, Edit, Eye, EyeOff, Trash2, AlertCircle, MessageCircle } from "lucide-react"
+import { ArrowLeft, ShoppingCart, Calendar, Edit, Eye, EyeOff, Trash2, AlertCircle } from "lucide-react"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { Button } from "@/components/ui/button"
@@ -13,7 +13,6 @@ import { Label } from "@/components/ui/label"
 import { useRouter } from "next/navigation"
 import { useToast } from "@/hooks/use-toast"
 import { productAPI, cartAPI, sellerAPI, rentalAPI } from "@/lib/api"
-import { chatAPI } from "@/lib/api-extensions"
 import {
   Dialog,
   DialogContent,
@@ -308,59 +307,6 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
     }
   }
 
-  const handleChatWithSeller = async () => {
-    if (isOwner) {
-      toast({
-        title: "본인 상품입니다",
-        description: "본인 상품에 대해서는 채팅할 수 없습니다.",
-        variant: "destructive",
-      })
-      return
-    }
-
-    if (!seller?.sellerId) {
-      toast({
-        title: "판매자 정보 없음",
-        description: "판매자 정보를 불러올 수 없습니다.",
-        variant: "destructive",
-      })
-      return
-    }
-
-    try {
-      // Get memberId from profile
-      const profileResponse = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/member-service/api/members/profile`, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-          "ngrok-skip-browser-warning": "true",
-        },
-        credentials: "include",
-      })
-      const profileData = await profileResponse.json()
-      const memberId = profileData.data.id
-
-      // Create or get chat room
-      const roomResponse = await chatAPI.createRoom({
-        sellerId: seller.sellerId,
-        memberId: memberId,
-      })
-
-      toast({
-        title: "채팅방으로 이동",
-        description: "판매자와의 채팅방으로 이동합니다.",
-      })
-
-      router.push(`/chat/${roomResponse.data.roomId}`)
-    } catch (error: any) {
-      console.error("[v0] Failed to create chat room:", error)
-      toast({
-        title: "채팅 시작 실패",
-        description: error.message || "채팅방을 생성할 수 없습니다.",
-        variant: "destructive",
-      })
-    }
-  }
-
   if (loading) {
     return (
       <div className="min-h-screen bg-white">
@@ -560,17 +506,6 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
                       <span className="text-primary">₩{totalPrice.toLocaleString()}</span>
                     </div>
                   </div>
-                )}
-
-                {!isOwner && seller && (
-                  <Button
-                    variant="outline"
-                    className="w-full rounded-lg h-11 bg-transparent"
-                    onClick={handleChatWithSeller}
-                  >
-                    <MessageCircle className="h-5 w-5 mr-2" />
-                    모디톡 문의
-                  </Button>
                 )}
 
                 <div className="flex gap-2 pt-2">
