@@ -247,10 +247,27 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
   }
 
   const handleGenerateDescription = async () => {
-    if (!formData.name) {
+    // 필수 필드 검증
+    const missingFields = []
+    
+    if (!formData.name.trim()) {
+      missingFields.push("상품명")
+    }
+    
+    if (!formData.category) {
+      missingFields.push("카테고리")
+    }
+    
+    // 스펙 검증 - 최소 하나의 스펙이 입력되어 있어야 함
+    const hasValidSpec = specs.some(spec => spec.key.trim() && spec.value.trim())
+    if (!hasValidSpec) {
+      missingFields.push("상품 스펙")
+    }
+
+    if (missingFields.length > 0) {
       toast({
-        title: "상품명을 먼저 입력하세요",
-        description: "AI 추천을 받으려면 상품명이 필요합니다",
+        title: "필수 정보를 입력하세요",
+        description: `다음 정보를 입력해야 AI 추천을 받을 수 있습니다: ${missingFields.join(", ")}`,
         variant: "destructive",
       })
       return
@@ -268,8 +285,8 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
 
       const result = await productAPI.generateDescription({
         name: formData.name,
-        category: formData.category || undefined,
-        specs: Object.keys(specsMap).length > 0 ? specsMap : undefined,
+        category: formData.category,
+        specs: specsMap,
         description: formData.description || undefined,
       })
 
@@ -443,6 +460,43 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
                   </div>
 
                   <div className="space-y-2">
+                    <Label>상품 스펙</Label>
+                    <p className="text-xs text-muted-foreground mb-2">
+                      상품의 주요 사양을 입력하세요 (예: 프로세서, RAM, 용량 등)
+                    </p>
+                    {specs.map((spec, index) => (
+                      <div key={index} className="flex gap-2">
+                        <Input
+                          placeholder="스펙명 (예: 프로세서)"
+                          value={spec.key}
+                          onChange={(e) => updateSpec(index, "key", e.target.value)}
+                          className="flex-1"
+                        />
+                        <Input
+                          placeholder="내용 (예: Apple M3 Pro)"
+                          value={spec.value}
+                          onChange={(e) => updateSpec(index, "value", e.target.value)}
+                          className="flex-1"
+                        />
+                        {specs.length > 1 && (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="icon"
+                            onClick={() => removeSpec(index)}
+                            className="bg-transparent"
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                    ))}
+                    <Button type="button" variant="outline" onClick={addSpec} className="w-full bg-transparent">
+                      + 스펙 추가
+                    </Button>
+                  </div>
+
+                  <div className="space-y-2">
                     <Label htmlFor="pricePerDay">
                       1일 대여 가격 <span className="text-red-500">*</span>
                     </Label>
@@ -506,43 +560,6 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
                       onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                       required
                     />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>상품 스펙</Label>
-                    <p className="text-xs text-muted-foreground mb-2">
-                      상품의 주요 사양을 입력하세요 (예: 프로세서, RAM, 용량 등)
-                    </p>
-                    {specs.map((spec, index) => (
-                      <div key={index} className="flex gap-2">
-                        <Input
-                          placeholder="스펙명 (예: 프로세서)"
-                          value={spec.key}
-                          onChange={(e) => updateSpec(index, "key", e.target.value)}
-                          className="flex-1"
-                        />
-                        <Input
-                          placeholder="내용 (예: Apple M3 Pro)"
-                          value={spec.value}
-                          onChange={(e) => updateSpec(index, "value", e.target.value)}
-                          className="flex-1"
-                        />
-                        {specs.length > 1 && (
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="icon"
-                            onClick={() => removeSpec(index)}
-                            className="bg-transparent"
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
-                        )}
-                      </div>
-                    ))}
-                    <Button type="button" variant="outline" onClick={addSpec} className="w-full bg-transparent">
-                      + 스펙 추가
-                    </Button>
                   </div>
 
                   <div className="space-y-2">

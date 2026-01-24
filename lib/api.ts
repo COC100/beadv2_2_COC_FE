@@ -413,6 +413,61 @@ export const authAPI = {
       },
       false,
     ),
+
+  oauth2Signup: async (data: {
+    provider: string
+    code: string
+    name?: string
+    phone?: string
+  }) => {
+    const url = `${API_BASE_URL}/member-service/api/auth/oauth2/signup`
+
+    const headers: HeadersInit = {
+      "Content-Type": "application/json",
+    }
+
+    if (API_BASE_URL.includes("ngrok")) {
+      headers["ngrok-skip-browser-warning"] = "true"
+    }
+
+    const response = await fetch(url, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(data),
+      credentials: "include",
+    })
+
+    if (!response.ok) {
+      let errorMessage = `${response.statusText}`
+      try {
+        const errorData = await response.json()
+        errorMessage = errorData.message || errorData.error || errorMessage
+      } catch {
+        // Ignore parsing error
+      }
+      throw new Error(errorMessage)
+    }
+
+    const responseData: ApiResponse<string> = await response.json()
+
+    return {
+      accessToken: responseData.data,
+    }
+  },
+
+  oauth2Connect: async (data: {
+    provider: string
+    code: string
+  }) => {
+    return fetchAPI<void>(
+      "/member-service/api/auth/oauth2/connect",
+      {
+        method: "POST",
+        body: JSON.stringify(data),
+      },
+      true,
+    )
+  },
 }
 
 // Account Service APIs
