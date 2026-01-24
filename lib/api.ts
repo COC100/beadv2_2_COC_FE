@@ -450,7 +450,7 @@ export const accountAPI = {
       },
       true,
     ),
-  }
+}
 
 // Seller Service APIs
 export const sellerAPI = {
