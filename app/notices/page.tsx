@@ -49,12 +49,13 @@ export default function NoticesPage() {
   const loadNotices = async () => {
     try {
       setLoading(true)
+      console.log("[v0] Loading notices without sort parameter")
       const response = await noticeAPI.getNotices({ 
         keyword: keyword || undefined, 
         page, 
-        size: 20,
-        sort: "pinned,desc;createdAt,desc"
+        size: 20
       })
+      console.log("[v0] Notices response:", response)
       setNotices(response.data.content || [])
       setTotalPages(response.data.totalPages || 0)
     } catch (error: any) {
