@@ -28,6 +28,8 @@ export default function AdminNoticesPage() {
     content: "",
     pinned: false,
     status: "DRAFT",
+    displayStartAt: "",
+    displayEndAt: "",
   })
 
   useEffect(() => {
@@ -57,13 +59,20 @@ export default function AdminNoticesPage() {
     }
 
     try {
+      // Prepare the data, converting datetime-local to ISO format
+      const submitData = {
+        ...formData,
+        displayStartAt: formData.displayStartAt ? new Date(formData.displayStartAt).toISOString() : null,
+        displayEndAt: formData.displayEndAt ? new Date(formData.displayEndAt).toISOString() : null,
+      }
+      
       if (editingNotice) {
-        await adminAPI.updateNotice(editingNotice.id, formData)
+        await adminAPI.updateNotice(editingNotice.id, submitData)
         toast({
           title: "공지사항 수정 완료",
         })
       } else {
-        await adminAPI.createNotice(formData)
+        await adminAPI.createNotice(submitData)
         toast({
           title: "공지사항 등록 완료",
         })
@@ -76,6 +85,8 @@ export default function AdminNoticesPage() {
         content: "",
         pinned: false,
         status: "DRAFT",
+        displayStartAt: "",
+        displayEndAt: "",
       })
       loadNotices()
     } catch (error: any) {
@@ -91,11 +102,26 @@ export default function AdminNoticesPage() {
     try {
       const response = await adminAPI.getNoticeDetail(noticeId)
       setEditingNotice(response.data)
+      
+      // Convert ISO datetime to datetime-local format (YYYY-MM-DDTHH:mm)
+      const formatDateTimeLocal = (dateStr: string) => {
+        if (!dateStr) return ""
+        const date = new Date(dateStr)
+        const year = date.getFullYear()
+        const month = String(date.getMonth() + 1).padStart(2, '0')
+        const day = String(date.getDate()).padStart(2, '0')
+        const hours = String(date.getHours()).padStart(2, '0')
+        const minutes = String(date.getMinutes()).padStart(2, '0')
+        return `${year}-${month}-${day}T${hours}:${minutes}`
+      }
+      
       setFormData({
         title: response.data.title || "",
         content: response.data.content || "",
         pinned: response.data.pinned || false,
         status: response.data.status || "DRAFT",
+        displayStartAt: formatDateTimeLocal(response.data.displayStartAt) || "",
+        displayEndAt: formatDateTimeLocal(response.data.displayEndAt) || "",
       })
       setShowForm(true)
     } catch (error: any) {
@@ -199,6 +225,8 @@ export default function AdminNoticesPage() {
                   content: "",
                   pinned: false,
                   status: "DRAFT",
+                  displayStartAt: "",
+                  displayEndAt: "",
                 })
               }}
             >
@@ -252,6 +280,24 @@ export default function AdminNoticesPage() {
                     <option value="PUBLISHED">발행</option>
                   </select>
                 </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>노출 시작일시</Label>
+                    <Input
+                      type="datetime-local"
+                      value={formData.displayStartAt}
+                      onChange={(e) => setFormData({ ...formData, displayStartAt: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <Label>노출 종료일시</Label>
+                    <Input
+                      type="datetime-local"
+                      value={formData.displayEndAt}
+                      onChange={(e) => setFormData({ ...formData, displayEndAt: e.target.value })}
+                    />
+                  </div>
+                </div>
                 <div className="flex gap-2">
                   <Button onClick={handleSubmit}>{editingNotice ? "수정" : "등록"}</Button>
                   <Button
@@ -264,6 +310,8 @@ export default function AdminNoticesPage() {
                         content: "",
                         pinned: false,
                         status: "DRAFT",
+                        displayStartAt: "",
+                        displayEndAt: "",
                       })
                     }}
                     className="bg-transparent"
