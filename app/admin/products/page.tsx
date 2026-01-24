@@ -193,14 +193,24 @@ export default function AdminProductsPage() {
                               {format(new Date(product.createdAt), "yyyy-MM-dd HH:mm", { locale: ko })}
                             </TableCell>
                             <TableCell className="text-right">
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => window.open(`/products/${product.productId}`, "_blank")}
-                                className="bg-transparent"
-                              >
-                                상세보기
-                              </Button>
+                              <div className="flex justify-end gap-2">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => window.open(`/products/${product.productId}`, "_blank")}
+                                  className="bg-transparent"
+                                >
+                                  상세보기
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  onClick={() => handleCreateModerationRequest(product.productId)}
+                                  disabled={product.moderationStatus === "CLEAR"}
+                                  className="bg-primary text-primary-foreground disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                  검수 요청
+                                </Button>
+                              </div>
                             </TableCell>
                           </TableRow>
                         ))}

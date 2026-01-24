@@ -52,8 +52,7 @@ export default function NoticesPage() {
       const response = await noticeAPI.getNotices({ 
         keyword: keyword || undefined, 
         page, 
-        size: 20,
-        sort: "pinned,desc;createdAt,desc"
+        size: 20
       })
       setNotices(response.data.content || [])
       setTotalPages(response.data.totalPages || 0)
@@ -99,7 +98,7 @@ export default function NoticesPage() {
                   onKeyPress={handleKeyPress}
                   className="flex-1"
                 />
-                <Button onClick={handleSearch} className="bg-transparent">
+                <Button onClick={handleSearch}>
                   <Search className="h-4 w-4 mr-2" />
                   검색
                 </Button>
