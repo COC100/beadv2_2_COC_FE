@@ -422,11 +422,17 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
                 )}
               </div>
               <h1 className="text-3xl font-bold mb-3 leading-tight">{product.name}</h1>
-              <div className="flex items-baseline gap-2 mb-6">
+              <div className="flex items-baseline gap-2 mb-2">
                 <Badge className="bg-accent text-white hover:bg-accent text-lg font-bold px-3 py-1">
                   ₩{product.pricePerDay.toLocaleString()}
                 </Badge>
                 <span className="text-muted-foreground">/일</span>
+              </div>
+              <div className="flex items-baseline gap-2 mb-6">
+                <span className="text-sm text-muted-foreground">보증금:</span>
+                <span className="text-sm font-semibold">
+                  ₩{(product.securityDepositAmount || 0).toLocaleString()}
+                </span>
               </div>
             </div>
 
