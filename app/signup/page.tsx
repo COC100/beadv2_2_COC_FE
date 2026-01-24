@@ -292,8 +292,14 @@ export default function SignupPage() {
   }
 
   const handleSocialSignup = (provider: string) => {
-    const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || ""
-    window.location.href = `${API_BASE_URL}/member-service/oauth2/authorization/${provider}`
+    const { getKakaoAuthUrl, getGoogleAuthUrl, getNaverAuthUrl } = require("@/lib/oauth-config")
+    if (provider === "kakao") {
+      window.location.href = getKakaoAuthUrl()
+    } else if (provider === "google") {
+      window.location.href = getGoogleAuthUrl()
+    } else if (provider === "naver") {
+      window.location.href = getNaverAuthUrl()
+    }
   }
 
   const formatTime = (seconds: number) => {
