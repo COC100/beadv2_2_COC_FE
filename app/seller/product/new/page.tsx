@@ -29,6 +29,7 @@ export default function NewProductPage() {
     name: "",
     category: "",
     pricePerDay: "",
+    securityDepositAmount: "",
     description: "",
   })
   const [specs, setSpecs] = useState<{ key: string; value: string }[]>([{ key: "", value: "" }])
@@ -140,6 +141,10 @@ export default function NewProductPage() {
         name: formData.name,
         description: formData.description,
         pricePerDay: Number(formData.pricePerDay),
+        securityDepositAmount:
+          formData.securityDepositAmount && Number(formData.securityDepositAmount) > 0
+            ? Number(formData.securityDepositAmount)
+            : undefined,
         category: formData.category,
         images: images.length > 0 ? images : undefined,
         specs: Object.keys(specsMap).length > 0 ? specsMap : undefined,
@@ -245,6 +250,23 @@ export default function NewProductPage() {
                       />
                       <span className="text-sm text-muted-foreground">원</span>
                     </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="securityDepositAmount">보증금</Label>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        id="securityDepositAmount"
+                        type="number"
+                        min="0"
+                        placeholder="50000"
+                        className="rounded-lg"
+                        value={formData.securityDepositAmount}
+                        onChange={(e) => setFormData({ ...formData, securityDepositAmount: e.target.value })}
+                      />
+                      <span className="text-sm text-muted-foreground">원</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground">대여 시 받을 보증금을 입력하세요 (선택사항)</p>
                   </div>
 
                   <div className="space-y-2">
