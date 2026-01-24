@@ -287,7 +287,6 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
         name: formData.name,
         category: formData.category,
         specs: specsMap,
-        description: formData.description || undefined,
       })
 
       setFormData({ ...formData, description: result.data })

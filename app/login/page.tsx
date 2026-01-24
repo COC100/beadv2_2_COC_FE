@@ -145,8 +145,8 @@ export default function LoginPage() {
                   variant="outline"
                   className="w-full"
                   onClick={() => {
-                    const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || ""
-                    window.location.href = `${API_BASE_URL}/member-service/oauth2/authorization/google`
+                    const { getGoogleAuthUrl } = require("@/lib/oauth-config")
+                    window.location.href = getGoogleAuthUrl()
                   }}
                 >
                   <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
@@ -174,8 +174,8 @@ export default function LoginPage() {
                   variant="outline"
                   className="w-full bg-[#FEE500] hover:bg-[#FEE500]/90 border-[#FEE500]"
                   onClick={() => {
-                    const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || ""
-                    window.location.href = `${API_BASE_URL}/member-service/oauth2/authorization/kakao`
+                    const { getKakaoAuthUrl } = require("@/lib/oauth-config")
+                    window.location.href = getKakaoAuthUrl()
                   }}
                 >
                   <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
@@ -191,8 +191,8 @@ export default function LoginPage() {
                   variant="outline"
                   className="w-full bg-[#03C75A] hover:bg-[#03C75A]/90 border-[#03C75A] text-white"
                   onClick={() => {
-                    const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || ""
-                    window.location.href = `${API_BASE_URL}/member-service/oauth2/authorization/naver`
+                    const { getNaverAuthUrl } = require("@/lib/oauth-config")
+                    window.location.href = getNaverAuthUrl()
                   }}
                 >
                   <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
