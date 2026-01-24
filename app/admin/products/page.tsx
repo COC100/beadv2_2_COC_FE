@@ -205,7 +205,8 @@ export default function AdminProductsPage() {
                                 <Button
                                   size="sm"
                                   onClick={() => handleCreateModerationRequest(product.productId)}
-                                  className="bg-primary text-primary-foreground"
+                                  disabled={product.moderationStatus === "PENDING"}
+                                  className="bg-primary text-primary-foreground disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                   검수 요청
                                 </Button>
