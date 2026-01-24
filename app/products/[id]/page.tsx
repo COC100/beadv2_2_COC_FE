@@ -428,12 +428,12 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
                 </Badge>
                 <span className="text-muted-foreground">/일</span>
               </div>
-              {product.securityDepositAmount && product.securityDepositAmount > 0 && (
-                <div className="flex items-baseline gap-2 mb-6">
-                  <span className="text-sm text-muted-foreground">보증금:</span>
-                  <span className="text-sm font-semibold">₩{product.securityDepositAmount.toLocaleString()}</span>
-                </div>
-              )}
+              <div className="flex items-baseline gap-2 mb-6">
+                <span className="text-sm text-muted-foreground">보증금:</span>
+                <span className="text-sm font-semibold">
+                  ₩{(product.securityDepositAmount || 0).toLocaleString()}
+                </span>
+              </div>
             </div>
 
             <Card className="border-2">

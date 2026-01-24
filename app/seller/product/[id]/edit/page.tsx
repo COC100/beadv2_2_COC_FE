@@ -38,7 +38,7 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
     name: "",
     category: "",
     pricePerDay: "",
-    securityDepositAmount: "",
+    securityDepositAmount: "0",
     description: "",
   })
   const [specs, setSpecs] = useState<{ key: string; value: string }[]>([{ key: "", value: "" }])
@@ -107,7 +107,7 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
           pricePerDay: productData.pricePerDay ? productData.pricePerDay.toString() : "",
           securityDepositAmount: productData.securityDepositAmount
             ? productData.securityDepositAmount.toString()
-            : "",
+            : "0",
           description: productData.description || "",
         })
 
@@ -286,10 +286,7 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
         name: formData.name,
         description: formData.description,
         pricePerDay: Number(formData.pricePerDay),
-        securityDepositAmount:
-          formData.securityDepositAmount && Number(formData.securityDepositAmount) > 0
-            ? Number(formData.securityDepositAmount)
-            : undefined,
+        securityDepositAmount: Number(formData.securityDepositAmount) || 0,
         category: formData.category,
         images: images.map((img) => ({
           imageId: img.imageId,
@@ -418,7 +415,9 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="securityDepositAmount">보증금</Label>
+                    <Label htmlFor="securityDepositAmount">
+                      보증금 <span className="text-red-500">*</span>
+                    </Label>
                     <div className="flex items-center gap-2">
                       <Input
                         id="securityDepositAmount"
@@ -428,10 +427,11 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
                         className="rounded-lg"
                         value={formData.securityDepositAmount}
                         onChange={(e) => setFormData({ ...formData, securityDepositAmount: e.target.value })}
+                        required
                       />
                       <span className="text-sm text-muted-foreground">원</span>
                     </div>
-                    <p className="text-xs text-muted-foreground">대여 시 받을 보증금을 입력하세요 (선택사항)</p>
+                    <p className="text-xs text-muted-foreground">대여 시 받을 보증금을 입력하세요 (0원 이상)</p>
                   </div>
 
                   <div className="space-y-2">
