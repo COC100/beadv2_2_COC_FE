@@ -1209,15 +1209,15 @@ export const adminAPI = {
       content: any[]
       totalElements: number
       totalPages: number
-    }>(`/member-service/api/admin/blacklists${queryParams.toString() ? `?${queryParams.toString()}` : ""}`, {}, true)
+    }>(`/support-service/api/admin/blacklists${queryParams.toString() ? `?${queryParams.toString()}` : ""}`, {}, true)
   },
 
   searchBlacklist: (email: string) =>
-    fetchAPI<any>(`/member-service/api/admin/blacklists/search?email=${encodeURIComponent(email)}`, {}, true),
+    fetchAPI<any>(`/support-service/api/admin/blacklists/search?email=${encodeURIComponent(email)}`, {}, true),
 
   addBlacklist: (data: { memberId: number; reason: string; memo?: string }) =>
     fetchAPI(
-      "/member-service/api/admin/blacklists",
+      "/support-service/api/admin/blacklists",
       {
         method: "POST",
         body: JSON.stringify(data),
@@ -1227,7 +1227,7 @@ export const adminAPI = {
 
   releaseBlacklist: (memberId: number) =>
     fetchAPI(
-      `/member-service/api/admin/blacklists/${memberId}/release`,
+      `/support-service/api/admin/blacklists/${memberId}/release`,
       {
         method: "PATCH",
       },
@@ -1388,7 +1388,7 @@ export const adminAPI = {
       totalElements: number
       totalPages: number
     }>(
-      `/support-service/api/admin/notices${queryParams.toString() ? `?${queryParams.toString()}` : ""}`,
+      `/support-service/api/notices${queryParams.toString() ? `?${queryParams.toString()}` : ""}`,
       {},
       true,
     )
