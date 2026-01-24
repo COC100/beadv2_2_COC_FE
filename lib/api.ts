@@ -839,29 +839,7 @@ export const sellerAPI = {
 
 // Admin APIs
 export const adminAPI = {
-  // 회원 관리
-  getMembers: (params?: { page?: number; size?: number }) => {
-    const queryParams = new URLSearchParams()
-    if (params) {
-      if (params.page !== undefined) queryParams.append("page", params.page.toString())
-      if (params.size !== undefined) queryParams.append("size", params.size.toString())
-    }
-    return fetchAPI<{
-      content: any[]
-      totalElements: number
-      totalPages: number
-      number: number
-      size: number
-    }>(`/member-service/internal/members${queryParams.toString() ? `?${queryParams.toString()}` : ""}`, {}, true)
-  },
-
-  searchMemberByEmail: (email: string) =>
-    fetchAPI<any>(`/member-service/internal/members/search?email=${encodeURIComponent(email)}`, {}, true),
-
-  getMemberDetail: (memberId: number) =>
-    fetchAPI<any>(`/member-service/internal/members/${memberId}`, {}, true),
-
-  // 블랙리스트 관리
+  // 블랙리스트 관리 (회원 정보 포함)
   getBlacklists: (params?: { status?: string; page?: number; size?: number }) => {
     const queryParams = new URLSearchParams()
     if (params) {
