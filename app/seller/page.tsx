@@ -42,39 +42,53 @@ export default function SellerPage() {
       }
 
       try {
+        // Check seller authorization with GET /seller-service/api/sellers/self
         const sellerResponse = await sellerAPI.getSelf()
-        console.log("[v0] Seller API response:", sellerResponse)
         setSellerInfo(sellerResponse.data)
 
+        // If authorized, load products
         try {
           const productsResponse = await productAPI.getSellerProducts({
             page: currentPage,
             size: 20,
             sort: "createdAt,desc",
           })
-          console.log("[v0] Products API response:", productsResponse)
           const productsData = productsResponse.data
           setProducts(productsData.content || [])
           setTotalProducts(productsData.totalElements || 0)
           setTotalPages(productsData.totalPages || 0)
           setIsLastPage(productsData.last || false)
         } catch (productError) {
-          console.error("[v0] Failed to load products (non-critical):", productError)
+          console.error("Failed to load products (non-critical):", productError)
           setProducts([])
           setTotalProducts(0)
         }
 
         setIsLoading(false)
       } catch (error: any) {
-        console.error("[v0] Failed to load seller data:", error)
+        console.error("Failed to load seller data:", error)
         const status = error.message.match(/\d{3}/)?.[0]
+        
+        // If no seller permission (403/404), redirect to seller application page
         if (status === "403" || status === "404") {
-          router.push("/become-seller")
+          setAlert({
+            open: true,
+            title: "판매자 권한 필요",
+            description: "판매자 신청 페이지로 이동합니다.",
+          })
+          setTimeout(() => {
+            router.push("/become-seller")
+          }, 1500)
         } else if (status === "401") {
           router.push("/intro")
         } else {
+          setAlert({
+            open: true,
+            title: "오류",
+            description: "판매자 정보를 불러오는데 실패했습니다.",
+            variant: "destructive",
+          })
           setIsLoading(false)
-          setProducts([])
         }
       }
     }
