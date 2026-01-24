@@ -40,8 +40,15 @@ export default function AdminSellersPage() {
       setRegistrations(response.data.content || [])
       setTotalPages(response.data.totalPages || 0)
     } catch (error: any) {
-      const status = error.message.match(/\d{3}/)?.[0]
-      if (status === "403") {
+      console.error("[v0] Failed to load seller registrations:", error)
+      setAlert({
+        open: true,
+        title: "판매자 신청 로딩 실패",
+        description: error.message || "관리자 권한이 필요합니다.",
+        variant: "destructive",
+      })
+      // Only redirect if it's an auth error (401), not a permission error (403)
+      if (error.message?.includes("인증") || error.message?.includes("토큰")) {
         router.push("/intro")
       }
     } finally {

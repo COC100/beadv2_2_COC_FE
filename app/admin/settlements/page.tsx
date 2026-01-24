@@ -42,7 +42,16 @@ export default function AdminSettlementsPage() {
       setSettlements(response.data.content || [])
       setTotalPages(response.data.totalPages || 0)
     } catch (error: any) {
-      router.push("/intro")
+      console.error("[v0] Failed to load settlements:", error)
+      toast({
+        title: "정산 내역 로딩 실패",
+        description: error.message || "관리자 권한이 필요합니다.",
+        variant: "destructive",
+      })
+      // Only redirect if it's an auth error (401), not a permission error (403)
+      if (error.message?.includes("인증") || error.message?.includes("토큰")) {
+        router.push("/intro")
+      }
     } finally {
       setLoading(false)
     }
