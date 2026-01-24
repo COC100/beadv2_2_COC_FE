@@ -40,10 +40,7 @@ export default function AdminSellersPage() {
       setRegistrations(response.data.content || [])
       setTotalPages(response.data.totalPages || 0)
     } catch (error: any) {
-      const status = error.message.match(/\d{3}/)?.[0]
-      if (status === "403") {
-        router.push("/intro")
-      }
+      router.push("/intro")
     } finally {
       setLoading(false)
     }

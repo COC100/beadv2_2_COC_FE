@@ -118,6 +118,11 @@ async function fetchAPI<T>(
       throw new Error("인증되지 않았습니다")
     }
 
+    if (response.status === 403) {
+      console.error("[v0] 403 Forbidden - insufficient permissions")
+      throw new Error("접근 권한이 없습니다. 관리자 권한이 필요합니다.")
+    }
+
     if (!response.ok) {
       const clonedResponse = response.clone()
       let errorMessage = `${response.statusText}`
@@ -1204,15 +1209,15 @@ export const adminAPI = {
       content: any[]
       totalElements: number
       totalPages: number
-    }>(`/member-service/api/admin/blacklists${queryParams.toString() ? `?${queryParams.toString()}` : ""}`, {}, true)
+    }>(`/support-service/api/admin/blacklists${queryParams.toString() ? `?${queryParams.toString()}` : ""}`, {}, true)
   },
 
   searchBlacklist: (email: string) =>
-    fetchAPI<any>(`/member-service/api/admin/blacklists/search?email=${encodeURIComponent(email)}`, {}, true),
+    fetchAPI<any>(`/support-service/api/admin/blacklists/search?email=${encodeURIComponent(email)}`, {}, true),
 
   addBlacklist: (data: { memberId: number; reason: string; memo?: string }) =>
     fetchAPI(
-      "/member-service/api/admin/blacklists",
+      "/support-service/api/admin/blacklists",
       {
         method: "POST",
         body: JSON.stringify(data),
@@ -1222,7 +1227,7 @@ export const adminAPI = {
 
   releaseBlacklist: (memberId: number) =>
     fetchAPI(
-      `/member-service/api/admin/blacklists/${memberId}/release`,
+      `/support-service/api/admin/blacklists/${memberId}/release`,
       {
         method: "PATCH",
       },
@@ -1383,7 +1388,7 @@ export const adminAPI = {
       totalElements: number
       totalPages: number
     }>(
-      `/support-service/api/admin/notices${queryParams.toString() ? `?${queryParams.toString()}` : ""}`,
+      `/support-service/api/notices${queryParams.toString() ? `?${queryParams.toString()}` : ""}`,
       {},
       true,
     )
@@ -1414,6 +1419,31 @@ export const adminAPI = {
       `/support-service/api/admin/notices/${noticeId}`,
       {
         method: "DELETE",
+      },
+      true,
+    ),
+
+  getNoticeDetail: (noticeId: number) =>
+    fetchAPI<any>(
+      `/support-service/api/admin/notices/${noticeId}`,
+      {},
+      true,
+    ),
+
+  publishNotice: (noticeId: number) =>
+    fetchAPI(
+      `/support-service/api/admin/notices/${noticeId}/publish`,
+      {
+        method: "PATCH",
+      },
+      true,
+    ),
+
+  draftNotice: (noticeId: number) =>
+    fetchAPI(
+      `/support-service/api/admin/notices/${noticeId}/draft`,
+      {
+        method: "PATCH",
       },
       true,
     ),
