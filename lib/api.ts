@@ -118,6 +118,11 @@ async function fetchAPI<T>(
       throw new Error("인증되지 않았습니다")
     }
 
+    if (response.status === 403) {
+      console.error("[v0] 403 Forbidden - insufficient permissions")
+      throw new Error("접근 권한이 없습니다. 관리자 권한이 필요합니다.")
+    }
+
     if (!response.ok) {
       const clonedResponse = response.clone()
       let errorMessage = `${response.statusText}`
@@ -1414,6 +1419,31 @@ export const adminAPI = {
       `/support-service/api/admin/notices/${noticeId}`,
       {
         method: "DELETE",
+      },
+      true,
+    ),
+
+  getNoticeDetail: (noticeId: number) =>
+    fetchAPI<any>(
+      `/support-service/api/admin/notices/${noticeId}`,
+      {},
+      true,
+    ),
+
+  publishNotice: (noticeId: number) =>
+    fetchAPI(
+      `/support-service/api/admin/notices/${noticeId}/publish`,
+      {
+        method: "PATCH",
+      },
+      true,
+    ),
+
+  draftNotice: (noticeId: number) =>
+    fetchAPI(
+      `/support-service/api/admin/notices/${noticeId}/draft`,
+      {
+        method: "PATCH",
       },
       true,
     ),
