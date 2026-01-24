@@ -517,7 +517,7 @@
   - Req: `message:string`
   - Res: `String`
 - **POST /api/ai/descriptions** — 상품 설명 추천
-  - Req: `ProductDescriptionRequest`
+  - Req: `ProductDescriptionRequest { productName:string(필수), specs:map<string,string>(필수), category:string(필수) }`
   - Res: `String`
 - **POST /api/ai/embeddings/reindex** — 임베딩 미생성 건 재색인
   - Res: `Integer`(재색인 개수)

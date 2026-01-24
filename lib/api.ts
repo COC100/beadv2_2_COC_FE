@@ -794,10 +794,9 @@ export const productAPI = {
     ),
 
   generateDescription: (data: {
-    name?: string
-    category?: string
-    specs?: Record<string, string>
-    description?: string
+    name: string
+    category: string
+    specs: Record<string, string>
   }) =>
     fetchAPI<string>(
       "/ai-service/api/ai/descriptions",
@@ -807,7 +806,6 @@ export const productAPI = {
           productName: data.name,
           category: data.category,
           specs: data.specs,
-          description: data.description,
         }),
       },
       true,

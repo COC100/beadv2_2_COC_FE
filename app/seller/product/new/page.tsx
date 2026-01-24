@@ -148,7 +148,6 @@ export default function NewProductPage() {
         name: formData.name,
         category: formData.category,
         specs: specsMap,
-        description: formData.description || undefined,
       })
 
       setFormData({ ...formData, description: result.data })
