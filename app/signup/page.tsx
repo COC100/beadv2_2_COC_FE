@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
@@ -10,9 +9,6 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
-import { memberAPI, authAPI } from "@/lib/api"
-import { useToast } from "@/hooks/use-toast"
-import { handlePhoneInput } from "@/lib/utils"
 import { Check, X } from "lucide-react"
 import {
   AlertDialog,
@@ -23,10 +19,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
+import { AlertPopup } from "@/components/alert-popup"
+import { authAPI, memberAPI } from "@/lib/api"
+import { handlePhoneInput } from "@/lib/utils"
 
 export default function SignupPage() {
   const router = useRouter()
-  const { toast } = useToast()
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -36,6 +34,11 @@ export default function SignupPage() {
   })
   const [agreed, setAgreed] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  const [alert, setAlert] = useState<{ open: boolean; title: string; description: string; variant?: "default" | "destructive" }>({
+    open: false,
+    title: "",
+    description: "",
+  })
   const [errorDialog, setErrorDialog] = useState<{ open: boolean; title: string; message: string }>({
     open: false,
     title: "",
@@ -112,7 +115,8 @@ export default function SignupPage() {
 
   const handleSendVerificationEmail = async () => {
     if (!formData.email) {
-      toast({
+      setAlert({
+        open: true,
         title: "이메일 입력 필요",
         description: "이메일을 먼저 입력해주세요.",
         variant: "destructive",
@@ -127,13 +131,15 @@ export default function SignupPage() {
       setEmailSent(true)
       setResendCooldown(10)
       setTimeRemaining(300) // 5 minutes = 300 seconds
-      toast({
+      setAlert({
+        open: true,
         title: "인증 메일 발송",
         description: "이메일로 인증번호가 발송되었습니다.",
       })
     } catch (error: any) {
       console.error("[v0] Send verification email failed:", error)
-      toast({
+      setAlert({
+        open: true,
         title: "인증 메일 발송 실패",
         description: error.message || "인증 메일 발송에 실패했습니다.",
         variant: "destructive",
@@ -145,7 +151,8 @@ export default function SignupPage() {
 
   const handleConfirmVerificationCode = async () => {
     if (!verificationCode || verificationCode.length !== 6) {
-      toast({
+      setAlert({
+        open: true,
         title: "인증번호 입력 필요",
         description: "6자리 인증번호를 입력해주세요.",
         variant: "destructive",
@@ -166,14 +173,16 @@ export default function SignupPage() {
         setVerificationToken(response.data.verificationToken)
         setVerificationSuccess(true)
         setVerificationError(false)
-        toast({
+        setAlert({
+          open: true,
           title: "이메일 인증 완료",
           description: "이메일 인증이 완료되었습니다.",
         })
       } else {
         setVerificationError(true)
         setVerificationSuccess(false)
-        toast({
+        setAlert({
+          open: true,
           title: "인증 실패",
           description: "인증번호가 일치하지 않습니다.",
           variant: "destructive",
@@ -183,7 +192,8 @@ export default function SignupPage() {
       console.error("[v0] Confirm verification code failed:", error)
       setVerificationError(true)
       setVerificationSuccess(false)
-      toast({
+      setAlert({
+        open: true,
         title: "인증 실패",
         description: error.message || "인증번호 확인에 실패했습니다.",
         variant: "destructive",
@@ -233,12 +243,15 @@ export default function SignupPage() {
         verificationToken: verificationToken,
       })
 
-      toast({
-        title: "회원가입 성공",
-        description: "로그인 페이지로 이동합니다.",
+      setAlert({
+        open: true,
+        title: "회원가입 완료",
+        description: "회원가입이 완료되었습니다. 로그인 페이지로 이동합니다.",
       })
 
-      router.push("/login")
+      setTimeout(() => {
+        router.push("/login")
+      }, 2000)
     } catch (error: any) {
       console.error("[v0] Signup failed:", error)
       const errorTitle = "회원가입 실패"
@@ -511,6 +524,14 @@ export default function SignupPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <AlertPopup
+        open={alert.open}
+        onOpenChange={(open) => setAlert({ ...alert, open })}
+        title={alert.title}
+        description={alert.description}
+        variant={alert.variant}
+      />
     </div>
   )
 }

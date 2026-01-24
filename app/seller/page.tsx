@@ -9,16 +9,20 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { useToast } from "@/hooks/use-toast"
 import { sellerAPI, productAPI } from "@/lib/api"
 import { getUserRoleFromToken } from "@/lib/utils"
 import { useRequireAuth } from "@/hooks/use-auth"
+import { AlertPopup } from "@/components/alert-popup"
 
 export default function SellerPage() {
   useRequireAuth()
 
   const router = useRouter()
-  const { toast } = useToast()
+  const [alert, setAlert] = useState<{ open: boolean; title: string; description: string; variant?: "default" | "destructive" }>({
+    open: false,
+    title: "",
+    description: "",
+  })
   const [isLoading, setIsLoading] = useState(true)
   const [sellerInfo, setSellerInfo] = useState<any>(null)
   const [products, setProducts] = useState<any[]>([])
@@ -34,12 +38,6 @@ export default function SellerPage() {
       const token = localStorage.getItem("accessToken")
       if (!token) {
         router.push("/intro")
-        return
-      }
-
-      const userRole = getUserRoleFromToken()
-      if (userRole === "MEMBER") {
-        router.push("/become-seller")
         return
       }
 
@@ -69,9 +67,10 @@ export default function SellerPage() {
         setIsLoading(false)
       } catch (error: any) {
         console.error("[v0] Failed to load seller data:", error)
-        if (error.message.includes("404") || error.message.includes("Not Found") || error.message.includes("403")) {
+        const status = error.message.match(/\d{3}/)?.[0]
+        if (status === "403" || status === "404") {
           router.push("/become-seller")
-        } else if (error.message.includes("401") || error.message.includes("Unauthorized")) {
+        } else if (status === "401") {
           router.push("/intro")
         } else {
           setIsLoading(false)
@@ -91,13 +90,15 @@ export default function SellerPage() {
 
       if (currentStatus === "ACTIVE") {
         await productAPI.deactivate(productId)
-        toast({
+        setAlert({
+          open: true,
           title: "상태 변경 완료",
           description: "상품이 예약 불가 상태로 변경되었습니다",
         })
       } else {
         await productAPI.activate(productId)
-        toast({
+        setAlert({
+          open: true,
           title: "상태 변경 완료",
           description: "상품이 예약 가능 상태로 변경되었습니다",
         })
@@ -111,14 +112,14 @@ export default function SellerPage() {
 
       console.log("[v0] Fetched products after status change:", productsResponse)
 
-      // fetchAPI returns { data, headers }, so extract data.content
       const productsData = productsResponse.data
       setProducts(productsData?.content || [])
       setTotalPages(productsData?.totalPages || 0)
       setTotalProducts(productsData?.totalElements || 0)
     } catch (error: any) {
       console.error("[v0] Failed to toggle product status:", error)
-      toast({
+      setAlert({
+        open: true,
         title: "상태 변경 실패",
         description: error.message || "상품 상태 변경에 실패했습니다",
         variant: "destructive",
@@ -138,12 +139,12 @@ export default function SellerPage() {
     try {
       await productAPI.delete(productId)
 
-      toast({
+      setAlert({
+        open: true,
         title: "상품 삭제 완료",
         description: "상품이 성공적으로 삭제되었습니다.",
       })
 
-      // Reload products
       const productsResponse = await productAPI.getSellerProducts({
         page: currentPage,
         size: 20,
@@ -157,7 +158,8 @@ export default function SellerPage() {
       setIsLastPage(productsData?.last || false)
     } catch (error: any) {
       console.error("[v0] Failed to delete product:", error)
-      toast({
+      setAlert({
+        open: true,
         title: "상품 삭제 실패",
         description: error.message || "상품 삭제에 실패했습니다.",
         variant: "destructive",
@@ -421,6 +423,14 @@ export default function SellerPage() {
           </TabsContent>
         </Tabs>
       </div>
+
+      <AlertPopup
+        open={alert.open}
+        onOpenChange={(open) => setAlert({ ...alert, open })}
+        title={alert.title}
+        description={alert.description}
+        variant={alert.variant}
+      />
 
       <Footer />
     </div>

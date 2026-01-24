@@ -7,13 +7,17 @@ import { Footer } from "@/components/footer"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { useToast } from "@/hooks/use-toast"
 import { adminAPI } from "@/lib/api"
 import { CheckCircle, XCircle } from "lucide-react"
+import { AlertPopup } from "@/components/alert-popup"
 
 export default function AdminSellersPage() {
   const router = useRouter()
-  const { toast } = useToast()
+  const [alert, setAlert] = useState<{ open: boolean; title: string; description: string; variant?: "default" | "destructive" }>({
+    open: false,
+    title: "",
+    description: "",
+  })
   const [registrations, setRegistrations] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [page, setPage] = useState(0)
@@ -36,7 +40,10 @@ export default function AdminSellersPage() {
       setRegistrations(response.data.content || [])
       setTotalPages(response.data.totalPages || 0)
     } catch (error: any) {
-      router.push("/intro")
+      const status = error.message.match(/\d{3}/)?.[0]
+      if (status === "403") {
+        router.push("/intro")
+      }
     } finally {
       setLoading(false)
     }
@@ -48,14 +55,16 @@ export default function AdminSellersPage() {
     try {
       await adminAPI.approveSeller(memberId)
 
-      toast({
+      setAlert({
+        open: true,
         title: "판매자 승인 완료",
         description: "판매자로 승인되었습니다",
       })
 
       loadRegistrations()
     } catch (error: any) {
-      toast({
+      setAlert({
+        open: true,
         title: "판매자 승인 실패",
         description: error.message,
         variant: "destructive",
@@ -69,14 +78,16 @@ export default function AdminSellersPage() {
     try {
       await adminAPI.rejectSeller(memberId)
 
-      toast({
+      setAlert({
+        open: true,
         title: "판매자 신청 반려",
         description: "판매자 신청이 반려되었습니다",
       })
 
       loadRegistrations()
     } catch (error: any) {
-      toast({
+      setAlert({
+        open: true,
         title: "판매자 신청 반려 실패",
         description: error.message,
         variant: "destructive",
@@ -95,7 +106,7 @@ export default function AdminSellersPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center justify-between flex-wrap gap-4">
+            <CardTitle className="flex items-center justify-between">
               <span>판매자 신청 목록</span>
               <div className="flex gap-2">
                 <Button
@@ -214,6 +225,15 @@ export default function AdminSellersPage() {
           </CardContent>
         </Card>
       </main>
+
+      <AlertPopup
+        open={alert.open}
+        onOpenChange={(open) => setAlert({ ...alert, open })}
+        title={alert.title}
+        description={alert.description}
+        variant={alert.variant}
+      />
+
       <Footer />
     </>
   )

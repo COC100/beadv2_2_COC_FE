@@ -21,9 +21,9 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Store, DollarSign, Shield, TrendingUp } from "lucide-react"
-import { useToast } from "@/hooks/use-toast"
 import { sellerAPI } from "@/lib/api"
 import { handlePhoneInput } from "@/lib/utils"
+import { AlertPopup } from "@/components/alert-popup"
 
 export default function BecomeSellerPage() {
   const [formData, setFormData] = useState({
@@ -34,14 +34,19 @@ export default function BecomeSellerPage() {
   const [agreed, setAgreed] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [showConfirmDialog, setShowConfirmDialog] = useState(false)
+  const [alert, setAlert] = useState<{ open: boolean; title: string; description: string; variant?: "default" | "destructive" }>({
+    open: false,
+    title: "",
+    description: "",
+  })
   const router = useRouter()
-  const { toast } = useToast()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
     if (!agreed) {
-      toast({
+      setAlert({
+        open: true,
         title: "약관 동의 필요",
         description: "판매자 약관에 동의해주세요",
         variant: "destructive",
@@ -62,30 +67,25 @@ export default function BecomeSellerPage() {
         storePhone: formData.phone || undefined,
       })
 
-      const response = await sellerAPI.register({
+      await sellerAPI.register({
         storeName: formData.businessName,
         bizRegNo: formData.businessNumber || undefined,
         storePhone: formData.phone || undefined,
       })
 
-      console.log("[v0] Seller registration response:", response)
-
-      if (response.data && typeof response.data === "string" && response.data.length > 0) {
-        localStorage.setItem("accessToken", response.data)
-        console.log("[v0] Updated accessToken after seller registration")
-      }
-
-      toast({
+      setAlert({
+        open: true,
         title: "판매자 신청 완료",
-        description: "판매자 등록이 완료되었습니다",
+        description: "관리자 승인 후 판매자로 활동할 수 있습니다",
       })
 
       setTimeout(() => {
-        router.push("/seller")
-      }, 500)
+        router.push("/")
+      }, 1500)
     } catch (error: any) {
       console.error("[v0] Seller registration failed:", error)
-      toast({
+      setAlert({
+        open: true,
         title: "판매자 신청 실패",
         description: error.message || "판매자 등록에 실패했습니다",
         variant: "destructive",
@@ -221,7 +221,7 @@ export default function BecomeSellerPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>판매자로 등록하시겠습니까?</AlertDialogTitle>
             <AlertDialogDescription>
-              판매자 등록을 진행합니다. 등록 후 상품을 등록하고 판매할 수 있습니다.
+              판매자 등록을 진행합니다. 등록 후 관리자 승인을 기다려야 합니다.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -232,6 +232,14 @@ export default function BecomeSellerPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <AlertPopup
+        open={alert.open}
+        onOpenChange={(open) => setAlert({ ...alert, open })}
+        title={alert.title}
+        description={alert.description}
+        variant={alert.variant}
+      />
 
       <Footer />
     </div>
