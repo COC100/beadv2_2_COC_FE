@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { useToast } from "@/hooks/use-toast"
-import { memberAPI } from "@/lib/api"
+import { authAPI } from "@/lib/api"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -19,6 +19,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
+
+const memberAPI = authAPI; // Declare memberAPI variable
 
 export default function LoginPage() {
   const [email, setEmail] = useState("")
@@ -37,7 +39,7 @@ export default function LoginPage() {
     setIsLoading(true)
 
     try {
-      const response = await memberAPI.login({ email, password })
+      const response = await authAPI.login({ email, password })
 
       console.log("[v0] Login response:", {
         hasAccessToken: !!response.accessToken,

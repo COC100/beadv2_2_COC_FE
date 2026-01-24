@@ -78,7 +78,7 @@ export default function ProductsPage() {
       if (keyword) params.keyword = keyword
       if (category && category !== "ALL") params.category = category
 
-      const response = await productAPI.list(params)
+      const response = await productAPI.search(params)
       const data = response.data
       console.log("[v0] Products response:", data)
 

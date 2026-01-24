@@ -347,19 +347,25 @@ export const authAPI = {
       headers["ngrok-skip-browser-warning"] = "true"
     }
 
-    await fetch(url, {
+    const response = await fetch(url, {
       method: "POST",
       headers,
       credentials: "include",
     })
 
+    if (!response.ok) {
+      throw new Error("로그아웃 실패")
+    }
+
     if (typeof window !== "undefined") {
       localStorage.removeItem("accessToken")
     }
+
+    return
   },
 
-  sendEmailVerification: (email: string) =>
-    fetchAPI(
+  sendVerificationEmail: (email: string) =>
+    fetchAPI<{ result: string }>(
       "/member-service/api/auth/email/verify/send",
       {
         method: "POST",
@@ -368,18 +374,18 @@ export const authAPI = {
       false,
     ),
 
-  confirmEmailVerification: (data: { email: string; code: string }) =>
+  confirmVerificationCode: (email: string, code: string) =>
     fetchAPI<{ verified: boolean; verificationToken: string }>(
       "/member-service/api/auth/email/verify/confirm",
       {
         method: "POST",
-        body: JSON.stringify(data),
+        body: JSON.stringify({ email, code }),
       },
       false,
     ),
 
-  sendPasswordReset: (email: string) =>
-    fetchAPI(
+  sendPasswordResetEmail: (email: string) =>
+    fetchAPI<void>(
       "/member-service/api/auth/password/reset/send",
       {
         method: "POST",
@@ -388,22 +394,22 @@ export const authAPI = {
       false,
     ),
 
-  confirmPasswordReset: (data: { email: string; code: string }) =>
+  confirmPasswordResetCode: (email: string, code: string) =>
     fetchAPI<{ resetToken: string }>(
       "/member-service/api/auth/password/reset/confirm",
       {
         method: "POST",
-        body: JSON.stringify(data),
+        body: JSON.stringify({ email, code }),
       },
       false,
     ),
 
-  resetPassword: (data: { resetToken: string; newPassword: string }) =>
-    fetchAPI(
+  resetPassword: (resetToken: string, newPassword: string) =>
+    fetchAPI<void>(
       "/member-service/api/auth/password/reset",
       {
         method: "POST",
-        body: JSON.stringify(data),
+        body: JSON.stringify({ resetToken, newPassword }),
       },
       false,
     ),
@@ -421,57 +427,28 @@ export const accountAPI = {
       {
         method: "POST",
         body: JSON.stringify({ amount }),
-      },
-      true,
-    ),
+  },
 
-  requestDeposit: (amount: number) =>
-    fetchAPI(
-      "/account-service/api/deposits/pg/request",
-      {
-        method: "POST",
-        body: JSON.stringify({ amount }),
-      },
-      true,
-    ),
-
-  approveDeposit: (data: { paymentKey: string; orderId: string; amount: number }) =>
-    fetchAPI(
-      "/account-service/api/deposits/pg/approve",
-      {
-        method: "POST",
-        body: JSON.stringify(data),
-      },
-      true,
-    ),
-
-  getDepositConfig: () =>
-    fetchAPI<{ clientKey: string; successUrl: string; failUrl: string }>(
-      "/account-service/api/deposits/pg/config",
-      {},
-      true,
-    ),
-
-  cancelDeposit: (data: { paymentKey: string; orderId: string; amount: number; reason: string }) =>
+  cancelDeposit: (orderId: string) =>
     fetchAPI(
       "/account-service/api/deposits/pg/cancel",
       {
         method: "POST",
-        body: JSON.stringify(data),
+        body: JSON.stringify({ orderId }),
       },
       true,
     ),
 
-  handleDepositFailure: (data: { orderId: string; code: string; message: string }) =>
+  handleFailDeposit: (data: { code: string; message: string; orderId: string }) =>
     fetchAPI(
       "/account-service/api/deposits/pg/payments/fail",
       {
         method: "POST",
         body: JSON.stringify(data),
       },
-      false,
+      true,
     ),
-}
+  }
 
 // Seller Service APIs
 export const sellerAPI = {
