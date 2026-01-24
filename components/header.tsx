@@ -60,7 +60,7 @@ export function Header() {
             <Link href="/products" className="hover:text-primary transition-colors">
               전체상품
             </Link>
-            <Link href={isSeller ? "/seller" : "/become-seller"} className="hover:text-primary transition-colors">
+            <Link href="/seller" className="hover:text-primary transition-colors">
               판매자
             </Link>
             <Link href="/how-it-works" className="hover:text-primary transition-colors">
@@ -161,10 +161,7 @@ export function Header() {
               <Link href="/products" className="hover:text-primary transition-colors py-2">
                 전체상품
               </Link>
-              <Link
-                href={isSeller ? "/seller" : "/become-seller"}
-                className="hover:text-primary transition-colors py-2"
-              >
+              <Link href="/seller" className="hover:text-primary transition-colors py-2">
                 판매자
               </Link>
               <Link href="/how-it-works" className="hover:text-primary transition-colors py-2">
