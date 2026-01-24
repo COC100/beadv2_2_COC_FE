@@ -73,7 +73,6 @@ async function fetchAPI<T>(
       console.log("[v0] 401 Unauthorized - attempting token refresh")
 
       try {
-        // Use shared promise to prevent multiple simultaneous refresh attempts
         if (!isRefreshing) {
           isRefreshing = true
           console.log("[v0] Starting token refresh...")
@@ -98,15 +97,10 @@ async function fetchAPI<T>(
         if (refreshPromise) {
           await refreshPromise
           console.log("[v0] Token refreshed, retrying original request")
-
-          // Retry the original request with new token
           return fetchAPI<T>(endpoint, options, requiresAuth, true)
         }
       } catch (refreshError) {
         console.error("[v0] Token refresh failed:", refreshError)
-        const hasRefreshCookie = document.cookie.split(";").some((cookie) => cookie.trim().startsWith("refreshToken="))
-        console.log("[v0] Has refresh token cookie:", hasRefreshCookie)
-
         if (typeof window !== "undefined") {
           localStorage.removeItem("accessToken")
         }
@@ -154,7 +148,7 @@ async function fetchAPI<T>(
       console.error("[v0] Non-JSON response:", responseText.substring(0, 200))
 
       if (responseText.startsWith("<!DOCTYPE") || responseText.startsWith("<html")) {
-        throw new Error("서버가 HTML 응답을 반환했습니다. ngrok을 사용하는 경우 경고 페이지를 우회해야 합니다.")
+        throw new Error("서버가 HTML 응답을 반환했습니다.")
       }
 
       throw new Error("서버 응답 형식이 올바르지 않습니다")
@@ -167,19 +161,11 @@ async function fetchAPI<T>(
       code: data.code,
       message: data.message,
       dataType: typeof data.data,
-      data: data.data,
     })
 
     return { data: data.data, headers: response.headers }
   } catch (error: any) {
     console.error("[v0] API Error:", error)
-
-    // This was causing false positives with blob URLs and other resource loading
-    // Only actual API server errors (502, 503) will trigger maintenance page
-    if (error instanceof TypeError && error.message === "Failed to fetch") {
-      console.error("[v0] Network error - but not redirecting to maintenance (could be resource loading)")
-    }
-
     throw error
   }
 }
@@ -191,7 +177,7 @@ export const memberAPI = {
     password: string
     name: string
     phone: string
-    verificationToken: string // Added verificationToken parameter
+    verificationToken: string
   }) =>
     fetchAPI(
       "/member-service/api/members/signup",
@@ -201,41 +187,6 @@ export const memberAPI = {
       },
       false,
     ),
-
-  login: async (data: { email: string; password: string }) => {
-    const url = `${API_BASE_URL}/member-service/api/auth/login`
-
-    const headers: HeadersInit = {
-      "Content-Type": "application/json",
-    }
-
-    if (API_BASE_URL.includes("ngrok")) {
-      headers["ngrok-skip-browser-warning"] = "true"
-    }
-
-    const response = await fetch(url, {
-      method: "POST",
-      headers,
-      body: JSON.stringify(data),
-    })
-
-    if (!response.ok) {
-      let errorMessage = `${response.statusText}`
-      try {
-        const errorData = await response.json()
-        errorMessage = errorData.message || errorData.error || errorMessage
-      } catch {
-        // Ignore parsing error
-      }
-      throw new Error(errorMessage)
-    }
-
-    const responseData: ApiResponse<string> = await response.json()
-
-    return {
-      accessToken: responseData.data, // data is now the accessToken string directly
-    }
-  },
 
   getProfile: () => fetchAPI("/member-service/api/members/profile", {}, true),
 
@@ -249,17 +200,14 @@ export const memberAPI = {
       true,
     ),
 
-  updatePassword: (
-    memberId: number,
-    data: {
-      name: string
-      password: string
-      email: string
-      verificationCode: string
-    },
-  ) =>
+  updatePassword: (data: {
+    name: string
+    password: string
+    email: string
+    verificationCode: string
+  }) =>
     fetchAPI(
-      `/member-service/api/members/${memberId}/passwords`,
+      "/member-service/api/members/passwords",
       {
         method: "PATCH",
         body: JSON.stringify(data),
@@ -276,30 +224,19 @@ export const memberAPI = {
       true,
     ),
 
-  requestPasswordReset: (email: string) =>
-    fetchAPI(
-      "/member-service/api/auth/password/reset/send",
-      {
-        method: "POST",
-        body: JSON.stringify({ email }),
-      },
-      false,
-    ),
-
-  confirmPasswordReset: (data: { email: string; code: string; newPassword: string }) =>
-    fetchAPI(
-      "/member-service/api/auth/password/reset/confirm",
-      {
-        method: "POST",
-        body: JSON.stringify(data),
-      },
-      false,
-    ),
-
   // Address APIs
-  getAddresses: () => fetchAPI<{ addressList: any[] }>("/member-service/api/addresses/profile", {}, true),
+  getAddresses: () => fetchAPI<any[]>("/member-service/api/addresses/profile", {}, true),
 
-  createAddress: (data: any) =>
+  createAddress: (data: {
+    addressLabel: string
+    recipientName: string
+    recipientPhone: string
+    type: string
+    postcode: string
+    roadAddress: string
+    detailAddress: string
+    isDefault: boolean
+  }) =>
     fetchAPI(
       "/member-service/api/addresses/profile",
       {
@@ -327,8 +264,100 @@ export const memberAPI = {
       },
       true,
     ),
+}
 
-  // Email Verification APIs
+// Auth APIs
+export const authAPI = {
+  login: async (data: { email: string; password: string }) => {
+    const url = `${API_BASE_URL}/member-service/api/auth/login`
+
+    const headers: HeadersInit = {
+      "Content-Type": "application/json",
+    }
+
+    if (API_BASE_URL.includes("ngrok")) {
+      headers["ngrok-skip-browser-warning"] = "true"
+    }
+
+    const response = await fetch(url, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(data),
+      credentials: "include",
+    })
+
+    if (!response.ok) {
+      let errorMessage = `${response.statusText}`
+      try {
+        const errorData = await response.json()
+        errorMessage = errorData.message || errorData.error || errorMessage
+      } catch {
+        // Ignore parsing error
+      }
+      throw new Error(errorMessage)
+    }
+
+    const responseData: ApiResponse<string> = await response.json()
+
+    return {
+      accessToken: responseData.data,
+    }
+  },
+
+  reissueToken: async () => {
+    const url = `${API_BASE_URL}/member-service/api/auth/reissue`
+
+    const headers: HeadersInit = {
+      "Content-Type": "application/json",
+    }
+
+    if (API_BASE_URL.includes("ngrok")) {
+      headers["ngrok-skip-browser-warning"] = "true"
+    }
+
+    const response = await fetch(url, {
+      method: "POST",
+      headers,
+      credentials: "include",
+    })
+
+    if (!response.ok) {
+      throw new Error("토큰 재발급 실패")
+    }
+
+    const responseData: ApiResponse<string> = await response.json()
+
+    if (typeof window !== "undefined") {
+      localStorage.setItem("accessToken", responseData.data)
+    }
+
+    return {
+      accessToken: responseData.data,
+    }
+  },
+
+  logout: async () => {
+    const url = `${API_BASE_URL}/member-service/api/auth/logout`
+
+    const headers: HeadersInit = {
+      "Content-Type": "application/json",
+    }
+
+    if (API_BASE_URL.includes("ngrok")) {
+      headers["ngrok-skip-browser-warning"] = "true"
+    }
+
+    await fetch(url, {
+      method: "POST",
+      headers,
+      credentials: "include",
+    })
+
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("accessToken")
+    }
+  },
+
   sendEmailVerification: (email: string) =>
     fetchAPI(
       "/member-service/api/auth/email/verify/send",
@@ -340,8 +369,38 @@ export const memberAPI = {
     ),
 
   confirmEmailVerification: (data: { email: string; code: string }) =>
-    fetchAPI<{ verified: boolean }>(
+    fetchAPI<{ verified: boolean; verificationToken: string }>(
       "/member-service/api/auth/email/verify/confirm",
+      {
+        method: "POST",
+        body: JSON.stringify(data),
+      },
+      false,
+    ),
+
+  sendPasswordReset: (email: string) =>
+    fetchAPI(
+      "/member-service/api/auth/password/reset/send",
+      {
+        method: "POST",
+        body: JSON.stringify({ email }),
+      },
+      false,
+    ),
+
+  confirmPasswordReset: (data: { email: string; code: string }) =>
+    fetchAPI<{ resetToken: string }>(
+      "/member-service/api/auth/password/reset/confirm",
+      {
+        method: "POST",
+        body: JSON.stringify(data),
+      },
+      false,
+    ),
+
+  resetPassword: (data: { resetToken: string; newPassword: string }) =>
+    fetchAPI(
+      "/member-service/api/auth/password/reset",
       {
         method: "POST",
         body: JSON.stringify(data),
@@ -355,6 +414,16 @@ export const accountAPI = {
   getBalance: () => fetchAPI<{ balance: number; createdAt: string }>("/account-service/api/accounts/balance", {}, true),
 
   getTransactions: () => fetchAPI<any[]>("/account-service/api/accounts/transactions", {}, true),
+
+  requestWithdrawal: (amount: number) =>
+    fetchAPI(
+      "/account-service/api/accounts/withdrawals",
+      {
+        method: "POST",
+        body: JSON.stringify({ amount }),
+      },
+      true,
+    ),
 
   requestDeposit: (amount: number) =>
     fetchAPI(
@@ -392,11 +461,156 @@ export const accountAPI = {
       },
       true,
     ),
+
+  handleDepositFailure: (data: { orderId: string; code: string; message: string }) =>
+    fetchAPI(
+      "/account-service/api/deposits/pg/payments/fail",
+      {
+        method: "POST",
+        body: JSON.stringify(data),
+      },
+      false,
+    ),
+}
+
+// Seller Service APIs
+export const sellerAPI = {
+  register: async (data: { storeName: string; bizRegNo?: string; storePhone?: string }) => {
+    const result = await fetchAPI(
+      "/seller-service/api/sellers",
+      {
+        method: "POST",
+        body: JSON.stringify(data),
+      },
+      true,
+    )
+    return result
+  },
+
+  getSelf: () => fetchAPI<any>("/seller-service/api/sellers/self", {}, true),
+
+  getDetail: (sellerId: number) => {
+    const hasToken = typeof window !== "undefined" && !!localStorage.getItem("accessToken")
+    return fetchAPI<any>(`/seller-service/api/sellers/${sellerId}`, {}, hasToken)
+  },
+
+  updateSelf: (data: { storeName: string; bizRegNo?: string; storePhone?: string }) =>
+    fetchAPI(
+      "/seller-service/api/sellers/self",
+      {
+        method: "PUT",
+        body: JSON.stringify(data),
+      },
+      true,
+    ),
+
+  getRentals: (params: {
+    productId?: number
+    status: string
+    startDate: string
+    endDate: string
+    page?: number
+    size?: number
+  }) => {
+    const queryParams = new URLSearchParams()
+    if (params.productId) queryParams.append("productId", params.productId.toString())
+    queryParams.append("status", params.status)
+    queryParams.append("startDate", params.startDate)
+    queryParams.append("endDate", params.endDate)
+    if (params.page !== undefined) queryParams.append("page", params.page.toString())
+    if (params.size !== undefined) queryParams.append("size", params.size.toString())
+    
+    return fetchAPI<any[]>(
+      `/seller-service/api/sellers/self/rentals?${queryParams.toString()}`,
+      {},
+      true,
+    )
+  },
+
+  getProductSummary: (productId: number) =>
+    fetchAPI<{ productId: number; productName: string; thumbnailImageUrl: string }>(
+      `/seller-service/api/sellers/products/${productId}`,
+      {},
+      true,
+    ),
+}
+
+// Chat APIs
+export const chatAPI = {
+  createRoom: (data: { sellerId: number; memberId: number }) =>
+    fetchAPI(
+      "/seller-service/api/chat/rooms",
+      {
+        method: "POST",
+        body: JSON.stringify(data),
+      },
+      true,
+    ),
+
+  getRooms: () => fetchAPI<any[]>("/seller-service/api/chat/rooms", {}, true),
+
+  getRoom: (roomId: number) => fetchAPI<any>(`/seller-service/api/chat/rooms/${roomId}`, {}, true),
+
+  getMessages: (roomId: number, params?: { cursorId?: number; size?: number }) => {
+    const queryParams = new URLSearchParams()
+    if (params?.cursorId) queryParams.append("cursorId", params.cursorId.toString())
+    if (params?.size) queryParams.append("size", params.size.toString())
+    
+    return fetchAPI<{ messages: any[]; nextCursorId: number; hasNext: boolean }>(
+      `/seller-service/api/chat/rooms/${roomId}/messages${queryParams.toString() ? `?${queryParams.toString()}` : ""}`,
+      {},
+      true,
+    )
+  },
+
+  leaveRoom: (roomId: number) =>
+    fetchAPI(
+      `/seller-service/api/chat/rooms/${roomId}/leave`,
+      {
+        method: "POST",
+      },
+      true,
+    ),
+}
+
+// Settlement APIs (Seller)
+export const settlementAPI = {
+  getSelfSettlements: (params?: { periodYm?: string; page?: number; size?: number }) => {
+    const queryParams = new URLSearchParams()
+    if (params?.periodYm) queryParams.append("periodYm", params.periodYm)
+    if (params?.page !== undefined) queryParams.append("page", params.page.toString())
+    if (params?.size !== undefined) queryParams.append("size", params.size.toString())
+    
+    return fetchAPI<{
+      content: any[]
+      totalElements: number
+      totalPages: number
+    }>(
+      `/seller-service/api/settlements/sellers/self${queryParams.toString() ? `?${queryParams.toString()}` : ""}`,
+      {},
+      true,
+    )
+  },
+
+  getSettlementDetail: (sellerSettlementId: number) =>
+    fetchAPI<any>(`/seller-service/api/settlements/sellers/self/${sellerSettlementId}`, {}, true),
+
+  getSettlementLines: (sellerSettlementId: number) =>
+    fetchAPI<any[]>(`/seller-service/api/settlements/sellers/self/${sellerSettlementId}/lines`, {}, true),
+
+  cancelSettlement: (sellerSettlementId: number) =>
+    fetchAPI(
+      `/seller-service/api/settlements/sellers/self/${sellerSettlementId}/cancel`,
+      {
+        method: "POST",
+      },
+      true,
+    ),
 }
 
 // Product Service APIs
 export const productAPI = {
-  list: (params?: {
+  search: (params?: {
     keyword?: string
     category?: string
     minPrice?: number
@@ -417,24 +631,82 @@ export const productAPI = {
       })
     }
     const endpoint = `/product-service/api/products/search${queryParams.toString() ? `?${queryParams.toString()}` : ""}`
-    const hasToken = typeof window !== "undefined" && !!localStorage.getItem("accessToken")
     return fetchAPI<{
       products: any[]
       nextCursor: string
       hasNext: boolean
-    }>(endpoint, {}, hasToken)
+    }>(endpoint, {}, false)
+  },
+
+  bulkGet: (productIds: number[]) =>
+    fetchAPI<any[]>(
+      "/product-service/api/products/bulk",
+      {
+        method: "POST",
+        body: JSON.stringify({ productIds }),
+      },
+      false,
+    ),
+
+  getRecentSearches: (size?: number) => {
+    const queryParams = size ? `?size=${size}` : ""
+    return fetchAPI<string[]>(`/product-service/api/products/recent-searches${queryParams}`, {}, true)
+  },
+
+  getPopularKeywords: (params?: { size?: number; startDate?: string; endDate?: string }) => {
+    const queryParams = new URLSearchParams()
+    if (params?.size) queryParams.append("size", params.size.toString())
+    if (params?.startDate) queryParams.append("startDate", params.startDate)
+    if (params?.endDate) queryParams.append("endDate", params.endDate)
+    
+    return fetchAPI<Array<{ keyword: string; count: number }>>(
+      `/product-service/api/products/popular-keywords${queryParams.toString() ? `?${queryParams.toString()}` : ""}`,
+      {},
+      false,
+    )
+  },
+
+  getPopularProducts: (params?: { size?: number; startDate?: string; endDate?: string }) => {
+    const queryParams = new URLSearchParams()
+    if (params?.size) queryParams.append("size", params.size.toString())
+    if (params?.startDate) queryParams.append("startDate", params.startDate)
+    if (params?.endDate) queryParams.append("endDate", params.endDate)
+    
+    return fetchAPI<Array<{ productId: number; productName: string; viewCount: number }>>(
+      `/product-service/api/products/popular-products${queryParams.toString() ? `?${queryParams.toString()}` : ""}`,
+      {},
+      false,
+    )
+  },
+
+  getSellerProducts: (params?: { page?: number; size?: number; sort?: string }) => {
+    const queryParams = new URLSearchParams()
+    if (params?.page !== undefined) queryParams.append("page", params.page.toString())
+    if (params?.size !== undefined) queryParams.append("size", params.size.toString())
+    if (params?.sort) queryParams.append("sort", params.sort)
+    
+    return fetchAPI<{
+      content: any[]
+      totalElements: number
+      totalPages: number
+      number: number
+      size: number
+      first: boolean
+      last: boolean
+    }>(`/product-service/api/products/seller${queryParams.toString() ? `?${queryParams.toString()}` : ""}`, {}, true)
   },
 
   getDetail: (productId: number) => {
-    const hasToken = typeof window !== "undefined" && !!localStorage.getItem("accessToken")
-    return fetchAPI<any>(`/product-service/api/products/${productId}`, {}, hasToken)
+    return fetchAPI<any>(`/product-service/api/products/${productId}`, {}, false)
   },
 
   create: (data: {
     name: string
     description: string
     pricePerDay: number
+    securityDepositAmount?: number
     category: string
+    specs?: Record<string, string>
     images?: string[]
   }) =>
     fetchAPI(
@@ -483,7 +755,7 @@ export const productAPI = {
       true,
     ),
 
-  uploadImage: (file: File, dir?: string) => {
+  uploadImage: async (file: File, dir?: string) => {
     const formData = new FormData()
     formData.append("file", file)
     if (dir) formData.append("dir", dir)
@@ -499,57 +771,25 @@ export const productAPI = {
       headers["ngrok-skip-browser-warning"] = "true"
     }
 
-    return fetch(`${API_BASE_URL}/product-service/api/images/upload`, {
+    const response = await fetch(`${API_BASE_URL}/product-service/api/images/upload`, {
       method: "POST",
       body: formData,
       headers,
+      credentials: "include",
     })
-      .then(async (response) => {
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}))
-          throw new Error(errorData.message || "이미지 업로드에 실패했습니다")
-        }
-        const data: ApiResponse<string> = await response.json()
-        return data.data
-      })
-      .catch((error) => {
-        console.error("[v0] Image upload error:", error)
-        throw error
-      })
-  },
 
-  getSellerProducts: (params?: { page?: number; size?: number; sort?: string }) => {
-    const queryParams = new URLSearchParams()
-    if (params) {
-      if (params.page !== undefined) queryParams.append("page", params.page.toString())
-      if (params.size !== undefined) queryParams.append("size", params.size.toString())
-      if (params.sort) queryParams.append("sort", params.sort)
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}))
+      throw new Error(errorData.message || "이미지 업로드에 실패했습니다")
     }
-    const endpoint = `/product-service/api/products/seller${queryParams.toString() ? `?${queryParams.toString()}` : ""}`
-    return fetchAPI<{
-      content: any[]
-      totalElements: number
-      totalPages: number
-      number: number
-      size: number
-      first: boolean
-      last: boolean
-    }>(endpoint, {}, true)
+
+    const data: ApiResponse<string> = await response.json()
+    return data.data
   },
 }
 
 // Rental Service APIs
 export const rentalAPI = {
-  create: (data: { productId: number; startDate: string; endDate: string }) =>
-    fetchAPI(
-      "/rental-service/api/rentals",
-      {
-        method: "POST",
-        body: JSON.stringify(data),
-      },
-      true,
-    ),
-
   createFromCart: (cartItemIds: number[]) =>
     fetchAPI(
       "/rental-service/api/rentals/carts",
@@ -560,27 +800,14 @@ export const rentalAPI = {
       true,
     ),
 
-  list: (params?: { startDate?: string; endDate?: string; rentalStatus?: string }) => {
-    const queryParams = new URLSearchParams()
-    if (params) {
-      Object.entries(params).forEach(([key, value]) => {
-        if (value) queryParams.append(key, value)
-      })
-    }
-    return fetchAPI<any[]>(
-      `/rental-service/api/rentals${queryParams.toString() ? `?${queryParams.toString()}` : ""}`,
-      {},
+  create: (data: { productId: number; startDate: string; endDate: string }) =>
+    fetchAPI(
+      "/rental-service/api/rentals",
+      {
+        method: "POST",
+        body: JSON.stringify(data),
+      },
       true,
-    )
-  },
-
-  getDetail: (rentalId: number) => fetchAPI<any>(`/rental-service/api/rentals/${rentalId}`, {}, true),
-
-  getUnavailableDates: (productId: number, ym: string) =>
-    fetchAPI<{ productId: number; ym: string; dates: string[] }>(
-      `/rental-service/api/rentals/${productId}/unavailable-dates?ym=${ym}`,
-      {},
-      false,
     ),
 
   accept: (rentalItemId: number) =>
@@ -601,16 +828,23 @@ export const rentalAPI = {
       true,
     ),
 
-  pay: (rentalId: number) => {
-    console.log("[v0] rentalAPI.pay called with rentalId:", rentalId)
-    return fetchAPI<any>(
+  pay: (rentalId: number) =>
+    fetchAPI(
       `/rental-service/api/rentals/${rentalId}/pay`,
       {
         method: "POST",
       },
       true,
-    )
-  },
+    ),
+
+  startRental: (rentalItemId: number) =>
+    fetchAPI(
+      `/rental-service/api/rentals/${rentalItemId}/rent`,
+      {
+        method: "POST",
+      },
+      true,
+    ),
 
   cancel: (rentalItemId: number) =>
     fetchAPI(
@@ -659,35 +893,43 @@ export const rentalAPI = {
       true,
     ),
 
-  // Rental Start API
-  startRental: (rentalItemId: number) =>
-    fetchAPI(
-      `/rental-service/api/rentals/${rentalItemId}/rent`,
-      {
-        method: "POST",
-      },
+  getDetail: (rentalId: number) => fetchAPI<any>(`/rental-service/api/rentals/${rentalId}`, {}, true),
+
+  search: (params?: { startDate?: string; endDate?: string; rentalStatus?: string }) => {
+    const queryParams = new URLSearchParams()
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value) queryParams.append(key, value)
+      })
+    }
+    return fetchAPI<any[]>(
+      `/rental-service/api/rentals${queryParams.toString() ? `?${queryParams.toString()}` : ""}`,
+      {},
       true,
+    )
+  },
+
+  getUnavailableDates: (productId: number, ym: string) =>
+    fetchAPI<{ productId: number; ym: string; unavailableDates: string[] }>(
+      `/rental-service/api/rentals/${productId}/unavailable-dates?ym=${ym}`,
+      {},
+      false,
     ),
 }
 
-// Cart APIs (Rental Service)
+// Cart APIs
 export const cartAPI = {
-  list: () => {
-    console.log("[v0] Cart API: Fetching cart list")
-    return fetchAPI<{ items: any[]; updatedAt: string }>("/rental-service/api/carts", {}, true)
-  },
+  list: () => fetchAPI<{ items: any[]; updatedAt: string }>("/rental-service/api/carts", {}, true),
 
-  addItem: (data: { productId: number; startDate: string; endDate: string }) => {
-    console.log("[v0] Cart API: Adding item with data:", JSON.stringify(data, null, 2))
-    return fetchAPI(
+  addItem: (data: { productId: number; startDate: string; endDate: string }) =>
+    fetchAPI(
       "/rental-service/api/carts/items",
       {
         method: "POST",
         body: JSON.stringify(data),
       },
       true,
-    )
-  },
+    ),
 
   updateItem: (cartItemId: number, data: { startDate: string; endDate: string }) =>
     fetchAPI(
@@ -709,34 +951,21 @@ export const cartAPI = {
     ),
 }
 
-// Seller Service APIs
-export const sellerAPI = {
-  register: async (data: { storeName: string; bizRegNo?: string; storePhone?: string }) => {
-    const result = await fetchAPI(
-      "/seller-service/api/sellers",
+// Review APIs
+export const reviewAPI = {
+  create: (data: { productId: number; rating: number; content: string }) =>
+    fetchAPI(
+      "/rental-service/api/reviews",
       {
         method: "POST",
         body: JSON.stringify(data),
       },
       true,
-    )
+    ),
 
-    // Backend internally calls PATCH /internal/members/{memberId}/role which returns new accessToken
-    // The accessToken is returned in the response body as a String
-    if (typeof result.data === "string" && result.data.length > 0) {
-      // If data is a string token, update localStorage
-      localStorage.setItem("accessToken", result.data)
-      console.log("[v0] Updated accessToken after seller registration")
-    }
-
-    return result
-  },
-
-  getSelf: () => fetchAPI<any>("/seller-service/api/sellers/self", {}, true),
-
-  updateSelf: (data: { storeName: string; bizRegNo?: string; storePhone?: string; status: string }) =>
+  update: (reviewId: number, data: { rating: number; content: string }) =>
     fetchAPI(
-      "/seller-service/api/sellers/self",
+      `/rental-service/api/reviews/${reviewId}`,
       {
         method: "PUT",
         body: JSON.stringify(data),
@@ -744,39 +973,16 @@ export const sellerAPI = {
       true,
     ),
 
-  getRentals: (params?: {
-    productId?: number
-    status?: string
-    startDate?: string
-    endDate?: string
-    page?: number
-    size?: number
-  }) => {
-    const queryParams = new URLSearchParams()
-    if (params) {
-      Object.entries(params).forEach(([key, value]) => {
-        if (value !== undefined && value !== null) {
-          queryParams.append(key, value.toString())
-        }
-      })
-    }
-    const url = `/seller-service/api/sellers/self/rentals${queryParams.toString() ? `?${queryParams.toString()}` : ""}`
-    console.log("[v0] Seller getRentals API URL:", url)
-    console.log("[v0] Seller getRentals params:", params)
-    return fetchAPI<any[]>(url, {}, true)
-  },
-
-  runSettlementBatch: (data: { periodYm: string }) =>
-    fetchAPI<{ id: number; status: string }>(
-      "/seller-service/api/settlements/sellers/self/batches/run",
+  delete: (reviewId: number) =>
+    fetchAPI(
+      `/rental-service/api/reviews/${reviewId}`,
       {
-        method: "POST",
-        body: JSON.stringify(data),
+        method: "DELETE",
       },
       true,
     ),
 
-  getSettlements: (params?: { periodYm?: string; page?: number; size?: number }) => {
+  list: (params?: { productId?: number; memberId?: number; rating?: number; page?: number; size?: number }) => {
     const queryParams = new URLSearchParams()
     if (params) {
       Object.entries(params).forEach(([key, value]) => {
@@ -789,60 +995,114 @@ export const sellerAPI = {
       content: any[]
       totalElements: number
       totalPages: number
-      number: number
-    }>(
-      `/seller-service/api/settlements/sellers/self${queryParams.toString() ? `?${queryParams.toString()}` : ""}`,
-      {},
-      true,
-    )
+    }>(`/rental-service/api/reviews${queryParams.toString() ? `?${queryParams.toString()}` : ""}`, {}, false)
   },
 
-  getSettlementDetail: (sellerSettlementId: number) =>
-    fetchAPI<any>(`/seller-service/api/settlements/sellers/self/${sellerSettlementId}`, {}, true),
+  getMyReviews: (params?: { page?: number; size?: number }) => {
+    const queryParams = new URLSearchParams()
+    if (params?.page !== undefined) queryParams.append("page", params.page.toString())
+    if (params?.size !== undefined) queryParams.append("size", params.size.toString())
+    
+    return fetchAPI<{
+      content: any[]
+      totalElements: number
+      totalPages: number
+    }>(`/rental-service/api/reviews/me${queryParams.toString() ? `?${queryParams.toString()}` : ""}`, {}, true)
+  },
+}
 
-  getSettlementLines: (sellerSettlementId: number) =>
-    fetchAPI<any[]>(`/seller-service/api/settlements/sellers/self/${sellerSettlementId}/lines`, {}, true),
-
-  paySettlement: (sellerSettlementId: number, paidAt?: string) => {
-    const queryParams = paidAt ? `?paidAt=${encodeURIComponent(paidAt)}` : ""
-    return fetchAPI(
-      `/seller-service/api/settlements/sellers/self/${sellerSettlementId}/pay${queryParams}`,
-      {
-        method: "POST",
-      },
-      true,
-    )
+// Support Service APIs - Notices
+export const noticeAPI = {
+  getNotices: (params?: { keyword?: string; page?: number; size?: number; sort?: string }) => {
+    const queryParams = new URLSearchParams()
+    if (params) {
+      if (params.keyword) queryParams.append("keyword", params.keyword)
+      if (params.page !== undefined) queryParams.append("page", params.page.toString())
+      if (params.size !== undefined) queryParams.append("size", params.size.toString())
+      if (params.sort) queryParams.append("sort", params.sort)
+    }
+    return fetchAPI<{
+      content: any[]
+      totalElements: number
+      totalPages: number
+    }>(`/support-service/api/notices${queryParams.toString() ? `?${queryParams.toString()}` : ""}`, {}, false)
   },
 
-  cancelSettlement: (sellerSettlementId: number) =>
+  getNoticeDetail: (noticeId: number) => fetchAPI<any>(`/support-service/api/notices/${noticeId}`, {}, false),
+}
+
+// Support Service APIs - FAQs
+export const faqAPI = {
+  list: (params?: { keyword?: string; category?: string; page?: number; size?: number }) => {
+    const queryParams = new URLSearchParams()
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value) queryParams.append(key, value.toString())
+      })
+    }
+    return fetchAPI<{
+      content: any[]
+      totalElements: number
+      totalPages: number
+    }>(`/support-service/api/faqs${queryParams.toString() ? `?${queryParams.toString()}` : ""}`, {}, false)
+  },
+}
+
+// Support Service APIs - Inquiries
+export const inquiryAPI = {
+  create: (data: { category: string; title: string; content: string }) =>
     fetchAPI(
-      `/seller-service/api/settlements/sellers/self/${sellerSettlementId}/cancel`,
+      "/support-service/api/inquiries",
       {
         method: "POST",
+        body: JSON.stringify(data),
       },
       true,
     ),
 
-  acceptRental: (rentalItemId: number) =>
+  update: (inquiryId: number, data: { category: string; title: string; content: string }) =>
     fetchAPI(
-      `/rental-service/api/rentals/${rentalItemId}/accept`,
+      `/support-service/api/inquiries/${inquiryId}`,
       {
-        method: "PATCH",
+        method: "PUT",
+        body: JSON.stringify(data),
       },
       true,
     ),
 
-  getInfo: async (sellerId: number): Promise<{ data: any; headers: Headers }> => {
-    return fetchAPI(`/seller-service/api/sellers/${sellerId}`, { method: "GET" })
+  delete: (inquiryId: number) =>
+    fetchAPI(
+      `/support-service/api/inquiries/${inquiryId}`,
+      {
+        method: "DELETE",
+      },
+      true,
+    ),
+
+  list: (params?: { status?: string; page?: number; size?: number }) => {
+    const queryParams = new URLSearchParams()
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value) queryParams.append(key, value.toString())
+      })
+    }
+    return fetchAPI<{
+      content: any[]
+      totalElements: number
+      totalPages: number
+    }>(`/support-service/api/inquiries${queryParams.toString() ? `?${queryParams.toString()}` : ""}`, {}, true)
   },
+
+  getDetail: (inquiryId: number) => fetchAPI<any>(`/support-service/api/inquiries/${inquiryId}`, {}, true),
 }
 
 // Admin APIs
 export const adminAPI = {
-  // 블랙리스트 관리 (회원 정보 포함)
-  getBlacklists: (params?: { status?: string; page?: number; size?: number }) => {
+  // Blacklist Management
+  getBlacklists: (params?: { memberId?: number; status?: string; page?: number; size?: number }) => {
     const queryParams = new URLSearchParams()
     if (params) {
+      if (params.memberId) queryParams.append("memberId", params.memberId.toString())
       if (params.status) queryParams.append("status", params.status)
       if (params.page !== undefined) queryParams.append("page", params.page.toString())
       if (params.size !== undefined) queryParams.append("size", params.size.toString())
@@ -851,18 +1111,15 @@ export const adminAPI = {
       content: any[]
       totalElements: number
       totalPages: number
-    }>(`/support-service/api/admin/blacklists${queryParams.toString() ? `?${queryParams.toString()}` : ""}`, {}, true)
+    }>(`/member-service/api/admin/blacklists${queryParams.toString() ? `?${queryParams.toString()}` : ""}`, {}, true)
   },
 
   searchBlacklist: (email: string) =>
-    fetchAPI<any>(`/support-service/api/admin/blacklists/search?email=${encodeURIComponent(email)}`, {}, true),
-
-  getBlacklistDetail: (memberId: number) =>
-    fetchAPI<any>(`/support-service/api/admin/blacklists/${memberId}`, {}, true),
+    fetchAPI<any>(`/member-service/api/admin/blacklists/search?email=${encodeURIComponent(email)}`, {}, true),
 
   addBlacklist: (data: { memberId: number; reason: string; memo?: string }) =>
     fetchAPI(
-      "/support-service/api/admin/blacklists",
+      "/member-service/api/admin/blacklists",
       {
         method: "POST",
         body: JSON.stringify(data),
@@ -870,17 +1127,16 @@ export const adminAPI = {
       true,
     ),
 
-  releaseBlacklist: (memberId: number, data?: { memo?: string }) =>
+  releaseBlacklist: (memberId: number) =>
     fetchAPI(
-      `/support-service/api/admin/blacklists/${memberId}/release`,
+      `/member-service/api/admin/blacklists/${memberId}/release`,
       {
         method: "PATCH",
-        body: JSON.stringify(data || {}),
       },
       true,
     ),
 
-  // 판매자 승인/거절
+  // Seller Management
   getSellerRegistrations: (params?: { status?: string; page?: number; size?: number; sort?: string }) => {
     const queryParams = new URLSearchParams()
     if (params) {
@@ -893,7 +1149,11 @@ export const adminAPI = {
       content: any[]
       totalElements: number
       totalPages: number
-    }>(`/seller-service/api/admin/sellers/registrations${queryParams.toString() ? `?${queryParams.toString()}` : ""}`, {}, true)
+    }>(
+      `/seller-service/api/admin/sellers/registrations${queryParams.toString() ? `?${queryParams.toString()}` : ""}`,
+      {},
+      true,
+    )
   },
 
   approveSeller: (memberId: number) =>
@@ -914,8 +1174,14 @@ export const adminAPI = {
       true,
     ),
 
-  // 정산 관리
-  getSellerSettlements: (params?: { periodYm?: string; sellerId?: number; status?: string; page?: number; size?: number }) => {
+  // Settlement Management
+  getSellerSettlements: (params?: {
+    periodYm?: string
+    sellerId?: number
+    status?: string
+    page?: number
+    size?: number
+  }) => {
     const queryParams = new URLSearchParams()
     if (params) {
       if (params.periodYm) queryParams.append("periodYm", params.periodYm)
@@ -928,10 +1194,14 @@ export const adminAPI = {
       content: any[]
       totalElements: number
       totalPages: number
-    }>(`/seller-service/api/admin/settlements/seller-settlements${queryParams.toString() ? `?${queryParams.toString()}` : ""}`, {}, true)
+    }>(
+      `/seller-service/api/admin/settlements/seller-settlements${queryParams.toString() ? `?${queryParams.toString()}` : ""}`,
+      {},
+      true,
+    )
   },
 
-  paySellerSettlement: (sellerSettlementId: number, paidAt?: string) => {
+  paySettlement: (sellerSettlementId: number, paidAt?: string) => {
     const queryParams = paidAt ? `?paidAt=${encodeURIComponent(paidAt)}` : ""
     return fetchAPI(
       `/seller-service/api/admin/settlements/seller-settlements/${sellerSettlementId}/pay${queryParams}`,
@@ -942,7 +1212,12 @@ export const adminAPI = {
     )
   },
 
-  payBulkSettlements: (data: { sellerId?: number; periodYm?: string; status?: string; paidAt?: string }) =>
+  bulkPaySettlements: (data: {
+    sellerId?: number
+    periodYm?: string
+    status?: string
+    paidAt?: string
+  }) =>
     fetchAPI(
       "/seller-service/api/admin/settlements/seller-settlements/pay-bulk",
       {
@@ -952,7 +1227,13 @@ export const adminAPI = {
       true,
     ),
 
-  runSettlementBatch: (data: { periodYm: string; startDate?: string; endDate?: string; sellerId?: number; pageSize?: number }) =>
+  runSettlementBatch: (data: {
+    periodYm: string
+    startDate?: string
+    endDate?: string
+    sellerId?: number
+    pageSize?: number
+  }) =>
     fetchAPI(
       "/seller-service/api/admin/settlements/batches/run",
       {
@@ -962,25 +1243,60 @@ export const adminAPI = {
       true,
     ),
 
-  // 공지사항 관리
-  getNotices: (params?: { keyword?: string; page?: number; size?: number }) => {
+  // Product Moderation
+  getProductModerations: (params?: {
+    moderationStatus?: string
+    page?: number
+    size?: number
+    sort?: string
+  }) => {
     const queryParams = new URLSearchParams()
     if (params) {
-      if (params.keyword) queryParams.append("keyword", params.keyword)
+      if (params.moderationStatus) queryParams.append("moderationStatus", params.moderationStatus)
       if (params.page !== undefined) queryParams.append("page", params.page.toString())
       if (params.size !== undefined) queryParams.append("size", params.size.toString())
+      if (params.sort) queryParams.append("sort", params.sort)
     }
     return fetchAPI<{
       content: any[]
       totalElements: number
       totalPages: number
-    }>(`/support-service/api/notices${queryParams.toString() ? `?${queryParams.toString()}` : ""}`, {}, false)
+    }>(
+      `/product-service/api/admin/products/moderation-requests${queryParams.toString() ? `?${queryParams.toString()}` : ""}`,
+      {},
+      true,
+    )
   },
 
-  getNoticeDetail: (noticeId: number) =>
-    fetchAPI<any>(`/support-service/api/notices/${noticeId}`, {}, false),
+  createProductModerationRequest: (productId: number) =>
+    fetchAPI(
+      `/product-service/api/admin/products/${productId}/moderation-requests`,
+      {
+        method: "POST",
+      },
+      true,
+    ),
 
-  createNotice: (data: { title: string; content: string; pinned?: boolean; status?: string; displayStartAt?: string; displayEndAt?: string }) =>
+  // Notice Management
+  getNotices: (params?: { page?: number; size?: number; sort?: string }) => {
+    const queryParams = new URLSearchParams()
+    if (params) {
+      if (params.page !== undefined) queryParams.append("page", params.page.toString())
+      if (params.size !== undefined) queryParams.append("size", params.size.toString())
+      if (params.sort) queryParams.append("sort", params.sort)
+    }
+    return fetchAPI<{
+      content: any[]
+      totalElements: number
+      totalPages: number
+    }>(
+      `/support-service/api/admin/notices${queryParams.toString() ? `?${queryParams.toString()}` : ""}`,
+      {},
+      true,
+    )
+  },
+
+  createNotice: (data: { title: string; content: string; pinned: boolean; status: string }) =>
     fetchAPI(
       "/support-service/api/admin/notices",
       {
@@ -990,11 +1306,11 @@ export const adminAPI = {
       true,
     ),
 
-  updateNotice: (noticeId: number, data: { title?: string; content?: string; pinned?: boolean; displayStartAt?: string; displayEndAt?: string }) =>
+  updateNotice: (noticeId: number, data: { title: string; content: string; pinned: boolean; status: string }) =>
     fetchAPI(
       `/support-service/api/admin/notices/${noticeId}`,
       {
-        method: "PATCH",
+        method: "PUT",
         body: JSON.stringify(data),
       },
       true,
@@ -1009,221 +1325,26 @@ export const adminAPI = {
       true,
     ),
 
-  publishNotice: (noticeId: number) =>
-    fetchAPI(
-      `/support-service/api/admin/notices/${noticeId}/publish`,
-      {
-        method: "PATCH",
-      },
-      true,
-    ),
-
-  draftNotice: (noticeId: number) =>
-    fetchAPI(
-      `/support-service/api/admin/notices/${noticeId}/draft`,
-      {
-        method: "PATCH",
-      },
-      true,
-    ),
-
-  // 상품 검수 관리
-  getProductModerationRequests: (params?: { moderationStatus?: string; page?: number; size?: number; sort?: string }) => {
+  // FAQ Management
+  getFAQs: (params?: { page?: number; size?: number }) => {
     const queryParams = new URLSearchParams()
-    if (params) {
-      if (params.moderationStatus) queryParams.append("moderationStatus", params.moderationStatus)
-      if (params.page !== undefined) queryParams.append("page", params.page.toString())
-      if (params.size !== undefined) queryParams.append("size", params.size.toString())
-      if (params.sort) queryParams.append("sort", params.sort)
-    }
+    if (params?.page !== undefined) queryParams.append("page", params.page.toString())
+    if (params?.size !== undefined) queryParams.append("size", params.size.toString())
+    
     return fetchAPI<{
       content: any[]
       totalElements: number
       totalPages: number
-    }>(`/product-service/api/admin/products/moderation-requests${queryParams.toString() ? `?${queryParams.toString()}` : ""}`, {}, true)
-  },
-
-  createProductModerationRequest: (productId: number) =>
-    fetchAPI(
-      `/product-service/api/admin/products/${productId}/moderation-requests`,
-      {
-        method: "POST",
-      },
-      true,
-    ),
-}
-
-// 공지사항 API
-export const noticeAPI = {
-  getNotices: (params?: { keyword?: string; page?: number; size?: number; sort?: string }) => {
-    const queryParams = new URLSearchParams()
-    if (params) {
-      if (params.keyword) queryParams.append("keyword", params.keyword)
-      if (params.page !== undefined) queryParams.append("page", params.page.toString())
-      if (params.size !== undefined) queryParams.append("size", params.size.toString())
-      if (params.sort) queryParams.append("sort", params.sort)
-    }
-    return fetchAPI<{
-      content: any[]
-      totalElements: number
-      totalPages: number
-    }>(`/support-service/api/notices${queryParams.toString() ? `?${queryParams.toString()}` : ""}`)
-  },
-
-  getNoticeDetail: (noticeId: number) =>
-    fetchAPI<any>(`/support-service/api/notices/${noticeId}`),
-}
-
-// Auth Service APIs
-export const authAPI = {
-  // Email verification for signup
-  sendVerificationEmail: (email: string) =>
-    fetchAPI(
-      "/member-service/api/auth/email/verify/send",
-      {
-        method: "POST",
-        body: JSON.stringify({ email }),
-      },
-      false,
-    ),
-
-  confirmVerificationCode: (email: string, code: string) =>
-    fetchAPI<{ verified: boolean; verificationToken: string }>(
-      "/member-service/api/auth/email/verify/confirm",
-      {
-        method: "POST",
-        body: JSON.stringify({ email, code }),
-      },
-      false,
-    ),
-
-  reissueToken: async () => {
-    const url = `${API_BASE_URL}/member-service/api/auth/reissue`
-
-    console.log("[v0] Reissue token request to:", url)
-
-    const headers: HeadersInit = {
-      "Content-Type": "application/json",
-    }
-
-    if (API_BASE_URL.includes("ngrok")) {
-      headers["ngrok-skip-browser-warning"] = "true"
-    }
-
-    console.log("[v0] Current cookies:", document.cookie)
-
-    // Cookie with refresh token is automatically sent by browser
-    const response = await fetch(url, {
-      method: "POST",
-      headers,
-      credentials: "include", // Include cookies
-    })
-
-    console.log("[v0] Reissue response status:", response.status)
-
-    if (!response.ok) {
-      let errorMessage = `${response.statusText}`
-      try {
-        const errorData = await response.json()
-        console.error("[v0] Reissue error data:", errorData)
-        errorMessage = errorData.message || errorData.error || errorMessage
-      } catch {
-        console.error("[v0] Failed to parse reissue error response")
-      }
-      throw new Error(errorMessage)
-    }
-
-    const responseData: ApiResponse<string> = await response.json()
-    console.log("[v0] Reissue response data received")
-
-    // Update accessToken in localStorage
-    if (responseData.data) {
-      localStorage.setItem("accessToken", responseData.data)
-      console.log("[v0] Reissued accessToken saved to localStorage")
-    } else {
-      console.error("[v0] No accessToken in reissue response")
-    }
-
-    return {
-      accessToken: responseData.data,
-    }
-  },
-
-  logout: async () => {
-    const url = `${API_BASE_URL}/member-service/api/auth/logout`
-
-    const headers: HeadersInit = {
-      "Content-Type": "application/json",
-    }
-
-    if (API_BASE_URL.includes("ngrok")) {
-      headers["ngrok-skip-browser-warning"] = "true"
-    }
-
-    await fetch(url, {
-      method: "POST",
-      headers,
-      credentials: "include",
-    })
-
-    // Clear local storage
-    localStorage.removeItem("accessToken")
-  },
-}
-
-// Review Service APIs
-export const reviewAPI = {
-  create: async (data: {
-    rentalItemId: number
-    sellerId: number
-    rating: number
-    content: string
-  }): Promise<{ data: any; headers: Headers }> => {
-    return fetchAPI("/review-service/api/reviews", {
-      method: "POST",
-      body: JSON.stringify(data),
-    })
-  },
-
-  update: async (
-    reviewId: number,
-    data: { rating?: number; content?: string },
-  ): Promise<{ data: any; headers: Headers }> => {
-    return fetchAPI(`/review-service/api/reviews/${reviewId}`, {
-      method: "PATCH",
-      body: JSON.stringify(data),
-    })
-  },
-
-  delete: async (reviewId: number): Promise<{ data: any; headers: Headers }> => {
-    return fetchAPI(`/review-service/api/reviews/${reviewId}`, { method: "DELETE" })
-  },
-
-  list: async (sellerId: number): Promise<{ data: any; headers: Headers }> => {
-    return fetchAPI(`/review-service/api/reviews?sellerId=${sellerId}`, { method: "GET" })
-  },
-
-  myReviews: async (): Promise<{ data: any; headers: Headers }> => {
-    return fetchAPI("/review-service/api/reviews/me", { method: "GET" }, true)
-  },
-
-  getSummary: async (sellerId: number): Promise<{ data: any; headers: Headers }> => {
-    return fetchAPI(`/review-service/api/reviews/summary?sellerId=${sellerId}`, { method: "GET" })
-  },
-}
-
-// Delivery Service APIs
-export const deliveryAPI = {
-  // 배송 등록
-  register: (data: { rentalItemId: number; carrierCode: string; trackingNumber: string }) =>
-    fetchAPI<{
-      deliveryId: number
-      rentalItemId: number
-      carrierCode: string
-      trackingNumber: string
-      status: string
     }>(
-      "/delivery-service/api/deliveries",
+      `/support-service/api/admin/faqs${queryParams.toString() ? `?${queryParams.toString()}` : ""}`,
+      {},
+      true,
+    )
+  },
+
+  createFAQ: (data: { category: string; question: string; answer: string }) =>
+    fetchAPI(
+      "/support-service/api/admin/faqs",
       {
         method: "POST",
         body: JSON.stringify(data),
@@ -1231,19 +1352,101 @@ export const deliveryAPI = {
       true,
     ),
 
-  // 배송 조회 (deliveryId로)
-  getDetail: (deliveryId: number) => fetchAPI<any>(`/delivery-service/api/deliveries/${deliveryId}`, {}, true),
+  updateFAQ: (faqId: number, data: { category: string; question: string; answer: string }) =>
+    fetchAPI(
+      `/support-service/api/admin/faqs/${faqId}`,
+      {
+        method: "PUT",
+        body: JSON.stringify(data),
+      },
+      true,
+    ),
 
-  // 대여 아이템 배송 단건 조회 (rentalItemId로)
+  deleteFAQ: (faqId: number) =>
+    fetchAPI(
+      `/support-service/api/admin/faqs/${faqId}`,
+      {
+        method: "DELETE",
+      },
+      true,
+    ),
+
+  // Inquiry Management
+  getInquiries: (params?: { status?: string; page?: number; size?: number }) => {
+    const queryParams = new URLSearchParams()
+    if (params) {
+      if (params.status) queryParams.append("status", params.status)
+      if (params.page !== undefined) queryParams.append("page", params.page.toString())
+      if (params.size !== undefined) queryParams.append("size", params.size.toString())
+    }
+    return fetchAPI<{
+      content: any[]
+      totalElements: number
+      totalPages: number
+    }>(
+      `/support-service/api/admin/inquiries${queryParams.toString() ? `?${queryParams.toString()}` : ""}`,
+      {},
+      true,
+    )
+  },
+
+  getInquiryDetail: (inquiryId: number) =>
+    fetchAPI<any>(`/support-service/api/admin/inquiries/${inquiryId}`, {}, true),
+
+  answerInquiry: (inquiryId: number, data: { answer: string }) =>
+    fetchAPI(
+      `/support-service/api/admin/inquiries/${inquiryId}/answer`,
+      {
+        method: "POST",
+        body: JSON.stringify(data),
+      },
+      true,
+    ),
+}
+
+// Delivery APIs (Support Service)
+export const deliveryAPI = {
+  register: (data: { rentalItemId: number; carrierCode: string; trackingNumber: string }) =>
+    fetchAPI(
+      "/support-service/api/deliveries",
+      {
+        method: "POST",
+        body: JSON.stringify(data),
+      },
+      true,
+    ),
+
+  update: (rentalItemId: number, data: { carrierCode: string; trackingNumber: string }) =>
+    fetchAPI(
+      `/support-service/api/deliveries/${rentalItemId}`,
+      {
+        method: "PATCH",
+        body: JSON.stringify(data),
+      },
+      true,
+    ),
+
+  getById: (deliveryId: number) =>
+    fetchAPI<any>(`/support-service/api/deliveries/${deliveryId}`, {}, true),
+
   getByRentalItem: (rentalItemId: number) =>
-    fetchAPI<{
-      deliveryId: number
-      rentalItemId: number
-      carrierCode: string
-      trackingNumber: string
-      status: string
-      statusRaw: string
-      createdAt: string
-      updatedAt: string
-    }>(`/delivery-service/api/deliveries/rental-items/${rentalItemId}`, {}, true),
+    fetchAPI<any>(`/support-service/api/deliveries/rental-items/${rentalItemId}`, {}, true),
+}
+
+// AI Service APIs
+export const aiAPI = {
+  generateProductDescription: (data: { name: string; category: string; specs?: Record<string, string> }) =>
+    fetchAPI(
+      "/ai-service/api/ai/products/generate-description",
+      {
+        method: "POST",
+        body: JSON.stringify(data),
+      },
+      true,
+    ),
+
+  getRecommendations: (params?: { limit?: number }) => {
+    const queryParams = params?.limit ? `?limit=${params.limit}` : ""
+    return fetchAPI<any[]>(`/ai-service/api/ai/products/recommendations${queryParams}`, {}, true)
+  },
 }
