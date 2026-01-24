@@ -89,10 +89,10 @@ export default function HomePage() {
     }
 
     const fetchProducts = async () => {
-      try {
-        setLoading(true)
-        const response = await productAPI.list({ size: 8, sortType: "LATEST" })
-        console.log("[v0] Products API response:", response)
+    try {
+      setLoading(true)
+      const response = await productAPI.search({ size: 8, sortType: "LATEST" })
+      console.log("[v0] Products API response:", response)
 
         const productsData = response.data?.products || []
         console.log("[v0] Products data:", productsData)

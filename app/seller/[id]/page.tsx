@@ -56,7 +56,7 @@ export default function SellerProfilePage({ params }: { params: { id: string } }
         const sellerResponse = await sellerAPI.getInfo(sellerId)
         setSeller(sellerResponse.data)
 
-        const productsResponse = await productAPI.list({ sellerId, size: 20 })
+        const productsResponse = await productAPI.search({ sellerId, size: 20 })
         setProducts(productsResponse.data.products || [])
 
         // Load seller reviews
