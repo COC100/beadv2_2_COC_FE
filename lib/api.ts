@@ -427,7 +427,9 @@ export const accountAPI = {
       {
         method: "POST",
         body: JSON.stringify({ amount }),
-  },
+      },
+      true,
+    ),
 
   cancelDeposit: (orderId: string) =>
     fetchAPI(
