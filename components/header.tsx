@@ -9,22 +9,14 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "@/compon
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Separator } from "@/components/ui/separator"
 import { getUserRoleFromToken } from "@/lib/utils"
-
-interface Notification {
-  id: number
-  title: string
-  message: string
-  time: string
-  isRead: boolean
-  type: "rental" | "payment" | "system"
-}
+import { useNotifications } from "@/hooks/use-notifications"
 
 export function Header() {
   const router = useRouter()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [isSeller, setIsSeller] = useState(false)
-  const [notifications, setNotifications] = useState<Notification[]>([])
+  const { notifications, unreadCount, isConnected, markAsRead, markAllAsRead } = useNotifications()
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -37,16 +29,6 @@ export function Header() {
       }
     }
   }, [])
-
-  const unreadCount = notifications.filter((n) => !n.isRead).length
-
-  const markAsRead = (id: number) => {
-    setNotifications(notifications.map((n) => (n.id === id ? { ...n, isRead: true } : n)))
-  }
-
-  const markAllAsRead = () => {
-    setNotifications(notifications.map((n) => ({ ...n, isRead: true })))
-  }
 
   return (
     <header className={`border-b bg-white sticky top-0 z-50`}>
@@ -102,28 +84,58 @@ export function Header() {
                   <Separator />
                   <ScrollArea className="h-[400px]">
                     {notifications.length === 0 ? (
-                      <div className="p-8 text-center text-sm text-muted-foreground">알림이 없습니다</div>
+                      <div className="p-8 text-center">
+                        <p className="text-sm text-muted-foreground">알림이 없습니다</p>
+                        {isConnected && (
+                          <p className="text-xs text-green-600 mt-2">실시간 알림 연결됨</p>
+                        )}
+                      </div>
                     ) : (
                       <div className="py-2">
                         {notifications.map((notification) => (
                           <div key={notification.id}>
-                            <button
-                              className={`w-full text-left px-4 py-3 hover:bg-muted/50 transition-colors ${
-                                !notification.isRead ? "bg-blue-50/50" : ""
-                              }`}
-                              onClick={() => markAsRead(notification.id)}
-                            >
-                              <div className="flex items-start gap-3">
-                                <div className="flex-1 min-w-0">
-                                  <div className="flex items-center gap-2 mb-1">
-                                    <p className="font-medium text-sm">{notification.title}</p>
-                                    {!notification.isRead && <span className="w-2 h-2 bg-red-500 rounded-full" />}
+                            {notification.link ? (
+                              <Link
+                                href={notification.link}
+                                className={`block w-full text-left px-4 py-3 hover:bg-muted/50 transition-colors ${
+                                  !notification.isRead ? "bg-blue-50/50" : ""
+                                }`}
+                                onClick={() => markAsRead(notification.id)}
+                              >
+                                <div className="flex items-start gap-3">
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2 mb-1">
+                                      <p className="font-medium text-sm">{notification.title}</p>
+                                      {!notification.isRead && <span className="w-2 h-2 bg-red-500 rounded-full" />}
+                                    </div>
+                                    <p className="text-xs text-muted-foreground line-clamp-2">{notification.message}</p>
+                                    <p className="text-xs text-muted-foreground mt-1">
+                                      {new Date(notification.createdAt).toLocaleString("ko-KR")}
+                                    </p>
                                   </div>
-                                  <p className="text-xs text-muted-foreground line-clamp-2">{notification.message}</p>
-                                  <p className="text-xs text-muted-foreground mt-1">{notification.time}</p>
                                 </div>
-                              </div>
-                            </button>
+                              </Link>
+                            ) : (
+                              <button
+                                className={`w-full text-left px-4 py-3 hover:bg-muted/50 transition-colors ${
+                                  !notification.isRead ? "bg-blue-50/50" : ""
+                                }`}
+                                onClick={() => markAsRead(notification.id)}
+                              >
+                                <div className="flex items-start gap-3">
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2 mb-1">
+                                      <p className="font-medium text-sm">{notification.title}</p>
+                                      {!notification.isRead && <span className="w-2 h-2 bg-red-500 rounded-full" />}
+                                    </div>
+                                    <p className="text-xs text-muted-foreground line-clamp-2">{notification.message}</p>
+                                    <p className="text-xs text-muted-foreground mt-1">
+                                      {new Date(notification.createdAt).toLocaleString("ko-KR")}
+                                    </p>
+                                  </div>
+                                </div>
+                              </button>
+                            )}
                             <Separator />
                           </div>
                         ))}
