@@ -1,0 +1,399 @@
+"use client"
+
+import { useEffect, useState } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Loader2, Check, X } from "lucide-react"
+import { authAPI } from "@/lib/api"
+import { handlePhoneInput } from "@/lib/utils"
+import { useToast } from "@/hooks/use-toast"
+import Link from "next/link"
+
+export default function OAuth2CallbackPage() {
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const { toast } = useToast()
+  
+  const [status, setStatus] = useState<"loading" | "signup_required" | "success" | "error">("loading")
+  const [signupToken, setSignupToken] = useState<string>("")
+  const [formData, setFormData] = useState({
+    email: "",
+    phone: "",
+  })
+  const [verificationCode, setVerificationCode] = useState("")
+  const [verificationToken, setVerificationToken] = useState("")
+  const [isEmailVerified, setIsEmailVerified] = useState(false)
+  const [emailSent, setEmailSent] = useState(false)
+  const [isVerificationSending, setIsVerificationSending] = useState(false)
+  const [isVerificationConfirming, setIsVerificationConfirming] = useState(false)
+  const [verificationError, setVerificationError] = useState(false)
+  const [verificationSuccess, setVerificationSuccess] = useState(false)
+  const [resendCooldown, setResendCooldown] = useState(0)
+  const [timeRemaining, setTimeRemaining] = useState(0)
+  const [isLoading, setIsLoading] = useState(false)
+
+  useEffect(() => {
+    const statusParam = searchParams.get("status")
+    const tokenParam = searchParams.get("token")
+
+    console.log("[v0] OAuth2 Callback:", { statusParam, tokenParam })
+
+    if (statusParam === "signup_required" && tokenParam) {
+      setStatus("signup_required")
+      setSignupToken(tokenParam)
+    } else if (statusParam === "success") {
+      setStatus("success")
+      toast({
+        title: "로그인 성공",
+        description: "환영합니다!",
+      })
+      setTimeout(() => {
+        router.push("/")
+      }, 1500)
+    } else {
+      setStatus("error")
+    }
+  }, [searchParams, router, toast])
+
+  useEffect(() => {
+    if (timeRemaining > 0) {
+      const timer = setInterval(() => {
+        setTimeRemaining((prev) => {
+          if (prev <= 1) {
+            clearInterval(timer)
+            return 0
+          }
+          return prev - 1
+        })
+      }, 1000)
+      return () => clearInterval(timer)
+    }
+  }, [timeRemaining])
+
+  useEffect(() => {
+    if (resendCooldown > 0) {
+      const timer = setInterval(() => {
+        setResendCooldown((prev) => {
+          if (prev <= 1) {
+            clearInterval(timer)
+            return 0
+          }
+          return prev - 1
+        })
+      }, 1000)
+      return () => clearInterval(timer)
+    }
+  }, [resendCooldown])
+
+  const handleSendVerificationEmail = async () => {
+    if (!formData.email) {
+      toast({
+        title: "이메일 입력 필요",
+        description: "이메일을 먼저 입력해주세요.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    setIsVerificationSending(true)
+    try {
+      await authAPI.sendVerificationEmail(formData.email)
+      setEmailSent(true)
+      setResendCooldown(10)
+      setTimeRemaining(300)
+      toast({
+        title: "인증 메일 발송",
+        description: "이메일로 인증번호가 발송되었습니다.",
+      })
+    } catch (error: any) {
+      toast({
+        title: "인증 메일 발송 실패",
+        description: error.message || "인증 메일 발송에 실패했습니다.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsVerificationSending(false)
+    }
+  }
+
+  const handleConfirmVerificationCode = async () => {
+    if (!verificationCode || verificationCode.length !== 6) {
+      toast({
+        title: "인증번호 입력 필요",
+        description: "6자리 인증번호를 입력해주세요.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    setIsVerificationConfirming(true)
+    setVerificationError(false)
+    setVerificationSuccess(false)
+
+    try {
+      const response = await authAPI.confirmVerificationCode(formData.email, verificationCode)
+
+      if (response.data.verified && response.data.verificationToken) {
+        setIsEmailVerified(true)
+        setVerificationToken(response.data.verificationToken)
+        setVerificationSuccess(true)
+        toast({
+          title: "이메일 인증 완료",
+          description: "이메일 인증이 완료되었습니다.",
+        })
+      } else {
+        setVerificationError(true)
+        toast({
+          title: "인증 실패",
+          description: "인증번호가 일치하지 않습니다.",
+          variant: "destructive",
+        })
+      }
+    } catch (error: any) {
+      setVerificationError(true)
+      toast({
+        title: "인증 실패",
+        description: error.message || "인증번호 확인에 실패했습니다.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsVerificationConfirming(false)
+    }
+  }
+
+  const handleOAuth2Signup = async (e: React.FormEvent) => {
+    e.preventDefault()
+
+    if (!isEmailVerified || !verificationToken) {
+      toast({
+        title: "이메일 인증 필요",
+        description: "이메일 인증을 완료해주세요.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    setIsLoading(true)
+    try {
+      const response = await authAPI.oauth2Signup({
+        signupToken,
+        email: formData.email,
+        phone: formData.phone,
+        verificationToken,
+      })
+
+      localStorage.setItem("accessToken", response.accessToken)
+
+      toast({
+        title: "회원가입 완료",
+        description: "환영합니다! 메인 페이지로 이동합니다.",
+      })
+
+      setTimeout(() => {
+        router.push("/")
+      }, 1500)
+    } catch (error: any) {
+      console.error("[v0] OAuth2 Signup failed:", error)
+      toast({
+        title: "회원가입 실패",
+        description: error.message || "회원가입에 실패했습니다.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60)
+    const secs = seconds % 60
+    return `${mins}:${secs.toString().padStart(2, "0")}`
+  }
+
+  if (status === "loading") {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center p-4">
+        <Card className="w-full max-w-md">
+          <CardContent className="pt-6 flex flex-col items-center gap-4">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <p className="text-muted-foreground">로그인 처리 중...</p>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  if (status === "success") {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center p-4">
+        <Card className="w-full max-w-md">
+          <CardContent className="pt-6 flex flex-col items-center gap-4">
+            <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center">
+              <Check className="h-6 w-6 text-green-600" />
+            </div>
+            <p className="text-lg font-semibold">로그인 성공!</p>
+            <p className="text-muted-foreground">메인 페이지로 이동합니다...</p>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  if (status === "error") {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center p-4">
+        <Card className="w-full max-w-md">
+          <CardContent className="pt-6 flex flex-col items-center gap-4">
+            <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center">
+              <X className="h-6 w-6 text-red-600" />
+            </div>
+            <p className="text-lg font-semibold">로그인 실패</p>
+            <p className="text-muted-foreground">잘못된 요청입니다.</p>
+            <Button onClick={() => router.push("/login")}>로그인 페이지로 돌아가기</Button>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center p-4">
+      <div className="w-full max-w-md">
+        <div className="text-center mb-8">
+          <Link href="/" className="text-4xl font-bold text-primary">
+            Modi
+          </Link>
+          <p className="text-muted-foreground mt-2">전자기기 렌탈 플랫폼</p>
+        </div>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>추가 정보 입력</CardTitle>
+            <CardDescription>회원가입을 완료하기 위해 추가 정보를 입력해주세요</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleOAuth2Signup} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="email">
+                  이메일 <span className="text-destructive">*</span>
+                </Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="user@example.com"
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    disabled={isEmailVerified}
+                    required
+                    className="flex-1"
+                  />
+                  <Button
+                    type="button"
+                    onClick={handleSendVerificationEmail}
+                    disabled={!formData.email || isVerificationSending || resendCooldown > 0 || isEmailVerified}
+                    variant="outline"
+                  >
+                    {isVerificationSending ? "전송 중..." : emailSent ? "재발송" : "인증 메일"}
+                  </Button>
+                </div>
+              </div>
+
+              {emailSent && !isEmailVerified && (
+                <div className="space-y-2">
+                  <Label htmlFor="verificationCode">
+                    인증번호 <span className="text-destructive">*</span>
+                  </Label>
+                  <div className="relative flex gap-2">
+                    <div className="relative flex-1">
+                      <Input
+                        id="verificationCode"
+                        type="text"
+                        placeholder="6자리 인증번호"
+                        value={verificationCode}
+                        onChange={(e) => {
+                          setVerificationCode(e.target.value.replace(/\D/g, "").slice(0, 6))
+                          setVerificationError(false)
+                          setVerificationSuccess(false)
+                        }}
+                        maxLength={6}
+                        required
+                        className="pr-16"
+                      />
+                      {timeRemaining > 0 && (
+                        <div className="absolute right-3 top-1/2 -translate-y-1/2 text-sm font-semibold text-blue-600">
+                          {formatTime(timeRemaining)}
+                        </div>
+                      )}
+                      {timeRemaining === 0 && (
+                        <div className="absolute right-3 top-1/2 -translate-y-1/2 text-sm font-semibold text-destructive">
+                          만료됨
+                        </div>
+                      )}
+                    </div>
+                    <Button
+                      type="button"
+                      onClick={handleConfirmVerificationCode}
+                      disabled={verificationCode.length !== 6 || isVerificationConfirming || timeRemaining === 0}
+                      variant="outline"
+                    >
+                      {isVerificationConfirming ? "확인 중..." : "인증 확인"}
+                    </Button>
+                  </div>
+                  {verificationError && verificationCode.length === 6 && (
+                    <p className="text-sm text-destructive flex items-center gap-1">
+                      <X className="h-4 w-4" />
+                      인증번호가 일치하지 않습니다
+                    </p>
+                  )}
+                  {verificationSuccess && (
+                    <p className="text-sm text-green-600 flex items-center gap-1">
+                      <Check className="h-4 w-4" />
+                      인증번호 확인 완료
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {isEmailVerified && (
+                <p className="text-sm text-green-600 flex items-center gap-1">
+                  <Check className="h-4 w-4" />
+                  이메일 인증 완료
+                </p>
+              )}
+
+              <div className="space-y-2">
+                <Label htmlFor="phone">
+                  전화번호 <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="phone"
+                  type="tel"
+                  placeholder="010-1234-5678"
+                  value={formData.phone}
+                  onChange={(e) => {
+                    const formatted = handlePhoneInput(e.target.value)
+                    setFormData({ ...formData, phone: formatted })
+                  }}
+                  required
+                />
+              </div>
+
+              <Button
+                type="submit"
+                className="w-full"
+                size="lg"
+                disabled={!formData.email || !formData.phone || !isEmailVerified || isLoading}
+              >
+                {isLoading ? "가입 중..." : "회원가입 완료"}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  )
+}

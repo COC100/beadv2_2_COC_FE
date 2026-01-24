@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Separator } from "@/components/ui/separator"
-import { Check, X } from "lucide-react"
+import { Check, X, ArrowLeft } from "lucide-react"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -28,6 +28,7 @@ import { useToast } from "@/hooks/use-toast"
 export default function SignupPage() {
   const router = useRouter()
   const { toast } = useToast()
+  const [showEmailSignup, setShowEmailSignup] = useState(false)
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -290,6 +291,11 @@ export default function SignupPage() {
     }
   }
 
+  const handleSocialSignup = (provider: string) => {
+    const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || ""
+    window.location.href = `${API_BASE_URL}/member-service/oauth2/authorization/${provider}`
+  }
+
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60)
     const secs = seconds % 60
@@ -308,222 +314,31 @@ export default function SignupPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>회원가입</CardTitle>
-            <CardDescription>새로운 계정을 만드세요</CardDescription>
+            <CardTitle className="flex items-center gap-2">
+              {showEmailSignup && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => setShowEmailSignup(false)}
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                </Button>
+              )}
+              회원가입
+            </CardTitle>
+            <CardDescription>
+              {showEmailSignup ? "새로운 계정을 만드세요" : "간편하게 시작하세요"}
+            </CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSignup} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="email">
-                  이메일 <span className="text-destructive">*</span>
-                </Label>
-                <div className="flex gap-2">
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="user@example.com"
-                    value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    disabled={isEmailVerified}
-                    required
-                    className="flex-1"
-                  />
-                  <Button
-                    type="button"
-                    onClick={handleSendVerificationEmail}
-                    disabled={!formData.email || isVerificationSending || resendCooldown > 0 || isEmailVerified}
-                    variant="outline"
-                  >
-                    {isVerificationSending ? "전송 중..." : emailSent ? "재발송" : "인증 메일 전송"}
-                  </Button>
-                </div>
-              </div>
-
-              {emailSent && !isEmailVerified && (
-                <div className="space-y-2">
-                  <Label htmlFor="verificationCode">
-                    인증번호 <span className="text-destructive">*</span>
-                  </Label>
-                  <div className="relative flex gap-2">
-                    <div className="relative flex-1">
-                      <Input
-                        id="verificationCode"
-                        type="text"
-                        placeholder="6자리 인증번호"
-                        value={verificationCode}
-                        onChange={(e) => {
-                          setVerificationCode(e.target.value.replace(/\D/g, "").slice(0, 6))
-                          setVerificationError(false)
-                          setVerificationSuccess(false)
-                        }}
-                        maxLength={6}
-                        required
-                        className="pr-16"
-                      />
-                      {timeRemaining > 0 && (
-                        <div className="absolute right-3 top-1/2 -translate-y-1/2 text-sm font-semibold text-blue-600">
-                          {formatTime(timeRemaining)}
-                        </div>
-                      )}
-                      {timeRemaining === 0 && (
-                        <div className="absolute right-3 top-1/2 -translate-y-1/2 text-sm font-semibold text-destructive">
-                          만료됨
-                        </div>
-                      )}
-                    </div>
-                    <Button
-                      type="button"
-                      onClick={handleConfirmVerificationCode}
-                      disabled={verificationCode.length !== 6 || isVerificationConfirming || timeRemaining === 0}
-                      variant="outline"
-                    >
-                      {isVerificationConfirming ? "확인 중..." : "인증 확인"}
-                    </Button>
-                  </div>
-                  {verificationError && verificationCode.length === 6 && (
-                    <p className="text-sm text-destructive flex items-center gap-1">
-                      <X className="h-4 w-4" />
-                      인증번호가 일치하지 않습니다
-                    </p>
-                  )}
-                  {verificationSuccess && (
-                    <p className="text-sm text-green-600 flex items-center gap-1">
-                      <Check className="h-4 w-4" />
-                      인증번호 확인 완료
-                    </p>
-                  )}
-                </div>
-              )}
-
-              {isEmailVerified && (
-                <p className="text-sm text-green-600 flex items-center gap-1">
-                  <Check className="h-4 w-4" />
-                  이메일 인증 완료
-                </p>
-              )}
-
-              <div className="space-y-2">
-                <Label htmlFor="name">
-                  이름 <span className="text-destructive">*</span>
-                </Label>
-                <Input
-                  id="name"
-                  type="text"
-                  placeholder="홍길동"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="phone">
-                  전화번호 <span className="text-destructive">*</span>
-                </Label>
-                <Input
-                  id="phone"
-                  type="tel"
-                  placeholder="010-1234-5678"
-                  value={formData.phone}
-                  onChange={(e) => {
-                    const formatted = handlePhoneInput(e.target.value)
-                    setFormData({ ...formData, phone: formatted })
-                  }}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="password">
-                  비밀번호 <span className="text-destructive">*</span>
-                </Label>
-                <Input
-                  id="password"
-                  type="password"
-                  value={formData.password}
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  required
-                />
-                {formData.password && !allPasswordValid && (
-                  <div className="text-sm space-y-1 text-destructive">
-                    {!passwordValidation.hasSpecial && <p>• 특수문자 필요</p>}
-                    {!passwordValidation.hasNumber && <p>• 숫자 필요</p>}
-                    {!passwordValidation.hasLetter && <p>• 영문 필요</p>}
-                    {!passwordValidation.hasLength && <p>• 8자 이상 필요</p>}
-                  </div>
-                )}
-                {formData.password && allPasswordValid && (
-                  <p className="text-sm text-blue-600 flex items-center gap-1">
-                    <Check className="h-4 w-4" />
-                    비밀번호 등록 가능
-                  </p>
-                )}
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="confirmPassword">
-                  비밀번호 확인 <span className="text-destructive">*</span>
-                </Label>
-                <Input
-                  id="confirmPassword"
-                  type="password"
-                  value={formData.confirmPassword}
-                  onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-                  required
-                />
-                {formData.confirmPassword && !passwordsMatch && (
-                  <p className="text-sm text-destructive flex items-center gap-1">
-                    <X className="h-4 w-4" />
-                    동일하지 않은 비밀번호
-                  </p>
-                )}
-                {formData.confirmPassword && passwordsMatch && (
-                  <p className="text-sm text-blue-600 flex items-center gap-1">
-                    <Check className="h-4 w-4" />
-                    동일한 비밀번호
-                  </p>
-                )}
-              </div>
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="terms"
-                  checked={agreed}
-                  onCheckedChange={(checked) => setAgreed(checked as boolean)}
-                  className="border-2"
-                />
-                <label htmlFor="terms" className="text-sm leading-none cursor-pointer">
-                  <span className="text-destructive">(필수)</span>{" "}
-                  <Link href="/terms" className="text-primary hover:underline">
-                    이용약관
-                  </Link>{" "}
-                  및{" "}
-                  <Link href="/privacy" className="text-primary hover:underline">
-                    개인정보처리방침
-                  </Link>
-                  에 동의합니다
-                </label>
-              </div>
-              <Button type="submit" className="w-full" size="lg" disabled={!isFormValid || isLoading}>
-                {isLoading ? "회원가입 중..." : "회원가입"}
-              </Button>
-
-              <div className="relative my-4">
-                <div className="absolute inset-0 flex items-center">
-                  <Separator />
-                </div>
-                <div className="relative flex justify-center text-xs uppercase">
-                  <span className="bg-white px-2 text-muted-foreground">또는</span>
-                </div>
-              </div>
-
-              <div className="space-y-2">
+            {!showEmailSignup ? (
+              <div className="space-y-3">
                 <Button
                   type="button"
                   variant="outline"
                   className="w-full"
-                  onClick={() => {
-                    toast({
-                      title: "소셜 회원가입",
-                      description: "Google 회원가입 기능은 준비 중입니다.",
-                    })
-                  }}
+                  onClick={() => handleSocialSignup("google")}
                 >
                   <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
                     <path
@@ -549,12 +364,7 @@ export default function SignupPage() {
                   type="button"
                   variant="outline"
                   className="w-full bg-[#FEE500] hover:bg-[#FEE500]/90 border-[#FEE500]"
-                  onClick={() => {
-                    toast({
-                      title: "소셜 회원가입",
-                      description: "Kakao 회원가입 기능은 준비 중입니다.",
-                    })
-                  }}
+                  onClick={() => handleSocialSignup("kakao")}
                 >
                   <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
                     <path
@@ -568,20 +378,226 @@ export default function SignupPage() {
                   type="button"
                   variant="outline"
                   className="w-full bg-[#03C75A] hover:bg-[#03C75A]/90 border-[#03C75A] text-white"
-                  onClick={() => {
-                    toast({
-                      title: "소셜 회원가입",
-                      description: "Naver 회원가입 기능은 준비 중입니다.",
-                    })
-                  }}
+                  onClick={() => handleSocialSignup("naver")}
                 >
                   <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
                     <path fill="white" d="M16.273 12.845 7.376 0H0v24h7.726V11.156L16.624 24H24V0h-7.727v12.845z" />
                   </svg>
                   Naver로 계속하기
                 </Button>
+
+                <div className="relative my-4">
+                  <div className="absolute inset-0 flex items-center">
+                    <Separator />
+                  </div>
+                  <div className="relative flex justify-center text-xs uppercase">
+                    <span className="bg-white px-2 text-muted-foreground">또는</span>
+                  </div>
+                </div>
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => setShowEmailSignup(true)}
+                >
+                  이메일로 회원가입
+                </Button>
               </div>
-            </form>
+            ) : (
+              <form onSubmit={handleSignup} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="email">
+                    이메일 <span className="text-destructive">*</span>
+                  </Label>
+                  <div className="flex gap-2">
+                    <Input
+                      id="email"
+                      type="email"
+                      placeholder="user@example.com"
+                      value={formData.email}
+                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                      disabled={isEmailVerified}
+                      required
+                      className="flex-1"
+                    />
+                    <Button
+                      type="button"
+                      onClick={handleSendVerificationEmail}
+                      disabled={!formData.email || isVerificationSending || resendCooldown > 0 || isEmailVerified}
+                      variant="outline"
+                    >
+                      {isVerificationSending ? "전송 중..." : emailSent ? "재발송" : "인증 메일 전송"}
+                    </Button>
+                  </div>
+                </div>
+
+                {emailSent && !isEmailVerified && (
+                  <div className="space-y-2">
+                    <Label htmlFor="verificationCode">
+                      인증번호 <span className="text-destructive">*</span>
+                    </Label>
+                    <div className="relative flex gap-2">
+                      <div className="relative flex-1">
+                        <Input
+                          id="verificationCode"
+                          type="text"
+                          placeholder="6자리 인증번호"
+                          value={verificationCode}
+                          onChange={(e) => {
+                            setVerificationCode(e.target.value.replace(/\D/g, "").slice(0, 6))
+                            setVerificationError(false)
+                            setVerificationSuccess(false)
+                          }}
+                          maxLength={6}
+                          required
+                          className="pr-16"
+                        />
+                        {timeRemaining > 0 && (
+                          <div className="absolute right-3 top-1/2 -translate-y-1/2 text-sm font-semibold text-blue-600">
+                            {formatTime(timeRemaining)}
+                          </div>
+                        )}
+                        {timeRemaining === 0 && (
+                          <div className="absolute right-3 top-1/2 -translate-y-1/2 text-sm font-semibold text-destructive">
+                            만료됨
+                          </div>
+                        )}
+                      </div>
+                      <Button
+                        type="button"
+                        onClick={handleConfirmVerificationCode}
+                        disabled={verificationCode.length !== 6 || isVerificationConfirming || timeRemaining === 0}
+                        variant="outline"
+                      >
+                        {isVerificationConfirming ? "확인 중..." : "인증 확인"}
+                      </Button>
+                    </div>
+                    {verificationError && verificationCode.length === 6 && (
+                      <p className="text-sm text-destructive flex items-center gap-1">
+                        <X className="h-4 w-4" />
+                        인증번호가 일치하지 않습니다
+                      </p>
+                    )}
+                    {verificationSuccess && (
+                      <p className="text-sm text-green-600 flex items-center gap-1">
+                        <Check className="h-4 w-4" />
+                        인증번호 확인 완료
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {isEmailVerified && (
+                  <p className="text-sm text-green-600 flex items-center gap-1">
+                    <Check className="h-4 w-4" />
+                    이메일 인증 완료
+                  </p>
+                )}
+
+                <div className="space-y-2">
+                  <Label htmlFor="name">
+                    이름 <span className="text-destructive">*</span>
+                  </Label>
+                  <Input
+                    id="name"
+                    type="text"
+                    placeholder="홍길동"
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="phone">
+                    전화번호 <span className="text-destructive">*</span>
+                  </Label>
+                  <Input
+                    id="phone"
+                    type="tel"
+                    placeholder="010-1234-5678"
+                    value={formData.phone}
+                    onChange={(e) => {
+                      const formatted = handlePhoneInput(e.target.value)
+                      setFormData({ ...formData, phone: formatted })
+                    }}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="password">
+                    비밀번호 <span className="text-destructive">*</span>
+                  </Label>
+                  <Input
+                    id="password"
+                    type="password"
+                    value={formData.password}
+                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    required
+                  />
+                  {formData.password && !allPasswordValid && (
+                    <div className="text-sm space-y-1 text-destructive">
+                      {!passwordValidation.hasSpecial && <p>• 특수문자 필요</p>}
+                      {!passwordValidation.hasNumber && <p>• 숫자 필요</p>}
+                      {!passwordValidation.hasLetter && <p>• 영문 필요</p>}
+                      {!passwordValidation.hasLength && <p>• 8자 이상 필요</p>}
+                    </div>
+                  )}
+                  {formData.password && allPasswordValid && (
+                    <p className="text-sm text-blue-600 flex items-center gap-1">
+                      <Check className="h-4 w-4" />
+                      비밀번호 등록 가능
+                    </p>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="confirmPassword">
+                    비밀번호 확인 <span className="text-destructive">*</span>
+                  </Label>
+                  <Input
+                    id="confirmPassword"
+                    type="password"
+                    value={formData.confirmPassword}
+                    onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+                    required
+                  />
+                  {formData.confirmPassword && !passwordsMatch && (
+                    <p className="text-sm text-destructive flex items-center gap-1">
+                      <X className="h-4 w-4" />
+                      동일하지 않은 비밀번호
+                    </p>
+                  )}
+                  {formData.confirmPassword && passwordsMatch && (
+                    <p className="text-sm text-blue-600 flex items-center gap-1">
+                      <Check className="h-4 w-4" />
+                      동일한 비밀번호
+                    </p>
+                  )}
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="terms"
+                    checked={agreed}
+                    onCheckedChange={(checked) => setAgreed(checked as boolean)}
+                    className="border-2"
+                  />
+                  <label htmlFor="terms" className="text-sm leading-none cursor-pointer">
+                    <span className="text-destructive">(필수)</span>{" "}
+                    <Link href="/terms" className="text-primary hover:underline">
+                      이용약관
+                    </Link>{" "}
+                    및{" "}
+                    <Link href="/privacy" className="text-primary hover:underline">
+                      개인정보처리방침
+                    </Link>
+                    에 동의합니다
+                  </label>
+                </div>
+                <Button type="submit" className="w-full" size="lg" disabled={!isFormValid || isLoading}>
+                  {isLoading ? "회원가입 중..." : "회원가입"}
+                </Button>
+              </form>
+            )}
           </CardContent>
           <CardFooter className="flex justify-center">
             <p className="text-sm text-muted-foreground">

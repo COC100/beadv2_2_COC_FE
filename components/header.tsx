@@ -3,20 +3,15 @@
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { ShoppingCart, Menu, X, User, Bell, Sparkles } from "lucide-react"
+import { ShoppingCart, Menu, X, User, Sparkles } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { Separator } from "@/components/ui/separator"
 import { getUserRoleFromToken } from "@/lib/utils"
-import { useNotifications } from "@/hooks/use-notifications"
 
 export function Header() {
   const router = useRouter()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [isSeller, setIsSeller] = useState(false)
-  const { notifications, unreadCount, isConnected, markAsRead, markAllAsRead } = useNotifications()
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -63,88 +58,6 @@ export function Header() {
                 <ShoppingCart className="h-5 w-5" />
               </Button>
             </Link>
-
-            {isLoggedIn && (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="rounded-lg relative">
-                    <Bell className="h-5 w-5" />
-                    {unreadCount > 0 && <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />}
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-80">
-                  <div className="flex items-center justify-between px-4 py-3">
-                    <h3 className="font-semibold">알림</h3>
-                    {unreadCount > 0 && (
-                      <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={markAllAsRead}>
-                        모두 읽음
-                      </Button>
-                    )}
-                  </div>
-                  <Separator />
-                  <ScrollArea className="h-[400px]">
-                    {notifications.length === 0 ? (
-                      <div className="p-8 text-center">
-                        <p className="text-sm text-muted-foreground">알림이 없습니다</p>
-                        {isConnected && (
-                          <p className="text-xs text-green-600 mt-2">실시간 알림 연결됨</p>
-                        )}
-                      </div>
-                    ) : (
-                      <div className="py-2">
-                        {notifications.map((notification) => (
-                          <div key={notification.id}>
-                            {notification.link ? (
-                              <Link
-                                href={notification.link}
-                                className={`block w-full text-left px-4 py-3 hover:bg-muted/50 transition-colors ${
-                                  !notification.isRead ? "bg-blue-50/50" : ""
-                                }`}
-                                onClick={() => markAsRead(notification.id)}
-                              >
-                                <div className="flex items-start gap-3">
-                                  <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-2 mb-1">
-                                      <p className="font-medium text-sm">{notification.title}</p>
-                                      {!notification.isRead && <span className="w-2 h-2 bg-red-500 rounded-full" />}
-                                    </div>
-                                    <p className="text-xs text-muted-foreground line-clamp-2">{notification.message}</p>
-                                    <p className="text-xs text-muted-foreground mt-1">
-                                      {new Date(notification.createdAt).toLocaleString("ko-KR")}
-                                    </p>
-                                  </div>
-                                </div>
-                              </Link>
-                            ) : (
-                              <button
-                                className={`w-full text-left px-4 py-3 hover:bg-muted/50 transition-colors ${
-                                  !notification.isRead ? "bg-blue-50/50" : ""
-                                }`}
-                                onClick={() => markAsRead(notification.id)}
-                              >
-                                <div className="flex items-start gap-3">
-                                  <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-2 mb-1">
-                                      <p className="font-medium text-sm">{notification.title}</p>
-                                      {!notification.isRead && <span className="w-2 h-2 bg-red-500 rounded-full" />}
-                                    </div>
-                                    <p className="text-xs text-muted-foreground line-clamp-2">{notification.message}</p>
-                                    <p className="text-xs text-muted-foreground mt-1">
-                                      {new Date(notification.createdAt).toLocaleString("ko-KR")}
-                                    </p>
-                                  </div>
-                                </div>
-                              </button>
-                            )}
-                            <Separator />
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </ScrollArea>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            )}
 
             <Link href="/mypage" className="hidden sm:block">
               <Button variant="ghost" size="icon" className="rounded-lg">
