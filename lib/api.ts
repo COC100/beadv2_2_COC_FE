@@ -427,7 +427,9 @@ export const accountAPI = {
       {
         method: "POST",
         body: JSON.stringify({ amount }),
-  },
+      },
+      true,
+    ),
 
   cancelDeposit: (orderId: string) =>
     fetchAPI(
@@ -448,7 +450,7 @@ export const accountAPI = {
       },
       true,
     ),
-  }
+}
 
 // Seller Service APIs
 export const sellerAPI = {
