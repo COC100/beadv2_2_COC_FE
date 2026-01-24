@@ -734,6 +734,21 @@ export const productAPI = {
       true,
     ),
 
+  generateDescription: (data: {
+    name?: string
+    category?: string
+    specs?: Record<string, string>
+    description?: string
+  }) =>
+    fetchAPI<string>(
+      "/ai-service/api/ai/descriptions",
+      {
+        method: "POST",
+        body: JSON.stringify(data),
+      },
+      true,
+    ),
+
   uploadImage: async (file: File, dir?: string) => {
     const formData = new FormData()
     formData.append("file", file)
