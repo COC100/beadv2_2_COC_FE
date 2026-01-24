@@ -803,7 +803,12 @@ export const productAPI = {
       "/ai-service/api/ai/descriptions",
       {
         method: "POST",
-        body: JSON.stringify(data),
+        body: JSON.stringify({
+          productName: data.name,
+          category: data.category,
+          specs: data.specs,
+          description: data.description,
+        }),
       },
       true,
     ),
