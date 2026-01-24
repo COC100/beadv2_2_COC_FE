@@ -64,7 +64,7 @@ export default function AdminProductsPage() {
   const fetchProducts = async () => {
     try {
       setLoading(true)
-      const result = await adminAPI.getProductModerationRequests({
+      const result = await adminAPI.getProductModerations({
         moderationStatus,
         page,
         size: 20,
