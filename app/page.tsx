@@ -31,6 +31,8 @@ export default function HomePage() {
   const router = useRouter()
   const { toast } = useToast()
   const [products, setProducts] = useState<any[]>([])
+  const [recommendedProducts, setRecommendedProducts] = useState<any[]>([])
+  const [showRecommended, setShowRecommended] = useState(false)
   const [loading, setLoading] = useState(true)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [currentSlide, setCurrentSlide] = useState(0)
@@ -89,21 +91,36 @@ export default function HomePage() {
     }
 
     const fetchProducts = async () => {
-    try {
-      setLoading(true)
-      const response = await productAPI.search({ size: 8, sortType: "LATEST" })
-      console.log("[v0] Products API response:", response)
+      try {
+        setLoading(true)
+        const response = await productAPI.search({ size: 8, sortType: "LATEST" })
 
         const productsData = response.data?.products || []
-        console.log("[v0] Products data:", productsData)
-
         const activeProducts = productsData.filter((product: any) => product.status === "ACTIVE")
         setProducts(activeProducts)
+
+        if (isAuthenticated) {
+          try {
+            const recommendedResponse = await productAPI.getRecentRecommendations(8)
+            const recommendedItems = recommendedResponse.data || []
+            
+            if (recommendedItems.length > 0) {
+              const productIds = recommendedItems.map((item: any) => item.productId)
+              const bulkResponse = await productAPI.bulkGet(productIds)
+              const recommendedProductsData = bulkResponse.data || []
+              
+              const activeRecommended = recommendedProductsData.filter((product: any) => product.status === "ACTIVE")
+              setRecommendedProducts(activeRecommended)
+              setShowRecommended(activeRecommended.length > 0)
+            }
+          } catch (error) {
+            console.error("[v0] Failed to fetch recommended products:", error)
+          }
+        }
       } catch (error: any) {
         console.error("[v0] Failed to fetch products:", error)
 
         if (error.message?.includes("인증")) {
-          console.log("[v0] Product list requires authentication, showing empty state")
           setProducts([])
         } else {
           toast({
@@ -118,7 +135,7 @@ export default function HomePage() {
     }
 
     fetchProducts()
-  }, [router, toast])
+  }, [router, toast, isAuthenticated])
 
   const categories = [
     { name: "노트북", icon: Laptop, category: "LAPTOP" },
@@ -262,7 +279,7 @@ export default function HomePage() {
       <section className="py-12">
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold">인기 상품</h2>
+            <h2 className="text-2xl font-bold">최신 상품</h2>
             <Link href="/products" className="flex items-center gap-1 text-sm text-muted-foreground hover:text-primary">
               전체보기
               <ChevronRight className="h-4 w-4" />
@@ -311,6 +328,49 @@ export default function HomePage() {
           )}
         </div>
       </section>
+
+      {showRecommended && (
+        <section className="py-12 bg-gray-50 dark:bg-gray-900">
+          <div className="container mx-auto px-4">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold">추천 상품</h2>
+              <Link href="/products" className="flex items-center gap-1 text-sm text-muted-foreground hover:text-primary">
+                전체보기
+                <ChevronRight className="h-4 w-4" />
+              </Link>
+            </div>
+
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
+              {recommendedProducts.map((product) => (
+                <Link key={product.productId} href={`/products/${product.productId}`}>
+                  <Card className="hover:shadow-lg transition-shadow group border-gray-200 pt-0 pb-4 px-0 overflow-hidden">
+                    <div className="aspect-square bg-gray-50 relative">
+                      <img
+                        src={product.thumbnailUrl || "/images/image.png"}
+                        alt={product.name}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement
+                          target.src = "/images/image.png"
+                        }}
+                      />
+                    </div>
+                    <CardContent className="p-3">
+                      <h3 className="font-medium text-sm mb-2 line-clamp-2 leading-tight">{product.name}</h3>
+                      <div className="flex items-center gap-2">
+                        <Badge variant="secondary" className="bg-accent text-white hover:bg-accent text-xs font-bold">
+                          ₩{product.pricePerDay?.toLocaleString()}
+                        </Badge>
+                        <span className="text-xs text-muted-foreground">/일</span>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
 
       <section className="py-16 bg-gray-50 dark:bg-gray-900">
         <div className="container mx-auto px-4">

@@ -19,7 +19,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { memberAPI } from "@/lib/api"
+import { authAPI } from "@/lib/api"
 
 export default function PasswordResetPage() {
   const router = useRouter()
@@ -84,19 +84,17 @@ export default function PasswordResetPage() {
     setIsLoading(true)
 
     try {
-      console.log("[v0] Confirming password reset")
-      await memberAPI.confirmPasswordReset({
-        email,
-        code,
-        newPassword,
-      })
-      console.log("[v0] Password reset successful")
+      const confirmResult = await authAPI.confirmPasswordResetCode(email, code)
+      const resetToken = confirmResult.data.resetToken
+      
+      await authAPI.resetPassword(resetToken, newPassword)
+      
       setSuccessDialog(true)
     } catch (error: any) {
       console.error("[v0] Password reset failed:", error)
       let errorMessage = "비밀번호 재설정에 실패했습니다."
 
-      if (error.message.includes("인증 코드")) {
+      if (error.message.includes("인증 코드") || error.message.includes("코드")) {
         errorMessage = "인증 코드가 올바르지 않거나 만료되었습니다."
       } else if (error.message.includes("이메일")) {
         errorMessage = "이메일 주소를 확인해주세요."

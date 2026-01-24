@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
-import { ArrowLeft, ShoppingCart, Calendar, Edit, Eye, EyeOff, Trash2, AlertCircle } from "lucide-react"
+import { ArrowLeft, ShoppingCart, Calendar, Edit, Eye, EyeOff, Trash2, AlertCircle, MessageCircle } from "lucide-react"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { Button } from "@/components/ui/button"
@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useRouter } from "next/navigation"
 import { useToast } from "@/hooks/use-toast"
-import { productAPI, cartAPI, sellerAPI, rentalAPI } from "@/lib/api"
+import { productAPI, cartAPI, sellerAPI, rentalAPI, chatAPI, memberAPI } from "@/lib/api"
 import {
   Dialog,
   DialogContent,
@@ -307,6 +307,47 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
     }
   }
 
+  const handleChatWithSeller = async () => {
+    if (isOwner) {
+      toast({
+        title: "본인 상품입니다",
+        description: "본인과 채팅할 수 없습니다.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    if (!seller?.sellerId) {
+      toast({
+        title: "판매자 정보 없음",
+        description: "판매자 정보를 찾을 수 없습니다.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    try {
+      const profile = await memberAPI.getProfile()
+      const memberId = profile.data.memberId
+
+      const roomResponse = await chatAPI.createRoom({
+        sellerId: seller.sellerId,
+        memberId: memberId,
+      })
+
+      const roomId = roomResponse.data.roomId
+
+      router.push(`/chat/${roomId}`)
+    } catch (error: any) {
+      console.error("[v0] Failed to create chat room:", error)
+      toast({
+        title: "채팅 시작 실패",
+        description: error.message || "채팅방을 생성할 수 없습니다.",
+        variant: "destructive",
+      })
+    }
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-white">
@@ -496,6 +537,19 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
                 {unavailableDates.length > 0 && (
                   <div className="text-xs text-muted-foreground bg-yellow-50 p-2 rounded">
                     ⚠️ 일부 날짜는 예약이 불가능합니다. 날짜 선택 시 확인해주세요.
+                  </div>
+                )}
+
+                {!isOwner && seller && (
+                  <div className="pt-2">
+                    <Button
+                      variant="outline"
+                      className="w-full rounded-lg h-11 gap-2"
+                      onClick={handleChatWithSeller}
+                    >
+                      <MessageCircle className="h-5 w-5" />
+                      모디톡 문의
+                    </Button>
                   </div>
                 )}
 
