@@ -468,6 +468,11 @@ export const sellerAPI = {
 
   getSelf: () => fetchAPI<any>("/seller-service/api/sellers/self", {}, true),
 
+  getInfo: (sellerId: number) => {
+    const hasToken = typeof window !== "undefined" && !!localStorage.getItem("accessToken")
+    return fetchAPI<any>(`/seller-service/api/sellers/${sellerId}`, {}, hasToken)
+  },
+
   getDetail: (sellerId: number) => {
     const hasToken = typeof window !== "undefined" && !!localStorage.getItem("accessToken")
     return fetchAPI<any>(`/seller-service/api/sellers/${sellerId}`, {}, hasToken)
@@ -733,6 +738,58 @@ export const productAPI = {
       },
       true,
     ),
+
+  generateDescription: (data: {
+    name?: string
+    category?: string
+    specs?: Record<string, string>
+    description?: string
+  }) =>
+    fetchAPI<string>(
+      "/ai-service/api/ai/descriptions",
+      {
+        method: "POST",
+        body: JSON.stringify(data),
+      },
+      true,
+    ),
+
+  getRecommendations: (data: {
+    productId?: number
+    query?: string
+    categories?: string[]
+    size?: number
+  }) =>
+    fetchAPI<{
+      message: string
+      items: Array<{
+        productId: number
+        name: string
+        category: string
+        specs: Record<string, string>
+        status: string
+        distance: number
+      }>
+    }>(
+      "/ai-service/api/ai/recommendations",
+      {
+        method: "POST",
+        body: JSON.stringify(data),
+      },
+      false,
+    ),
+
+  getRecentRecommendations: (size?: number) => {
+    const queryParams = size ? `?size=${size}` : ""
+    return fetchAPI<Array<{
+      productId: number
+      name: string
+      category: string
+      specs: Record<string, string>
+      status: string
+      distance: number
+    }>>(`/ai-service/api/ai/recommendations/recent${queryParams}`, {}, true)
+  },
 
   uploadImage: async (file: File, dir?: string) => {
     const formData = new FormData()

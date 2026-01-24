@@ -5,7 +5,7 @@ import type React from "react"
 import { useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { ArrowLeft, Upload, X } from "lucide-react"
+import { ArrowLeft, Upload, X, Sparkles } from "lucide-react"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { Button } from "@/components/ui/button"
@@ -25,6 +25,7 @@ export default function NewProductPage() {
   const { toast } = useToast()
   const [images, setImages] = useState<string[]>([])
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isGeneratingAI, setIsGeneratingAI] = useState(false)
   const [formData, setFormData] = useState({
     name: "",
     category: "",
@@ -103,6 +104,51 @@ export default function NewProductPage() {
         description: error.message || "이미지 업로드에 실패했습니다",
         variant: "destructive",
       })
+    }
+  }
+
+  const handleGenerateDescription = async () => {
+    if (!formData.name) {
+      toast({
+        title: "상품명을 먼저 입력하세요",
+        description: "AI 추천을 받으려면 상품명이 필요합니다",
+        variant: "destructive",
+      })
+      return
+    }
+
+    setIsGeneratingAI(true)
+
+    try {
+      const specsMap: Record<string, string> = {}
+      specs.forEach((spec) => {
+        if (spec.key.trim() && spec.value.trim()) {
+          specsMap[spec.key.trim()] = spec.value.trim()
+        }
+      })
+
+      const result = await productAPI.generateDescription({
+        name: formData.name,
+        category: formData.category || undefined,
+        specs: Object.keys(specsMap).length > 0 ? specsMap : undefined,
+        description: formData.description || undefined,
+      })
+
+      setFormData({ ...formData, description: result.data })
+
+      toast({
+        title: "AI 추천 완료",
+        description: "상세 설명이 생성되었습니다",
+      })
+    } catch (error: any) {
+      console.error("[v0] Failed to generate AI description:", error)
+      toast({
+        title: "AI 추천 실패",
+        description: error.message || "상세 설명 생성에 실패했습니다",
+        variant: "destructive",
+      })
+    } finally {
+      setIsGeneratingAI(false)
     }
   }
 
@@ -270,9 +316,22 @@ export default function NewProductPage() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="description">
-                      상세 설명 <span className="text-red-500">*</span>
-                    </Label>
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="description">
+                        상세 설명 <span className="text-red-500">*</span>
+                      </Label>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={handleGenerateDescription}
+                        disabled={isGeneratingAI || !formData.name}
+                        className="gap-2"
+                      >
+                        <Sparkles className="h-4 w-4" />
+                        {isGeneratingAI ? "생성 중..." : "AI 추천"}
+                      </Button>
+                    </div>
                     <Textarea
                       id="description"
                       placeholder="상품의 상세 정보를 입력하세요"

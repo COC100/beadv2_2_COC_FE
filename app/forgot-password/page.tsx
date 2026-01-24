@@ -18,11 +18,10 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { memberAPI } from "@/lib/api"
+import { authAPI } from "@/lib/api"
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("")
-  const [submitted, setSubmitted] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [errorDialog, setErrorDialog] = useState<{ open: boolean; title: string; message: string }>({
     open: false,
@@ -45,9 +44,7 @@ export default function ForgotPasswordPage() {
     setIsLoading(true)
 
     try {
-      console.log("[v0] Requesting password reset for:", email)
-      await memberAPI.requestPasswordReset(email)
-      console.log("[v0] Password reset email sent successfully")
+      await authAPI.sendPasswordResetEmail(email)
       window.location.href = `/forgot-password/reset?email=${encodeURIComponent(email)}`
     } catch (error: any) {
       console.error("[v0] Password reset request failed:", error)
@@ -77,43 +74,26 @@ export default function ForgotPasswordPage() {
         <Card className="rounded-2xl">
           <CardHeader>
             <CardTitle className="text-2xl">비밀번호 찾기</CardTitle>
-            <CardDescription>
-              {submitted ? "비밀번호 재설정 이메일을 발송했습니다" : "가입한 이메일 주소를 입력해주세요"}
-            </CardDescription>
+            <CardDescription>가입한 이메일 주소를 입력해주세요</CardDescription>
           </CardHeader>
           <CardContent>
-            {submitted ? (
-              <div className="space-y-6">
-                <div className="bg-secondary/30 rounded-xl p-6 text-center">
-                  <Mail className="h-16 w-16 mx-auto mb-4 text-primary" />
-                  <p className="text-muted-foreground leading-relaxed">
-                    <strong className="text-foreground">{email}</strong>로 비밀번호 재설정 링크를 발송했습니다. 이메일을
-                    확인해주세요.
-                  </p>
-                </div>
-                <Link href="/login">
-                  <Button className="w-full h-12 rounded-xl">로그인으로 돌아가기</Button>
-                </Link>
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div className="space-y-2">
+                <Label htmlFor="email">이메일</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="user@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  className="rounded-xl"
+                />
               </div>
-            ) : (
-              <form onSubmit={handleSubmit} className="space-y-6">
-                <div className="space-y-2">
-                  <Label htmlFor="email">이메일</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="user@example.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                    className="rounded-xl"
-                  />
-                </div>
-                <Button type="submit" className="w-full h-12 rounded-xl" disabled={isLoading}>
-                  {isLoading ? "요청 중..." : "재설정 링크 보내기"}
-                </Button>
-              </form>
-            )}
+              <Button type="submit" className="w-full h-12 rounded-xl" disabled={isLoading}>
+                {isLoading ? "코드 전송 중..." : "인증 코드 받기"}
+              </Button>
+            </form>
           </CardContent>
         </Card>
 

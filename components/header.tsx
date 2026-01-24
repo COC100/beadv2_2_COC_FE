@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { ShoppingCart, Menu, X, User, Bell } from "lucide-react"
+import { ShoppingCart, Menu, X, User, Bell, Sparkles } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -59,6 +59,10 @@ export function Header() {
           <nav className="hidden md:flex items-center gap-6 text-sm">
             <Link href="/products" className="hover:text-primary transition-colors">
               전체상품
+            </Link>
+            <Link href="/recommendations" className="hover:text-primary transition-colors flex items-center gap-1">
+              <Sparkles className="h-4 w-4" />
+              AI 추천
             </Link>
             <Link href="/seller" className="hover:text-primary transition-colors">
               판매자
@@ -160,6 +164,10 @@ export function Header() {
             <nav className="flex flex-col gap-3">
               <Link href="/products" className="hover:text-primary transition-colors py-2">
                 전체상품
+              </Link>
+              <Link href="/recommendations" className="hover:text-primary transition-colors py-2 flex items-center gap-1">
+                <Sparkles className="h-4 w-4" />
+                AI 추천
               </Link>
               <Link href="/seller" className="hover:text-primary transition-colors py-2">
                 판매자
