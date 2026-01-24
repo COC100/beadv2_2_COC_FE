@@ -49,13 +49,11 @@ export default function NoticesPage() {
   const loadNotices = async () => {
     try {
       setLoading(true)
-      console.log("[v0] Loading notices without sort parameter")
       const response = await noticeAPI.getNotices({ 
         keyword: keyword || undefined, 
         page, 
         size: 20
       })
-      console.log("[v0] Notices response:", response)
       setNotices(response.data.content || [])
       setTotalPages(response.data.totalPages || 0)
     } catch (error: any) {
@@ -100,7 +98,7 @@ export default function NoticesPage() {
                   onKeyPress={handleKeyPress}
                   className="flex-1"
                 />
-                <Button onClick={handleSearch} className="bg-transparent">
+                <Button onClick={handleSearch}>
                   <Search className="h-4 w-4 mr-2" />
                   검색
                 </Button>
