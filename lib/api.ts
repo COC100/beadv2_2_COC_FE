@@ -415,10 +415,10 @@ export const authAPI = {
     ),
 
   oauth2Signup: async (data: {
-    provider: string
-    code: string
-    name?: string
-    phone?: string
+    signupToken: string
+    email: string
+    phone: string
+    verificationToken: string
   }) => {
     const url = `${API_BASE_URL}/member-service/api/auth/oauth2/signup`
 
@@ -456,8 +456,7 @@ export const authAPI = {
   },
 
   oauth2Connect: async (data: {
-    provider: string
-    code: string
+    signupToken: string
   }) => {
     return fetchAPI<void>(
       "/member-service/api/auth/oauth2/connect",

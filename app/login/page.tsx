@@ -145,10 +145,8 @@ export default function LoginPage() {
                   variant="outline"
                   className="w-full"
                   onClick={() => {
-                    toast({
-                      title: "소셜 로그인",
-                      description: "Google 로그인 기능은 준비 중입니다.",
-                    })
+                    const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || ""
+                    window.location.href = `${API_BASE_URL}/member-service/oauth2/authorization/google`
                   }}
                 >
                   <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
@@ -176,10 +174,8 @@ export default function LoginPage() {
                   variant="outline"
                   className="w-full bg-[#FEE500] hover:bg-[#FEE500]/90 border-[#FEE500]"
                   onClick={() => {
-                    toast({
-                      title: "소셜 로그인",
-                      description: "Kakao 로그인 기능은 준비 중입니다.",
-                    })
+                    const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || ""
+                    window.location.href = `${API_BASE_URL}/member-service/oauth2/authorization/kakao`
                   }}
                 >
                   <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
@@ -195,10 +191,8 @@ export default function LoginPage() {
                   variant="outline"
                   className="w-full bg-[#03C75A] hover:bg-[#03C75A]/90 border-[#03C75A] text-white"
                   onClick={() => {
-                    toast({
-                      title: "소셜 로그인",
-                      description: "Naver 로그인 기능은 준비 중입니다.",
-                    })
+                    const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || ""
+                    window.location.href = `${API_BASE_URL}/member-service/oauth2/authorization/naver`
                   }}
                 >
                   <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
