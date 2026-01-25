@@ -1294,7 +1294,7 @@ export const adminAPI = {
       totalElements: number
       totalPages: number
     }>(
-      `/seller-service/internal/sellers/registrations${queryParams.toString() ? `?${queryParams.toString()}` : ""}`,
+      `/support-service/api/admin/sellers/registrations${queryParams.toString() ? `?${queryParams.toString()}` : ""}`,
       {},
       true,
     )
@@ -1302,7 +1302,7 @@ export const adminAPI = {
 
   approveSeller: (memberId: number) =>
     fetchAPI(
-      `/seller-service/internal/sellers/${memberId}/approve`,
+      `/support-service/api/admin/sellers/${memberId}/approve`,
       {
         method: "PATCH",
       },
@@ -1311,7 +1311,7 @@ export const adminAPI = {
 
   rejectSeller: (memberId: number) =>
     fetchAPI(
-      `/seller-service/internal/sellers/${memberId}/reject`,
+      `/support-service/api/admin/sellers/${memberId}/reject`,
       {
         method: "PATCH",
       },
