@@ -37,7 +37,7 @@ export default function SellerPage() {
     const loadSellerData = async () => {
       const token = localStorage.getItem("accessToken")
       if (!token) {
-        router.push("/intro")
+        router.push("/")
         return
       }
 
@@ -80,7 +80,7 @@ export default function SellerPage() {
             router.push("/become-seller")
           }, 1500)
         } else if (status === "401") {
-          router.push("/intro")
+          router.push("/")
         } else {
           setAlert({
             open: true,

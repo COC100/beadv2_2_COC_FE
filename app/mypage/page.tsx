@@ -28,7 +28,7 @@ export default function MyPage() {
       console.log("[v0] MyPage - checking token:", !!token)
 
       if (!token) {
-        router.push("/intro")
+        router.push("/")
         return
       }
 
@@ -52,7 +52,7 @@ export default function MyPage() {
         console.error("[v0] MyPage - Failed to load data:", error)
         if (error.message.includes("401") || error.message.includes("인증되지 않았습니다")) {
           localStorage.removeItem("accessToken")
-          router.push("/intro")
+          router.push("/")
         } else {
           toast({
             title: "데이터 로딩 실패",
@@ -74,7 +74,7 @@ export default function MyPage() {
       title: "로그아웃 완료",
       description: "안전하게 로그아웃되었습니다",
     })
-    router.push("/intro")
+    router.push("/")
   }
 
   if (isLoading) {

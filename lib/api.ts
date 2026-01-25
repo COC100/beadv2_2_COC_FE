@@ -14,11 +14,11 @@ export interface ApiResponse<T> {
 const handleAuthError = () => {
   if (typeof window === "undefined") return
 
-  const publicPaths = ["/intro", "/login", "/signup", "/forgot-password"]
+  const publicPaths = ["/", "/login", "/signup", "/forgot-password"]
   const currentPath = window.location.pathname
 
   if (!publicPaths.some((path) => currentPath.startsWith(path))) {
-    window.location.href = "/intro"
+    window.location.href = "/"
   }
 }
 
@@ -44,7 +44,7 @@ async function fetchAPI<T>(
   const hasToken = typeof window !== "undefined" && localStorage.getItem("accessToken")
 
   if (requiresAuth && !hasToken) {
-    console.error("[v0] No auth token found for protected endpoint, redirecting to intro")
+    console.error("[v0] No auth token found for protected endpoint, redirecting to /")
     handleAuthError()
     throw new Error("인증 토큰이 없습니다")
   }

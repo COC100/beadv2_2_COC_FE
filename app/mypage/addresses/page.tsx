@@ -67,7 +67,7 @@ export default function AddressesPage() {
     const loadAddresses = async () => {
       const token = localStorage.getItem("accessToken")
       if (!token) {
-        router.push("/intro")
+        router.push("/")
         return
       }
 
@@ -100,7 +100,7 @@ export default function AddressesPage() {
       } catch (error: any) {
         console.error("[v0] Failed to load addresses:", error)
         if (error.message.includes("401") || error.message.includes("인증")) {
-          router.push("/intro")
+          router.push("/")
         } else {
           toast({
             title: "주소 로딩 실패",

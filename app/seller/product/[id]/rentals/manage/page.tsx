@@ -187,7 +187,7 @@ function ManageProductRentalsContent({ productId }: { productId: string }) {
   useEffect(() => {
     const token = localStorage.getItem("accessToken")
     if (!token) {
-      router.push("/intro")
+      router.push("/")
       return
     }
 

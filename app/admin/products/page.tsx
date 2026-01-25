@@ -78,7 +78,7 @@ export default function AdminProductsPage() {
       }
     } catch (error: any) {
       console.error("Failed to fetch products:", error)
-      router.push("/intro")
+      router.push("/")
     } finally {
       setLoading(false)
     }

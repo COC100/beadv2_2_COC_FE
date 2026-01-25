@@ -28,7 +28,7 @@ export default function SellerSettingsPage() {
     const loadSellerInfo = async () => {
       const token = localStorage.getItem("accessToken")
       if (!token) {
-        router.push("/intro")
+        router.push("/")
         return
       }
 
