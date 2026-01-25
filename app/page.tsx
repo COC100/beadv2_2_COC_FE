@@ -288,7 +288,7 @@ export default function HomePage() {
               <Package className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
               <p className="text-muted-foreground mb-4">상품을 불러올 수 없습니다</p>
               {!isAuthenticated && (
-                <Link href="/">
+                <Link href="/login">
                   <Button>로그인하여 상품 보기</Button>
                 </Link>
               )}
