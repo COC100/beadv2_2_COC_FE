@@ -195,17 +195,6 @@
   - Query: `status?:SellerRegistrationStatus`, `pageable`
   - Res: `SellerRegistrationPageResponse { content:SellerRegistrationResponse[], page, size, totalElements, totalPages, last }`
 
-### 관리자
-- **PATCH /api/admin/sellers/{memberId}/approve** — 판매자 승인 (Auth)
-  - Path: `memberId:long`
-  - Res: `ApiResponse<SellerRegistrationResponse { registrationId, memberId, storeName, bizRegNo, storePhone, status, approvedBy }>`
-- **PATCH /api/admin/sellers/{memberId}/reject** — 판매자 반려 (Auth)
-  - Path: `memberId:long`
-  - Res: `ApiResponse<SellerRegistrationResponse>`
-- **GET /api/admin/sellers/registrations** — 판매자 등록 요청 목록 (Auth)
-  - Query: `status?:SellerRegistrationStatus`, `pageable`
-  - Res: `ApiResponse<Page<SellerRegistrationResponse>>`
-
 ### 채팅
 - **POST /api/chat/rooms** — 채팅방 생성 (Auth)
   - Req: `sellerId:long`, `memberId:long`
@@ -509,6 +498,17 @@
 - **POST /api/admin/members** — 관리자 계정 생성
   - Req: `email:string(email)`, `password:string(8-20, 영문+숫자+특수문자)`, `name:string<=20`, `phone:string(휴대폰)`
   - Res: `AdminMemberCreateResponse { memberId, email, role }`
+
+### 관리자 - 판매자 승인 (Auth, ADMIN)
+- **PATCH /api/admin/sellers/{memberId}/approve** — 판매자 승인
+  - Path: `memberId:long`
+  - Res: `ApiResponse<SellerRegistrationResponse { registrationId, memberId, storeName, bizRegNo, storePhone, status, approvedBy }>`
+- **PATCH /api/admin/sellers/{memberId}/reject** — 판매자 반려
+  - Path: `memberId:long`
+  - Res: `ApiResponse<SellerRegistrationResponse>`
+- **GET /api/admin/sellers/registrations** — 판매자 등록 요청 목록
+  - Query: `status?:SellerRegistrationStatus`, `pageable`
+  - Res: `ApiResponse<Page<SellerRegistrationResponse>>`
 
 ---
 ## ai-service
