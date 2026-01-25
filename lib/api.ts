@@ -1236,7 +1236,7 @@ export const adminAPI = {
       content: any[]
       totalElements: number
       totalPages: number
-    }>(`/support-service/api/admin/members${queryParams.toString() ? `?${queryParams.toString()}` : ""}`, {}, true)
+    }>(`/support-service/api/admin/blacklists${queryParams.toString() ? `?${queryParams.toString()}` : ""}`, {}, true)
   },
 
   searchMember: (email: string) =>
