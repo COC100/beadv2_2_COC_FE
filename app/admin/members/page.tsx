@@ -94,8 +94,8 @@ export default function AdminMembersPage() {
       <Header />
       <main className="flex-1 container mx-auto px-4 py-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">회원 관리 (블랙리스트)</h1>
-          <p className="text-muted-foreground">블랙리스트에 등록된 회원을 조회하고 관리할 수 있습니다</p>
+          <h1 className="text-3xl font-bold mb-2">회원 관리</h1>
+          <p className="text-muted-foreground">회원을 조회하고 관리할 수 있습니다</p>
         </div>
 
         <Card className="mb-6">
