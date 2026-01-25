@@ -104,9 +104,10 @@ export default function GoogleCallbackPage() {
           title: "로그인 성공",
           description: "환영합니다!",
         })
+        // Force a complete navigation to ensure token is recognized
         setTimeout(() => {
-          router.push("/")
-        }, 1500)
+          window.location.href = "/"
+        }, 1000)
       }
       // 신규 회원인 경우 - 추가 정보 입력 페이지로 이동
       else if (data.signupToken) {
