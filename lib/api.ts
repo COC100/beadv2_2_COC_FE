@@ -1081,7 +1081,7 @@ export const cartAPI = {
 export const reviewAPI = {
   create: (data: { productId: number; rating: number; content: string }) =>
     fetchAPI(
-      "/rental-service/api/reviews",
+      "/support-service/api/reviews",
       {
         method: "POST",
         body: JSON.stringify(data),
@@ -1091,9 +1091,9 @@ export const reviewAPI = {
 
   update: (reviewId: number, data: { rating: number; content: string }) =>
     fetchAPI(
-      `/rental-service/api/reviews/${reviewId}`,
+      `/support-service/api/reviews/${reviewId}`,
       {
-        method: "PUT",
+        method: "PATCH",
         body: JSON.stringify(data),
       },
       true,
@@ -1101,7 +1101,7 @@ export const reviewAPI = {
 
   delete: (reviewId: number) =>
     fetchAPI(
-      `/rental-service/api/reviews/${reviewId}`,
+      `/support-service/api/reviews/${reviewId}`,
       {
         method: "DELETE",
       },
@@ -1121,7 +1121,7 @@ export const reviewAPI = {
       content: any[]
       totalElements: number
       totalPages: number
-    }>(`/rental-service/api/reviews${queryParams.toString() ? `?${queryParams.toString()}` : ""}`, {}, false)
+    }>(`/support-service/api/reviews${queryParams.toString() ? `?${queryParams.toString()}` : ""}`, {}, false)
   },
 
   getMyReviews: (params?: { page?: number; size?: number }) => {
@@ -1133,7 +1133,7 @@ export const reviewAPI = {
       content: any[]
       totalElements: number
       totalPages: number
-    }>(`/rental-service/api/reviews/me${queryParams.toString() ? `?${queryParams.toString()}` : ""}`, {}, true)
+    }>(`/support-service/api/reviews/me${queryParams.toString() ? `?${queryParams.toString()}` : ""}`, {}, true)
   },
 }
 
