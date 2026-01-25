@@ -69,10 +69,10 @@ export default function SellerPage() {
         console.error("Failed to load seller data:", error)
         const status = error.message.match(/\d{3}/)?.[0]
         
-        // If no seller permission (403/404), redirect to seller application page
+        // If no seller permission (403/404), redirect to seller application page without showing popup
         if (status === "403" || status === "404") {
-          console.log("[v0] No seller permission, redirecting to /become-seller")
-          router.push("/become-seller")
+          router.replace("/become-seller")
+          return
         } else if (status === "401") {
           router.push("/")
         } else {
