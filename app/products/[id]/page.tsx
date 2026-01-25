@@ -21,10 +21,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { useRequireAuth } from "@/hooks/use-auth"
-
 export default function ProductDetailPage({ params }: { params: { id: string } }) {
-  useRequireAuth()
 
   const router = useRouter()
   const { toast } = useToast()
@@ -75,14 +72,6 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
     if (productId === null) return
 
     const loadProduct = async () => {
-      if (typeof window !== "undefined") {
-        const token = localStorage.getItem("accessToken")
-        if (!token) {
-          router.push("/")
-          return
-        }
-      }
-
       try {
         console.log("[v0 DEBUG] Loading product ID:", productId)
 
@@ -96,30 +85,32 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
 
         setProduct(productData)
 
-        // Check if user is seller/owner
-        try {
-          const sellerResponse = await sellerAPI.getSelf()
-          const currentSeller = sellerResponse.data
-          console.log("[v0 DEBUG] Current user seller data:", JSON.stringify(currentSeller, null, 2))
+        // Check if user is seller/owner (only if authenticated)
+        if (typeof window !== "undefined" && localStorage.getItem("accessToken")) {
+          try {
+            const sellerResponse = await sellerAPI.getSelf()
+            const currentSeller = sellerResponse.data
+            console.log("[v0 DEBUG] Current user seller data:", JSON.stringify(currentSeller, null, 2))
 
-          const isProductOwner = currentSeller?.sellerId === productData?.sellerId
-          console.log(
-            "[v0 DEBUG] Is owner?",
-            isProductOwner,
-            "Current Seller ID:",
-            currentSeller?.sellerId,
-            "Product Seller ID:",
-            productData?.sellerId,
-          )
-          setIsOwner(isProductOwner)
+            const isProductOwner = currentSeller?.sellerId === productData?.sellerId
+            console.log(
+              "[v0 DEBUG] Is owner?",
+              isProductOwner,
+              "Current Seller ID:",
+              currentSeller?.sellerId,
+              "Product Seller ID:",
+              productData?.sellerId,
+            )
+            setIsOwner(isProductOwner)
 
-          // If owner, use current seller info
-          if (isProductOwner) {
-            setSeller(currentSeller)
+            // If owner, use current seller info
+            if (isProductOwner) {
+              setSeller(currentSeller)
+            }
+          } catch (error) {
+            console.log("[v0 DEBUG] Not a seller or seller check failed (403 allowed):", error)
+            setIsOwner(false)
           }
-        } catch (error) {
-          console.log("[v0 DEBUG] Not a seller or seller check failed:", error)
-          setIsOwner(false)
         }
 
         if (!isOwner && productData?.sellerId) {
@@ -127,7 +118,7 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
             const sellerInfoResponse = await sellerAPI.getInfo(productData.sellerId)
             setSeller(sellerInfoResponse.data)
           } catch (error) {
-            console.log("[v0 DEBUG] Failed to fetch seller info:", error)
+            console.log("[v0 DEBUG] Failed to fetch seller info (403 allowed):", error)
             setSeller({
               sellerId: productData.sellerId,
               storeName: `판매자 #${productData.sellerId}`,
@@ -137,18 +128,22 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
       } catch (error: any) {
         console.error("[v0 DEBUG] Failed to load product:", error)
         console.error("[v0 DEBUG] Error stack:", error.stack)
-        toast({
-          title: "상품 로딩 실패",
-          description: error.message || "상품 정보를 불러올 수 없습니다",
-          variant: "destructive",
-        })
+        
+        // Don't show error toast for 403 errors, just silently fail
+        if (!error.message?.includes("403") && !error.message?.includes("권한")) {
+          toast({
+            title: "상품 로딩 실패",
+            description: error.message || "상품 정보를 불러올 수 없습니다",
+            variant: "destructive",
+          })
+        }
       } finally {
         setLoading(false)
       }
     }
 
     loadProduct()
-  }, [productId, router, toast, isOwner])
+  }, [productId, toast, isOwner])
 
   useEffect(() => {
     if (!productId || !startDate) return

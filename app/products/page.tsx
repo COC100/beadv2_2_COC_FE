@@ -13,8 +13,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Search, X } from "lucide-react"
 import { productAPI } from "@/lib/api"
 import { useToast } from "@/hooks/use-toast"
-import { useRequireAuth } from "@/hooks/use-auth"
-
 const CATEGORIES = [
   { value: "ALL", label: "전체" },
   { value: "LAPTOP", label: "노트북" },
@@ -30,7 +28,6 @@ const CATEGORIES = [
 ]
 
 export default function ProductsPage() {
-  useRequireAuth()
 
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -57,14 +54,6 @@ export default function ProductsPage() {
   }, [])
 
   const fetchProductsWithParams = async (keyword: string, sort: string, category: string, cursor?: string) => {
-    if (typeof window !== "undefined") {
-      const token = localStorage.getItem("accessToken")
-      if (!token) {
-        router.push("/")
-        return
-      }
-    }
-
     if (loading) return
 
     try {
@@ -94,11 +83,15 @@ export default function ProductsPage() {
       setHasNext(data.hasNext)
     } catch (error: any) {
       console.error("[v0] Failed to fetch products:", error)
-      toast({
-        title: "상품 로딩 실패",
-        description: error.message || "상품 목록을 불러올 수 없습니다",
-        variant: "destructive",
-      })
+      
+      // Don't show error toast for 403 errors, just silently fail
+      if (!error.message?.includes("403") && !error.message?.includes("권한")) {
+        toast({
+          title: "상품 로딩 실패",
+          description: error.message || "상품 목록을 불러올 수 없습니다",
+          variant: "destructive",
+        })
+      }
     } finally {
       setLoading(false)
     }

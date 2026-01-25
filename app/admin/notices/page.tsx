@@ -98,39 +98,8 @@ export default function AdminNoticesPage() {
     }
   }
 
-  const handleEdit = async (noticeId: number) => {
-    try {
-      const response = await adminAPI.getNoticeDetail(noticeId)
-      setEditingNotice(response.data)
-      
-      // Convert ISO datetime to datetime-local format (YYYY-MM-DDTHH:mm)
-      const formatDateTimeLocal = (dateStr: string) => {
-        if (!dateStr) return ""
-        const date = new Date(dateStr)
-        const year = date.getFullYear()
-        const month = String(date.getMonth() + 1).padStart(2, '0')
-        const day = String(date.getDate()).padStart(2, '0')
-        const hours = String(date.getHours()).padStart(2, '0')
-        const minutes = String(date.getMinutes()).padStart(2, '0')
-        return `${year}-${month}-${day}T${hours}:${minutes}`
-      }
-      
-      setFormData({
-        title: response.data.title || "",
-        content: response.data.content || "",
-        pinned: response.data.pinned || false,
-        status: response.data.status || "DRAFT",
-        displayStartAt: formatDateTimeLocal(response.data.displayStartAt) || "",
-        displayEndAt: formatDateTimeLocal(response.data.displayEndAt) || "",
-      })
-      setShowForm(true)
-    } catch (error: any) {
-      toast({
-        title: "공지사항 로딩 실패",
-        description: error.message,
-        variant: "destructive",
-      })
-    }
+  const handleEdit = (noticeId: number) => {
+    router.push(`/admin/notices/${noticeId}/edit`)
   }
 
   const handleDelete = async (noticeId: number) => {
@@ -352,25 +321,34 @@ export default function AdminNoticesPage() {
                             </div>
                           </div>
                           <div className="flex gap-2">
-                            {notice.status === "DRAFT" && (
-                              <Button size="sm" variant="outline" onClick={() => handlePublish(notice.id)} className="bg-transparent">
+                            {notice.status === "DELETED" ? (
+                              <Button size="sm" variant="outline" onClick={() => router.push(`/admin/notices/${notice.id}/view`)} className="bg-transparent">
                                 <Eye className="h-4 w-4 mr-2" />
-                                발행
+                                보기
                               </Button>
+                            ) : (
+                              <>
+                                {notice.status === "DRAFT" && (
+                                  <Button size="sm" variant="outline" onClick={() => handlePublish(notice.id)} className="bg-transparent">
+                                    <Eye className="h-4 w-4 mr-2" />
+                                    발행
+                                  </Button>
+                                )}
+                                {notice.status === "PUBLISHED" && (
+                                  <Button size="sm" variant="outline" onClick={() => handleDraft(notice.id)} className="bg-transparent">
+                                    임시저장
+                                  </Button>
+                                )}
+                                <Button size="sm" variant="outline" onClick={() => handleEdit(notice.id)} className="bg-transparent">
+                                  <Edit className="h-4 w-4 mr-2" />
+                                  수정
+                                </Button>
+                                <Button size="sm" variant="destructive" onClick={() => handleDelete(notice.id)}>
+                                  <Trash2 className="h-4 w-4 mr-2" />
+                                  삭제
+                                </Button>
+                              </>
                             )}
-                            {notice.status === "PUBLISHED" && (
-                              <Button size="sm" variant="outline" onClick={() => handleDraft(notice.id)} className="bg-transparent">
-                                임시저장
-                              </Button>
-                            )}
-                            <Button size="sm" variant="outline" onClick={() => handleEdit(notice.id)} className="bg-transparent">
-                              <Edit className="h-4 w-4 mr-2" />
-                              수정
-                            </Button>
-                            <Button size="sm" variant="destructive" onClick={() => handleDelete(notice.id)}>
-                              <Trash2 className="h-4 w-4 mr-2" />
-                              삭제
-                            </Button>
                           </div>
                         </div>
                       </CardContent>
