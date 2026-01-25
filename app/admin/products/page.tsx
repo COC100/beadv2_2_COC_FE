@@ -105,6 +105,23 @@ export default function AdminProductsPage() {
     }
   }
 
+  const handleApproveModeration = async (productId: number) => {
+    try {
+      await adminAPI.approveProductModeration(productId)
+      toast({
+        title: "승인 완료",
+        description: "상품이 승인되었습니다.",
+      })
+      fetchProducts()
+    } catch (error: any) {
+      toast({
+        title: "승인 실패",
+        description: error.message || "상품 승인에 실패했습니다.",
+        variant: "destructive",
+      })
+    }
+  }
+
   const filteredProducts = products.filter((product) =>
     product.name.toLowerCase().includes(searchQuery.toLowerCase())
   )
@@ -202,14 +219,24 @@ export default function AdminProductsPage() {
                                 >
                                   상세보기
                                 </Button>
-                                <Button
-                                  size="sm"
-                                  onClick={() => handleCreateModerationRequest(product.productId)}
-                                  disabled={product.moderationStatus === "CLEAR"}
-                                  className="bg-primary text-primary-foreground disabled:opacity-50 disabled:cursor-not-allowed"
-                                >
-                                  검수 요청
-                                </Button>
+                                {product.moderationStatus === "REVIEW" ? (
+                                  <Button
+                                    size="sm"
+                                    onClick={() => handleApproveModeration(product.productId)}
+                                    className="bg-green-600 text-white hover:bg-green-700"
+                                  >
+                                    승인
+                                  </Button>
+                                ) : (
+                                  <Button
+                                    size="sm"
+                                    onClick={() => handleCreateModerationRequest(product.productId)}
+                                    disabled={product.moderationStatus === "CLEAR"}
+                                    className="bg-primary text-primary-foreground disabled:opacity-50 disabled:cursor-not-allowed"
+                                  >
+                                    검수 요청
+                                  </Button>
+                                )}
                               </div>
                             </TableCell>
                           </TableRow>
