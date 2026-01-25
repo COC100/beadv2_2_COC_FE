@@ -173,42 +173,18 @@ export default function OAuth2SignupPage() {
 
     setIsLoading(true)
     try {
-      const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || ""
-
-      // API_SPEC.md의 POST /api/auth/oauth2/signup 엔드포인트 사용
-      const response = await fetch(`${API_BASE_URL}/api/auth/oauth2/signup`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: "include", // 쿠키 포함 (refresh token 수신용)
-        body: JSON.stringify({
-          provider,
-          signupToken,
-          email: formData.email,
-          phone: formData.phone,
-          verificationToken,
-        }),
+      // API_SPEC.md: POST /member-service/api/auth/oauth2/signup
+      // Req: OAuth2SignupRequest (signupToken, email, phone, verificationToken)
+      // Res: String accessToken (body), 리프레시 토큰 HttpOnly 쿠키 발급
+      const result = await authAPI.oauth2Signup({
+        signupToken,
+        email: formData.email,
+        phone: formData.phone,
+        verificationToken,
       })
 
-      // API_SPEC.md: POST /api/auth/oauth2/signup
-      // Res: String accessToken (body), 리프레시 토큰 HttpOnly 쿠키 발급
-      const responseText = await response.text()
-      
-      if (!response.ok) {
-        try {
-          const errorData = JSON.parse(responseText)
-          throw new Error(errorData.message || "회원가입에 실패했습니다")
-        } catch (e) {
-          throw new Error("회원가입에 실패했습니다")
-        }
-      }
-
-      // 응답은 순수 문자열로 accessToken 반환
-      const accessToken = responseText.trim().replace(/^"|"$/g, "") // 따옴표 제거
-      
-      if (accessToken) {
-        localStorage.setItem("accessToken", accessToken)
+      if (result.accessToken) {
+        localStorage.setItem("accessToken", result.accessToken)
 
         toast({
           title: "회원가입 완료",
