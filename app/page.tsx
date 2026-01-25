@@ -77,29 +77,25 @@ export default function HomePage() {
   }
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      const token = localStorage.getItem("accessToken")
-      console.log("[v0] Access token check:", token ? "found" : "not found")
-
-      if (!token) {
-        console.log("[v0] No access token found, redirecting to /")
-        router.push("/")
-        return // Stop execution, don't call fetchProducts
-      }
-
-      setIsAuthenticated(true)
-    }
-
     const fetchProducts = async () => {
       try {
         setLoading(true)
+        
+        // Check if user is authenticated
+        if (typeof window !== "undefined") {
+          const token = localStorage.getItem("accessToken")
+          console.log("[v0] Access token check:", token ? "found" : "not found")
+          setIsAuthenticated(!!token)
+        }
+
         const response = await productAPI.search({ size: 8, sortType: "LATEST" })
 
         const productsData = response.data?.products || []
         const activeProducts = productsData.filter((product: any) => product.status === "ACTIVE")
         setProducts(activeProducts)
 
-        if (isAuthenticated) {
+        // Try to fetch recommended products only if authenticated
+        if (typeof window !== "undefined" && localStorage.getItem("accessToken")) {
           try {
             const recommendedResponse = await productAPI.getRecentRecommendations(8)
             const recommendedItems = recommendedResponse.data || []
@@ -113,8 +109,9 @@ export default function HomePage() {
               setRecommendedProducts(activeRecommended)
               setShowRecommended(activeRecommended.length > 0)
             }
-          } catch (error) {
-            console.error("[v0] Failed to fetch recommended products:", error)
+          } catch (error: any) {
+            console.log("[v0] Failed to fetch recommended products (403 or auth error), skipping:", error)
+            // Silently skip recommended products if 403 or auth error
           }
         }
       } catch (error: any) {
@@ -135,7 +132,7 @@ export default function HomePage() {
     }
 
     fetchProducts()
-  }, [router, toast, isAuthenticated])
+  }, [toast])
 
   const categories = [
     { name: "노트북", icon: Laptop, category: "LAPTOP" },
