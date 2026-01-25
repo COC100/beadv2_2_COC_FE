@@ -146,6 +146,12 @@ async function fetchAPI<T>(
       throw new Error(errorMessage)
     }
 
+    // Handle 204 No Content responses
+    if (response.status === 204) {
+      console.log("[v0] Response data structure: 204 No Content")
+      return { data: null as T, headers: response.headers }
+    }
+
     const clonedResponse = response.clone()
 
     if (contentType && !contentType.includes("application/json")) {
