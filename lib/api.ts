@@ -1240,7 +1240,7 @@ export const adminAPI = {
   },
 
   searchMember: (email: string) =>
-    fetchAPI<any>(`/support-service/api/admin/members/search?email=${encodeURIComponent(email)}`, {}, true),
+    fetchAPI<any>(`/support-service/api/admin/blacklists?email=${encodeURIComponent(email)}`, {}, true),
 
   // Blacklist Management
   getBlacklists: (params?: { memberId?: number; status?: string; page?: number; size?: number }) => {
