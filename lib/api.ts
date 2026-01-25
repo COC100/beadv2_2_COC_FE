@@ -500,10 +500,11 @@ export const authAPI = {
       throw new Error(errorMessage)
     }
 
-    const responseData: ApiResponse<string> = await response.json()
+    // API_SPEC.md: Response는 순수 String으로 accessToken 반환
+    const accessToken = await response.text()
 
     return {
-      accessToken: responseData.data,
+      accessToken: accessToken.trim().replace(/^"|"$/g, ""), // 따옴표 제거
     }
   },
 
