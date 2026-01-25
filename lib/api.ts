@@ -1225,10 +1225,11 @@ export const inquiryAPI = {
 // Admin APIs
 export const adminAPI = {
   // Member Management
-  getMembers: (params?: { blacklistStatus?: string; page?: number; size?: number }) => {
+  getMembers: (params?: { blacklistStatus?: string; email?: string; page?: number; size?: number }) => {
     const queryParams = new URLSearchParams()
     if (params) {
       if (params.blacklistStatus) queryParams.append("blacklistStatus", params.blacklistStatus)
+      if (params.email) queryParams.append("email", params.email)
       if (params.page !== undefined) queryParams.append("page", params.page.toString())
       if (params.size !== undefined) queryParams.append("size", params.size.toString())
     }
@@ -1236,11 +1237,11 @@ export const adminAPI = {
       content: any[]
       totalElements: number
       totalPages: number
-    }>(`/support-service/api/admin/members${queryParams.toString() ? `?${queryParams.toString()}` : ""}`, {}, true)
+    }>(`/support-service/api/admin/blacklists${queryParams.toString() ? `?${queryParams.toString()}` : ""}`, {}, true)
   },
 
   searchMember: (email: string) =>
-    fetchAPI<any>(`/support-service/api/admin/members/search?email=${encodeURIComponent(email)}`, {}, true),
+    fetchAPI<any>(`/support-service/api/admin/blacklists?email=${encodeURIComponent(email)}`, {}, true),
 
   // Blacklist Management
   getBlacklists: (params?: { memberId?: number; status?: string; page?: number; size?: number }) => {
