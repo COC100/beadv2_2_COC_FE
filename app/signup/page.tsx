@@ -24,6 +24,7 @@ import { AlertPopup } from "@/components/alert-popup"
 import { authAPI, memberAPI } from "@/lib/api"
 import { handlePhoneInput } from "@/lib/utils"
 import { useToast } from "@/hooks/use-toast"
+import { getKakaoAuthUrl, getGoogleAuthUrl, getNaverAuthUrl } from "@/lib/oauth-config"
 
 export default function SignupPage() {
   const router = useRouter()
@@ -292,7 +293,6 @@ export default function SignupPage() {
   }
 
   const handleSocialSignup = (provider: string) => {
-    const { getKakaoAuthUrl, getGoogleAuthUrl, getNaverAuthUrl } = require("@/lib/oauth-config")
     if (provider === "kakao") {
       window.location.href = getKakaoAuthUrl()
     } else if (provider === "google") {
