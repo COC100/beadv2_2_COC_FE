@@ -236,6 +236,17 @@ export default function OAuth2SignupPage() {
           <CardHeader>
             <CardTitle>{getProviderName()} 회원가입</CardTitle>
             <CardDescription>회원가입을 완료하기 위해 추가 정보를 입력해주세요</CardDescription>
+            <div className="pt-2">
+              <p className="text-sm text-muted-foreground">
+                이미 계정이 있으신가요?{" "}
+                <Link
+                  href={`/oauth2/connect?provider=${provider}&token=${signupToken}`}
+                  className="text-primary hover:underline"
+                >
+                  기존 계정과 연결하기
+                </Link>
+              </p>
+            </div>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleOAuth2Signup} className="space-y-4">
