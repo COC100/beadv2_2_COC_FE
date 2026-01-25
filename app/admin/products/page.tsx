@@ -219,7 +219,7 @@ export default function AdminProductsPage() {
                                 >
                                   상세보기
                                 </Button>
-                                {product.moderationStatus === "REVIEW" ? (
+                                {product.moderationStatus === "REVIEW" && (
                                   <Button
                                     size="sm"
                                     onClick={() => handleApproveModeration(product.productId)}
@@ -227,12 +227,12 @@ export default function AdminProductsPage() {
                                   >
                                     승인
                                   </Button>
-                                ) : (
+                                )}
+                                {product.moderationStatus === "PENDING" && (
                                   <Button
                                     size="sm"
                                     onClick={() => handleCreateModerationRequest(product.productId)}
-                                    disabled={product.moderationStatus === "CLEAR"}
-                                    className="bg-primary text-primary-foreground disabled:opacity-50 disabled:cursor-not-allowed"
+                                    className="bg-primary text-primary-foreground"
                                   >
                                     검수 요청
                                   </Button>
