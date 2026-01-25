@@ -356,9 +356,37 @@ export default function CartPage() {
                     ))}
                   </div>
                   <Separator className="my-4" />
-                  <div className="flex justify-between font-bold text-lg mb-6">
-                    <span>총 금액</span>
-                    <span className="text-primary text-xl">₩{calculateTotal().toLocaleString()}</span>
+                  <div className="space-y-2 mb-6">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">대여료</span>
+                      <span className="font-medium">₩{calculateTotal().toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">보증금</span>
+                      <span className="font-medium">
+                        ₩
+                        {cartItems
+                          .reduce((sum, item) => {
+                            const product = productData[item.productId]
+                            return sum + (product?.securityDepositAmount || 0)
+                          }, 0)
+                          .toLocaleString()}
+                      </span>
+                    </div>
+                    <Separator />
+                    <div className="flex justify-between font-bold text-lg pt-2">
+                      <span>총 금액</span>
+                      <span className="text-primary text-xl">
+                        ₩
+                        {(
+                          calculateTotal() +
+                          cartItems.reduce((sum, item) => {
+                            const product = productData[item.productId]
+                            return sum + (product?.securityDepositAmount || 0)
+                          }, 0)
+                        ).toLocaleString()}
+                      </span>
+                    </div>
                   </div>
                   <Link href="/reservation">
                     <Button className="w-full h-11 rounded-lg" size="lg">

@@ -1470,6 +1470,17 @@ export const adminAPI = {
       true,
     ),
 
+  approveProductModeration: (productId: number, reason?: string) => {
+    const queryParams = reason ? `?reason=${encodeURIComponent(reason)}` : ""
+    return fetchAPI(
+      `/product-service/api/admin/products/${productId}/moderation/approve${queryParams}`,
+      {
+        method: "PATCH",
+      },
+      true,
+    )
+  },
+
   // Notice Management
   getAdminNotices: (params?: { status?: string; keyword?: string; page?: number; size?: number; sort?: string }) => {
     const queryParams = new URLSearchParams()

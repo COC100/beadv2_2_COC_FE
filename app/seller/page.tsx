@@ -69,16 +69,10 @@ export default function SellerPage() {
         console.error("Failed to load seller data:", error)
         const status = error.message.match(/\d{3}/)?.[0]
         
-        // If no seller permission (403/404), redirect to seller application page
+        // If no seller permission (403/404), redirect to seller application page without showing popup
         if (status === "403" || status === "404") {
-          setAlert({
-            open: true,
-            title: "판매자 권한 필요",
-            description: "판매자 신청 페이지로 이동합니다.",
-          })
-          setTimeout(() => {
-            router.push("/become-seller")
-          }, 1500)
+          router.replace("/become-seller")
+          return
         } else if (status === "401") {
           router.push("/")
         } else {

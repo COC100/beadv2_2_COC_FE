@@ -114,7 +114,7 @@ export default function RentalsPage() {
           return
         }
 
-        const rentalsResponse = await rentalAPI.list()
+        const rentalsResponse = await rentalAPI.search()
         const rentals = rentalsResponse.data
 
         const productIds = Array.from(

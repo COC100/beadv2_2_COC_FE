@@ -462,8 +462,20 @@ export default function ReservationPage() {
 
                 <div className="space-y-3 mb-4">
                   <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">상품 금액</span>
+                    <span className="text-muted-foreground">대여료</span>
                     <span className="font-medium">₩{totalAmount.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">보증금</span>
+                    <span className="font-medium">
+                      ₩
+                      {cartItems
+                        .reduce((sum, item) => {
+                          const product = productData[item.productId]
+                          return sum + (product?.securityDepositAmount || 0)
+                        }, 0)
+                        .toLocaleString()}
+                    </span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">배송비</span>
@@ -475,7 +487,16 @@ export default function ReservationPage() {
 
                 <div className="flex justify-between font-bold text-lg mb-6">
                   <span>총 결제 금액</span>
-                  <span className="text-primary text-xl">₩{totalAmount.toLocaleString()}</span>
+                  <span className="text-primary text-xl">
+                    ₩
+                    {(
+                      totalAmount +
+                      cartItems.reduce((sum, item) => {
+                        const product = productData[item.productId]
+                        return sum + (product?.securityDepositAmount || 0)
+                      }, 0)
+                    ).toLocaleString()}
+                  </span>
                 </div>
 
                 <Button className="w-full h-11 rounded-lg" size="lg" onClick={handleReservation}>
