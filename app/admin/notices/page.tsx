@@ -39,7 +39,7 @@ export default function AdminNoticesPage() {
   const loadNotices = async () => {
     try {
       setLoading(true)
-      const response = await adminAPI.getNotices({ page, size: 20 })
+      const response = await adminAPI.getAdminNotices({ page, size: 20 })
       setNotices(response.data.content || [])
       setTotalPages(response.data.totalPages || 0)
     } catch (error: any) {

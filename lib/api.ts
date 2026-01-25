@@ -670,7 +670,7 @@ export const settlementAPI = {
     fetchAPI<any[]>(`/seller-service/api/settlements/sellers/self/${sellerSettlementId}/lines`, {}, true),
 
   cancelSettlement: (sellerSettlementId: number) =>
-    fetchAPI(
+    fetchAPI<any>(
       `/seller-service/api/settlements/sellers/self/${sellerSettlementId}/cancel`,
       {
         method: "POST",
@@ -1422,9 +1422,11 @@ export const adminAPI = {
     ),
 
   // Notice Management
-  getNotices: (params?: { page?: number; size?: number; sort?: string }) => {
+  getAdminNotices: (params?: { status?: string; keyword?: string; page?: number; size?: number; sort?: string }) => {
     const queryParams = new URLSearchParams()
     if (params) {
+      if (params.status) queryParams.append("status", params.status)
+      if (params.keyword) queryParams.append("keyword", params.keyword)
       if (params.page !== undefined) queryParams.append("page", params.page.toString())
       if (params.size !== undefined) queryParams.append("size", params.size.toString())
       if (params.sort) queryParams.append("sort", params.sort)
@@ -1434,13 +1436,15 @@ export const adminAPI = {
       totalElements: number
       totalPages: number
     }>(
-      `/support-service/api/notices${queryParams.toString() ? `?${queryParams.toString()}` : ""}`,
+      `/support-service/api/admin/notices${queryParams.toString() ? `?${queryParams.toString()}` : ""}`,
       {},
       true,
     )
   },
 
-  createNotice: (data: { title: string; content: string; pinned: boolean; status: string }) =>
+  getAdminNoticeDetail: (noticeId: number) => fetchAPI<any>(`/support-service/api/admin/notices/${noticeId}`, {}, true),
+
+  createNotice: (data: { title: string; content: string; pinned?: boolean; status?: string; displayStartAt?: string; displayEndAt?: string }) =>
     fetchAPI(
       "/support-service/api/admin/notices",
       {
@@ -1450,11 +1454,11 @@ export const adminAPI = {
       true,
     ),
 
-  updateNotice: (noticeId: number, data: { title: string; content: string; pinned: boolean; status: string }) =>
+  updateNotice: (noticeId: number, data: { title?: string; content?: string; pinned?: boolean; displayStartAt?: string; displayEndAt?: string }) =>
     fetchAPI(
       `/support-service/api/admin/notices/${noticeId}`,
       {
-        method: "PUT",
+        method: "PATCH",
         body: JSON.stringify(data),
       },
       true,
@@ -1465,6 +1469,24 @@ export const adminAPI = {
       `/support-service/api/admin/notices/${noticeId}`,
       {
         method: "DELETE",
+      },
+      true,
+    ),
+
+  publishNotice: (noticeId: number) =>
+    fetchAPI(
+      `/support-service/api/admin/notices/${noticeId}/publish`,
+      {
+        method: "PATCH",
+      },
+      true,
+    ),
+
+  draftNotice: (noticeId: number) =>
+    fetchAPI(
+      `/support-service/api/admin/notices/${noticeId}/draft`,
+      {
+        method: "PATCH",
       },
       true,
     ),
