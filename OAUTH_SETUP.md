@@ -28,17 +28,9 @@ NEXT_PUBLIC_NAVER_CLIENT_ID=your_naver_client_id
 
 # API 서버 주소
 NEXT_PUBLIC_API_BASE_URL=https://your-api-server.com
-
-# 소셜 로그인 리다이렉트 베이스 URL (선택 사항)
-# 설정하지 않으면 자동으로 window.location.origin 사용
-# 로컬 테스트 예시: http://localhost:8080/member-service
-NEXT_PUBLIC_SOCIAL_REDIRECT_BASE_URL=http://localhost:8080/member-service
 \`\`\`
 
-**중요**: 
-- Client Secret은 절대 클라이언트에 노출하면 안 되며, 백엔드에서만 사용됩니다.
-- `NEXT_PUBLIC_SOCIAL_REDIRECT_BASE_URL`을 설정하면 소셜 로그인 콜백 URL이 해당 베이스 URL을 기준으로 생성됩니다.
-  - 예: `http://localhost:8080/member-service` 설정 시 → `http://localhost:8080/member-service/oauth2/callback/naver`
+**중요**: Client Secret은 절대 클라이언트에 노출하면 안 되며, 백엔드에서만 사용됩니다.
 
 ## 제공자별 설정
 
@@ -50,7 +42,7 @@ NEXT_PUBLIC_SOCIAL_REDIRECT_BASE_URL=http://localhost:8080/member-service
 #### 주요 설정
 - **Authorization Endpoint**: `https://kauth.kakao.com/oauth/authorize`
 - **Token Endpoint**: `https://kauth.kakao.com/oauth/token` (백엔드)
-- **Redirect URI**: `http://localhost:3000/oauth2/callback/kakao` (개발) 또는 `https://yourdomain.com/oauth2/callback/kakao` (운영)
+- **Redirect URI**: `http://localhost:3000/login/oauth2/code/kakao` (개발) 또는 `https://yourdomain.com/login/oauth2/code/kakao` (운영)
 - **Scope**: `profile_nickname profile_image account_email`
 
 #### 카카오 Developers 설정
@@ -58,7 +50,7 @@ NEXT_PUBLIC_SOCIAL_REDIRECT_BASE_URL=http://localhost:8080/member-service
 2. **내 애플리케이션 > 앱 설정 > 요약 정보**에서 REST API 키 확인
 3. **내 애플리케이션 > 제품 설정 > 카카오 로그인**에서:
    - 카카오 로그인 활성화
-   - Redirect URI 등록: `http://localhost:3000/oauth2/callback/kakao`
+   - Redirect URI 등록: `http://localhost:3000/login/oauth2/code/kakao`
 4. **내 애플리케이션 > 제품 설정 > 카카오 로그인 > 동의 항목**에서:
    - 닉네임, 프로필 사진, 카카오계정(이메일) 동의 항목 설정
 
@@ -70,7 +62,7 @@ NEXT_PUBLIC_SOCIAL_REDIRECT_BASE_URL=http://localhost:8080/member-service
 #### 주요 설정
 - **Authorization Endpoint**: `https://accounts.google.com/o/oauth2/v2/auth`
 - **Token Endpoint**: `https://oauth2.googleapis.com/token` (백엔드)
-- **Redirect URI**: `http://localhost:3000/oauth2/callback/google` (개발) 또는 `https://yourdomain.com/oauth2/callback/google` (운영)
+- **Redirect URI**: `http://localhost:3000/login/oauth2/code/google` (개발) 또는 `https://yourdomain.com/login/oauth2/code/google` (운영)
 - **Scope**: `openid profile email`
 
 #### Google Cloud Console 설정
@@ -82,7 +74,7 @@ NEXT_PUBLIC_SOCIAL_REDIRECT_BASE_URL=http://localhost:8080/member-service
 3. **API 및 서비스 > 사용자 인증 정보**에서:
    - OAuth 2.0 클라이언트 ID 만들기
    - 애플리케이션 유형: 웹 애플리케이션
-   - 승인된 리디렉션 URI: `http://localhost:3000/oauth2/callback/google`
+   - 승인된 리디렉션 URI: `http://localhost:3000/login/oauth2/code/google`
 
 ### 3. 네이버 로그인 (Naver Login)
 
@@ -92,10 +84,7 @@ NEXT_PUBLIC_SOCIAL_REDIRECT_BASE_URL=http://localhost:8080/member-service
 #### 주요 설정
 - **Authorization Endpoint**: `https://nid.naver.com/oauth2.0/authorize`
 - **Token Endpoint**: `https://nid.naver.com/oauth2.0/token` (백엔드)
-- **Redirect URI**: 
-  - 기본: `http://localhost:3000/oauth2/callback/naver` (개발)
-  - 커스텀: `http://localhost:8080/member-service/oauth2/callback/naver` (환경 변수 설정 시)
-  - 운영: `https://yourdomain.com/oauth2/callback/naver`
+- **Redirect URI**: `http://localhost:3000/login/oauth2/code/naver` (개발) 또는 `https://yourdomain.com/login/oauth2/code/naver` (운영)
 - **Scope**: `name email profile_image`
 
 #### 네이버 개발자센터 설정
@@ -104,10 +93,8 @@ NEXT_PUBLIC_SOCIAL_REDIRECT_BASE_URL=http://localhost:8080/member-service
    - 애플리케이션 이름, 사용 API(네이버 로그인) 선택
    - 제공 정보 선택: 이름, 이메일, 프로필 사진
 3. **API 설정**에서:
-   - 서비스 URL: `http://localhost:3000` (기본) 또는 `http://localhost:8080` (커스텀)
-   - Callback URL: 
-     - 기본: `http://localhost:3000/oauth2/callback/naver`
-     - 커스텀: `http://localhost:8080/member-service/oauth2/callback/naver` (환경 변수 사용 시)
+   - 서비스 URL: `http://localhost:3000`
+   - Callback URL: `http://localhost:3000/login/oauth2/code/naver`
 
 ## 백엔드 API 엔드포인트
 
@@ -181,13 +168,13 @@ Response:
 
 ### 파일 구조
 \`\`\`
-/lib/oauth-config.ts          # OAuth 설정 및 URL 생성
-/app/login/page.tsx            # 로그인 페이지 (소셜 로그인 버튼)
-/app/signup/page.tsx           # 회원가입 페이지 (소셜 회원가입 버튼)
-/app/oauth2/callback/kakao/page.tsx    # 카카오 콜백
-/app/oauth2/callback/google/page.tsx   # 구글 콜백
-/app/oauth2/callback/naver/page.tsx    # 네이버 콜백
-/app/oauth2/signup/page.tsx    # OAuth 회원가입 완료
+/lib/oauth-config.ts                    # OAuth 설정 및 URL 생성
+/app/login/page.tsx                      # 로그인 페이지 (소셜 로그인 버튼)
+/app/signup/page.tsx                     # 회원가입 페이지 (소셜 회원가입 버튼)
+/app/login/oauth2/code/kakao/page.tsx   # 카카오 콜백
+/app/login/oauth2/code/google/page.tsx  # 구글 콜백
+/app/login/oauth2/code/naver/page.tsx   # 네이버 콜백
+/app/oauth2/signup/page.tsx              # OAuth 회원가입 완료
 \`\`\`
 
 ### OAuth 흐름 처리
@@ -216,7 +203,6 @@ Response:
 
 ### 로컬 개발 환경
 
-#### 기본 설정 (localhost:3000)
 1. 환경 변수 설정 (`.env.local`)
    \`\`\`env
    NEXT_PUBLIC_KAKAO_CLIENT_ID=your_key
@@ -224,29 +210,13 @@ Response:
    NEXT_PUBLIC_NAVER_CLIENT_ID=your_key
    NEXT_PUBLIC_API_BASE_URL=http://localhost:8080
    \`\`\`
-2. 각 제공자의 개발자 센터에서 `http://localhost:3000/oauth2/callback/[provider]` 등록
+2. 각 제공자의 개발자 센터에서 콜백 URL 등록:
+   - 카카오: `http://localhost:3000/login/oauth2/code/kakao`
+   - 구글: `http://localhost:3000/login/oauth2/code/google`
+   - 네이버: `http://localhost:3000/login/oauth2/code/naver`
 3. 로그인/회원가입 페이지에서 소셜 로그인 버튼 클릭
 4. 인증 후 콜백 처리 확인
 5. 브라우저 개발자 도구 콘솔에서 `[v0]` 로그 확인
-
-#### 커스텀 콜백 URL 설정 (localhost:8080/member-service)
-1. 환경 변수에 소셜 로그인 리다이렉트 베이스 URL 추가 (`.env.local`)
-   \`\`\`env
-   NEXT_PUBLIC_KAKAO_CLIENT_ID=your_key
-   NEXT_PUBLIC_GOOGLE_CLIENT_ID=your_key
-   NEXT_PUBLIC_NAVER_CLIENT_ID=your_key
-   NEXT_PUBLIC_API_BASE_URL=http://localhost:8080
-   # 커스텀 콜백 URL 설정
-   NEXT_PUBLIC_SOCIAL_REDIRECT_BASE_URL=http://localhost:8080/member-service
-   \`\`\`
-2. 각 제공자의 개발자 센터에서 커스텀 콜백 URL 등록
-   - 카카오: `http://localhost:8080/member-service/oauth2/callback/kakao`
-   - 구글: `http://localhost:8080/member-service/oauth2/callback/google`
-   - 네이버: `http://localhost:8080/member-service/oauth2/callback/naver`
-3. 프론트엔드 개발 서버 재시작
-4. 로그인 테스트 진행
-
-**참고**: 실제로 앱은 `localhost:3000`에서 실행되지만, OAuth 콜백 URL은 `localhost:8080/member-service`로 설정됩니다. 이는 백엔드 API 서버의 경로 구조에 맞추기 위한 것입니다.
 
 ### 디버깅
 프론트엔드 코드에는 `console.log("[v0] ...")` 디버그 로그가 포함되어 있습니다:
