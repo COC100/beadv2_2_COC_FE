@@ -5,19 +5,19 @@ export const OAUTH_CONFIG = {
     authUrl: "https://kauth.kakao.com/oauth/authorize",
     clientId: process.env.NEXT_PUBLIC_KAKAO_CLIENT_ID || "",
     redirectUri: typeof window !== "undefined" ? `${window.location.origin}/oauth2/callback/kakao` : "",
-    scope: "",
+    scope: "profile_nickname profile_image account_email", // 카카오 공식 스코프
   },
   google: {
     authUrl: "https://accounts.google.com/o/oauth2/v2/auth",
     clientId: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "",
     redirectUri: typeof window !== "undefined" ? `${window.location.origin}/oauth2/callback/google` : "",
-    scope: "openid profile email",
+    scope: "openid profile email", // Google OAuth 2.0 표준 스코프
   },
   naver: {
     authUrl: "https://nid.naver.com/oauth2.0/authorize",
     clientId: process.env.NEXT_PUBLIC_NAVER_CLIENT_ID || "",
     redirectUri: typeof window !== "undefined" ? `${window.location.origin}/oauth2/callback/naver` : "",
-    scope: "",
+    scope: "name email profile_image", // 네이버 공식 스코프
   },
 }
 
@@ -38,6 +38,7 @@ export function getKakaoAuthUrl(): string {
     state,
   })
 
+  // 카카오는 scope 파라미터를 공백으로 구분된 문자열로 전달
   if (OAUTH_CONFIG.kakao.scope) {
     params.append("scope", OAUTH_CONFIG.kakao.scope)
   }
@@ -56,8 +57,8 @@ export function getGoogleAuthUrl(): string {
     response_type: "code",
     scope: OAUTH_CONFIG.google.scope,
     state,
-    access_type: "offline",
-    prompt: "consent",
+    access_type: "online", // 웹 로그인은 online 권장 (offline은 refresh token 필요시)
+    prompt: "select_account", // 계정 선택 화면 표시
   })
 
   return `${OAUTH_CONFIG.google.authUrl}?${params.toString()}`
@@ -75,6 +76,7 @@ export function getNaverAuthUrl(): string {
     state,
   })
 
+  // 네이버는 scope를 선택적으로 사용 (기본: name, email 제공)
   if (OAUTH_CONFIG.naver.scope) {
     params.append("scope", OAUTH_CONFIG.naver.scope)
   }

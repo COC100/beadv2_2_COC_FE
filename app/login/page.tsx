@@ -11,6 +11,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Separator } from "@/components/ui/separator"
 import { useToast } from "@/hooks/use-toast"
 import { authAPI } from "@/lib/api"
+import { getKakaoAuthUrl, getGoogleAuthUrl, getNaverAuthUrl } from "@/lib/oauth-config"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -145,7 +146,6 @@ export default function LoginPage() {
                   variant="outline"
                   className="w-full"
                   onClick={() => {
-                    const { getGoogleAuthUrl } = require("@/lib/oauth-config")
                     window.location.href = getGoogleAuthUrl()
                   }}
                 >
@@ -174,7 +174,6 @@ export default function LoginPage() {
                   variant="outline"
                   className="w-full bg-[#FEE500] hover:bg-[#FEE500]/90 border-[#FEE500]"
                   onClick={() => {
-                    const { getKakaoAuthUrl } = require("@/lib/oauth-config")
                     window.location.href = getKakaoAuthUrl()
                   }}
                 >
@@ -191,7 +190,6 @@ export default function LoginPage() {
                   variant="outline"
                   className="w-full bg-[#03C75A] hover:bg-[#03C75A]/90 border-[#03C75A] text-white"
                   onClick={() => {
-                    const { getNaverAuthUrl } = require("@/lib/oauth-config")
                     window.location.href = getNaverAuthUrl()
                   }}
                 >
