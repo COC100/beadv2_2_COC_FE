@@ -670,7 +670,7 @@ export const settlementAPI = {
     fetchAPI<any[]>(`/seller-service/api/settlements/sellers/self/${sellerSettlementId}/lines`, {}, true),
 
   cancelSettlement: (sellerSettlementId: number) =>
-    fetchAPI(
+    fetchAPI<any>(
       `/seller-service/api/settlements/sellers/self/${sellerSettlementId}/cancel`,
       {
         method: "POST",
@@ -1079,7 +1079,7 @@ export const cartAPI = {
 
 // Review APIs
 export const reviewAPI = {
-  create: (data: { productId: number; rating: number; content: string }) =>
+  create: (data: { rentalItemId: number; sellerId: number; rating: number; content: string }) =>
     fetchAPI(
       "/support-service/api/reviews",
       {
@@ -1089,7 +1089,7 @@ export const reviewAPI = {
       true,
     ),
 
-  update: (reviewId: number, data: { rating: number; content: string }) =>
+  update: (reviewId: number, data: { rating?: number; content?: string }) =>
     fetchAPI(
       `/support-service/api/reviews/${reviewId}`,
       {
@@ -1108,7 +1108,7 @@ export const reviewAPI = {
       true,
     ),
 
-  list: (params?: { productId?: number; memberId?: number; rating?: number; page?: number; size?: number }) => {
+  list: (params?: { sellerId?: number; rating?: number; page?: number; size?: number }) => {
     const queryParams = new URLSearchParams()
     if (params) {
       Object.entries(params).forEach(([key, value]) => {
@@ -1117,24 +1117,24 @@ export const reviewAPI = {
         }
       })
     }
-    return fetchAPI<{
-      content: any[]
-      totalElements: number
-      totalPages: number
-    }>(`/support-service/api/reviews${queryParams.toString() ? `?${queryParams.toString()}` : ""}`, {}, false)
+    return fetchAPI<any[]>(`/support-service/api/reviews${queryParams.toString() ? `?${queryParams.toString()}` : ""}`, {}, false)
   },
 
-  getMyReviews: (params?: { page?: number; size?: number }) => {
+  getMyReviews: (params?: { rating?: number; page?: number; size?: number }) => {
     const queryParams = new URLSearchParams()
+    if (params?.rating) queryParams.append("rating", params.rating.toString())
     if (params?.page !== undefined) queryParams.append("page", params.page.toString())
     if (params?.size !== undefined) queryParams.append("size", params.size.toString())
     
-    return fetchAPI<{
-      content: any[]
-      totalElements: number
-      totalPages: number
-    }>(`/support-service/api/reviews/me${queryParams.toString() ? `?${queryParams.toString()}` : ""}`, {}, true)
+    return fetchAPI<any[]>(`/support-service/api/reviews/me${queryParams.toString() ? `?${queryParams.toString()}` : ""}`, {}, true)
   },
+
+  getSummary: (sellerId: number) =>
+    fetchAPI<{ sellerId: number; summary: string; reviewCount: number; summarizedAt: string } | null>(
+      `/support-service/api/reviews/summary?sellerId=${sellerId}`,
+      {},
+      false,
+    ),
 }
 
 // Support Service APIs - Notices
@@ -1422,9 +1422,11 @@ export const adminAPI = {
     ),
 
   // Notice Management
-  getNotices: (params?: { page?: number; size?: number; sort?: string }) => {
+  getAdminNotices: (params?: { status?: string; keyword?: string; page?: number; size?: number; sort?: string }) => {
     const queryParams = new URLSearchParams()
     if (params) {
+      if (params.status) queryParams.append("status", params.status)
+      if (params.keyword) queryParams.append("keyword", params.keyword)
       if (params.page !== undefined) queryParams.append("page", params.page.toString())
       if (params.size !== undefined) queryParams.append("size", params.size.toString())
       if (params.sort) queryParams.append("sort", params.sort)
@@ -1434,13 +1436,15 @@ export const adminAPI = {
       totalElements: number
       totalPages: number
     }>(
-      `/support-service/api/notices${queryParams.toString() ? `?${queryParams.toString()}` : ""}`,
+      `/support-service/api/admin/notices${queryParams.toString() ? `?${queryParams.toString()}` : ""}`,
       {},
       true,
     )
   },
 
-  createNotice: (data: { title: string; content: string; pinned: boolean; status: string }) =>
+  getAdminNoticeDetail: (noticeId: number) => fetchAPI<any>(`/support-service/api/admin/notices/${noticeId}`, {}, true),
+
+  createNotice: (data: { title: string; content: string; pinned?: boolean; status?: string; displayStartAt?: string; displayEndAt?: string }) =>
     fetchAPI(
       "/support-service/api/admin/notices",
       {
@@ -1450,11 +1454,11 @@ export const adminAPI = {
       true,
     ),
 
-  updateNotice: (noticeId: number, data: { title: string; content: string; pinned: boolean; status: string }) =>
+  updateNotice: (noticeId: number, data: { title?: string; content?: string; pinned?: boolean; displayStartAt?: string; displayEndAt?: string }) =>
     fetchAPI(
       `/support-service/api/admin/notices/${noticeId}`,
       {
-        method: "PUT",
+        method: "PATCH",
         body: JSON.stringify(data),
       },
       true,
@@ -1466,13 +1470,6 @@ export const adminAPI = {
       {
         method: "DELETE",
       },
-      true,
-    ),
-
-  getNoticeDetail: (noticeId: number) =>
-    fetchAPI<any>(
-      `/support-service/api/admin/notices/${noticeId}`,
-      {},
       true,
     ),
 
@@ -1490,6 +1487,17 @@ export const adminAPI = {
       `/support-service/api/admin/notices/${noticeId}/draft`,
       {
         method: "PATCH",
+      },
+      true,
+    ),
+
+  // Admin Member Management
+  createAdminMember: (data: { email: string; password: string; name: string; phone: string }) =>
+    fetchAPI(
+      "/support-service/api/admin/members",
+      {
+        method: "POST",
+        body: JSON.stringify(data),
       },
       true,
     ),

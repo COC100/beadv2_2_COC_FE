@@ -186,17 +186,14 @@
   - Res: `SellerIdResponse { sellerId, memberId }`
 - **GET /internal/sellers/{sellerId}** — 판매자 조회
   - Res: `SellerDetailResponse`
-
-### 관리자
-- **PATCH /api/admin/sellers/{memberId}/approve** — 판매자 승인 (Auth)
-  - Path: `memberId:long`
-  - Res: `SellerRegistrationResponse { registrationId, memberId, storeName, bizRegNo, storePhone, status, approvedBy }` (래퍼 없음)
-- **PATCH /api/admin/sellers/{memberId}/reject** — 판매자 반려 (Auth)
-  - Path: `memberId:long`
-  - Res: `SellerRegistrationResponse` (래퍼 없음)
-- **GET /api/admin/sellers/registrations** — 판매자 등록 요청 목록 (Auth)
+- **PATCH /internal/sellers/{memberId}/approve** — 판매자 승인(내부)
+  - Query: `approvedBy:long`
+  - Res: `SellerRegistrationResponse { registrationId, memberId, storeName, bizRegNo, storePhone, status, approvedBy }`
+- **PATCH /internal/sellers/{memberId}/reject** — 판매자 반려(내부)
+  - Res: `SellerRegistrationResponse`
+- **GET /internal/sellers/registrations** — 판매자 등록 요청 목록(내부)
   - Query: `status?:SellerRegistrationStatus`, `pageable`
-  - Res: `Page<SellerRegistrationResponse>` (래퍼 없음)
+  - Res: `SellerRegistrationPageResponse { content:SellerRegistrationResponse[], page, size, totalElements, totalPages, last }`
 
 ### 채팅
 - **POST /api/chat/rooms** — 채팅방 생성 (Auth)
@@ -226,8 +223,6 @@
   - Res: `SellerSettlementResponse`
 - **GET /api/settlements/sellers/self/{sellerSettlementId}/lines** — 라인 상세 (Auth)
   - Res: `SellerSettlementLineResponse[] { id, sellerSettlementId, sellerId, rentalItemId, memberId, productId, rentalAmount, feeAmount }`
-- **POST /api/settlements/sellers/self/{sellerSettlementId}/cancel** — 정산 취소 (Auth)
-  - Res: `SellerSettlementResponse`
 
 ### 정산 관리자 (Auth)
 - **GET /api/admin/settlements/seller-settlements** — 판매자 정산 조회
@@ -239,9 +234,6 @@
 - **POST /api/admin/settlements/seller-settlements/pay-bulk** — 관리자 일괄 지급/실패 처리
   - Req: `SettlementBulkPayRequest { sellerId?:long, periodYm?:yyyy-MM, status?:SellerSettlementStatus, paidAt?:ISO_LOCAL_DATE_TIME }`
   - Res: `SettlementBulkPayResponse { requestedCount, successCount, failedCount }`
-- **POST /api/admin/settlements/batches/run** — 관리자 배치 실행
-  - Req: `SettlementAdminBatchRunRequest { periodYm:yyyy-MM, startDate?:yyyy-MM-dd, endDate?:yyyy-MM-dd, sellerId?:long, pageSize?:int>0 }`
-  - Res: `SettlementBatchResponse { id, periodYm, status:SettlementBatchStatus, startedAt, completedAt, createdAt, updatedAt }`
 
 ### 정산 배치 내부 (래퍼 ApiResponse)
 - Auth: 내부 토큰 헤더 `X-Internal-Token: <token>` (설정: `internal.api.header`, `internal.api.token`)
@@ -468,6 +460,11 @@
   - Res: `NoticeResponse { id, title, content, status:NoticeStatus, pinned, viewCount, displayStartAt, displayEndAt, createdAt, updatedAt }`
 
 ### 관리자 - 공지 (Auth, ADMIN)
+- **GET /api/admin/notices** — 공지 목록 조회(관리자)
+  - Query: `status?:NoticeStatus`, `keyword?:string`, `pageable`(sort=pinned,createdAt desc)
+  - Res: `Page<AdminNoticeSummaryResponse { id, title, pinned, viewCount, status, createdAt }>`
+- **GET /api/admin/notices/{noticeId}** — 공지 상세 조회(관리자)
+  - Res: `NoticeResponse { id, title, content, status:NoticeStatus, pinned, viewCount, displayStartAt, displayEndAt, createdAt, updatedAt }`
 - **POST /api/admin/notices** — 공지 생성
   - Req: `title:string<=200`, `content:string`, `pinned?:boolean`, `status?:NoticeStatus`, `displayStartAt?:datetime`, `displayEndAt?:datetime`
   - Res: `NoticeResponse` (201)
@@ -502,6 +499,17 @@
   - Req: `email:string(email)`, `password:string(8-20, 영문+숫자+특수문자)`, `name:string<=20`, `phone:string(휴대폰)`
   - Res: `AdminMemberCreateResponse { memberId, email, role }`
 
+### 관리자 - 판매자 승인 (Auth, ADMIN)
+- **PATCH /api/admin/sellers/{memberId}/approve** — 판매자 승인
+  - Path: `memberId:long`
+  - Res: `ApiResponse<SellerRegistrationResponse { registrationId, memberId, storeName, bizRegNo, storePhone, status, approvedBy }>`
+- **PATCH /api/admin/sellers/{memberId}/reject** — 판매자 반려
+  - Path: `memberId:long`
+  - Res: `ApiResponse<SellerRegistrationResponse>`
+- **GET /api/admin/sellers/registrations** — 판매자 등록 요청 목록
+  - Query: `status?:SellerRegistrationStatus`, `pageable`
+  - Res: `ApiResponse<Page<SellerRegistrationResponse>>`
+
 ---
 ## ai-service
 ### API
@@ -517,7 +525,7 @@
   - Req: `message:string`
   - Res: `String`
 - **POST /api/ai/descriptions** — 상품 설명 추천
-  - Req: `ProductDescriptionRequest { productName:string(필수), specs:map<string,string>(필수), category:string(필수) }`
+  - Req: `ProductDescriptionRequest`
   - Res: `String`
 - **POST /api/ai/embeddings/reindex** — 임베딩 미생성 건 재색인
   - Res: `Integer`(재색인 개수)
