@@ -197,7 +197,7 @@ export default function AdminMembersPage() {
                     setPage(0)
                   }}
                 >
-                  정상
+                  활성
                 </Button>
                 <Button
                   variant={blacklistStatusFilter === "SUSPENDED" ? "default" : "outline"}
@@ -234,12 +234,12 @@ export default function AdminMembersPage() {
                         <div className="text-sm text-muted-foreground">
                           가입일: {new Date(member.createdAt).toLocaleDateString()}
                         </div>
-                        <Badge variant={member.blacklistStatus === "ACTIVE" ? "default" : "destructive"}>
-                          {member.blacklistStatus === "ACTIVE" ? "정상" : "정지"}
+                        <Badge variant={member.status === "ACTIVE" ? "default" : "destructive"}>
+                          {member.status === "ACTIVE" ? "활성" : "정지"}
                         </Badge>
                       </div>
                       <div className="flex gap-2">
-                        {member.blacklistStatus === "ACTIVE" ? (
+                        {member.status === "ACTIVE" ? (
                           <Button
                             size="sm"
                             variant="outline"
