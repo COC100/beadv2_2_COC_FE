@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
@@ -37,6 +37,11 @@ export default function AdminMembersPage() {
   const [selectedMember, setSelectedMember] = useState<any>(null)
   const [blacklistReason, setBlacklistReason] = useState("")
   const [blacklistMemo, setBlacklistMemo] = useState("")
+
+  // Auto-load members when statusFilter or page changes
+  useEffect(() => {
+    loadMembers()
+  }, [statusFilter, page])
 
   const handleSearch = async () => {
     if (!searchEmail.trim()) {
@@ -293,7 +298,6 @@ export default function AdminMembersPage() {
                       onClick={() => {
                         setStatusFilter("ALL")
                         setPage(0)
-                        loadMembers()
                       }}
                     >
                       전체
@@ -304,7 +308,6 @@ export default function AdminMembersPage() {
                       onClick={() => {
                         setStatusFilter("ACTIVE")
                         setPage(0)
-                        loadMembers()
                       }}
                     >
                       활성
@@ -315,7 +318,6 @@ export default function AdminMembersPage() {
                       onClick={() => {
                         setStatusFilter("SUSPENDED")
                         setPage(0)
-                        loadMembers()
                       }}
                     >
                       정지
@@ -338,11 +340,7 @@ export default function AdminMembersPage() {
                   <div className="flex justify-center gap-2 mt-6">
                     <Button
                       variant="outline"
-                      onClick={() => {
-                        const newPage = Math.max(0, page - 1)
-                        setPage(newPage)
-                        setTimeout(() => loadMembers(), 0)
-                      }}
+                      onClick={() => setPage((p) => Math.max(0, p - 1))}
                       disabled={page === 0}
                     >
                       이전
@@ -352,11 +350,7 @@ export default function AdminMembersPage() {
                     </span>
                     <Button
                       variant="outline"
-                      onClick={() => {
-                        const newPage = Math.min(totalPages - 1, page + 1)
-                        setPage(newPage)
-                        setTimeout(() => loadMembers(), 0)
-                      }}
+                      onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
                       disabled={page >= totalPages - 1}
                     >
                       다음
