@@ -1,6 +1,9 @@
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || ""
+const API_BASIC_AUTH_USERNAME = process.env.NEXT_PUBLIC_API_BASIC_AUTH_USERNAME || ""
+const API_BASIC_AUTH_PASSWORD = process.env.NEXT_PUBLIC_API_BASIC_AUTH_PASSWORD || ""
 
 console.log("[v0] API_BASE_URL:", API_BASE_URL)
+console.log("[v0] Basic Auth configured:", !!API_BASIC_AUTH_USERNAME)
 
 // Common API response wrapper
 export interface ApiResponse<T> {
@@ -49,8 +52,22 @@ async function fetchAPI<T>(
     throw new Error("인증 토큰이 없습니다")
   }
 
-  if (hasToken) {
+  // Add HTTP Basic Auth if configured (for server-level authentication)
+  // Basic Auth must be set first if present, as it's for server access
+  if (API_BASIC_AUTH_USERNAME && API_BASIC_AUTH_PASSWORD) {
+    const basicAuth = btoa(`${API_BASIC_AUTH_USERNAME}:${API_BASIC_AUTH_PASSWORD}`)
+    headers.Authorization = `Basic ${basicAuth}`
+    console.log("[v0] Adding Basic Auth header")
+  }
+  
+  // Add Bearer token if available (may override Basic Auth for API-level auth)
+  // For servers that need both, this might need adjustment
+  if (hasToken && !API_BASIC_AUTH_USERNAME) {
     headers.Authorization = `Bearer ${localStorage.getItem("accessToken")}`
+  } else if (hasToken && API_BASIC_AUTH_USERNAME) {
+    // If both are needed, we keep Basic Auth and add Bearer as X-Bearer-Token
+    headers["X-Bearer-Token"] = `Bearer ${localStorage.getItem("accessToken")}`
+    console.log("[v0] Adding Bearer token as X-Bearer-Token (Basic Auth present)")
   }
 
   if (API_BASE_URL.includes("ngrok")) {
@@ -286,6 +303,12 @@ export const authAPI = {
       "Content-Type": "application/json",
     }
 
+    // Add HTTP Basic Auth if configured
+    if (API_BASIC_AUTH_USERNAME && API_BASIC_AUTH_PASSWORD) {
+      const basicAuth = btoa(`${API_BASIC_AUTH_USERNAME}:${API_BASIC_AUTH_PASSWORD}`)
+      headers.Authorization = `Basic ${basicAuth}`
+    }
+
     if (API_BASE_URL.includes("ngrok")) {
       headers["ngrok-skip-browser-warning"] = "true"
     }
@@ -322,6 +345,12 @@ export const authAPI = {
       "Content-Type": "application/json",
     }
 
+    // Add HTTP Basic Auth if configured
+    if (API_BASIC_AUTH_USERNAME && API_BASIC_AUTH_PASSWORD) {
+      const basicAuth = btoa(`${API_BASIC_AUTH_USERNAME}:${API_BASIC_AUTH_PASSWORD}`)
+      headers.Authorization = `Basic ${basicAuth}`
+    }
+
     if (API_BASE_URL.includes("ngrok")) {
       headers["ngrok-skip-browser-warning"] = "true"
     }
@@ -352,6 +381,12 @@ export const authAPI = {
 
     const headers: HeadersInit = {
       "Content-Type": "application/json",
+    }
+
+    // Add HTTP Basic Auth if configured
+    if (API_BASIC_AUTH_USERNAME && API_BASIC_AUTH_PASSWORD) {
+      const basicAuth = btoa(`${API_BASIC_AUTH_USERNAME}:${API_BASIC_AUTH_PASSWORD}`)
+      headers.Authorization = `Basic ${basicAuth}`
     }
 
     if (API_BASE_URL.includes("ngrok")) {
@@ -435,6 +470,12 @@ export const authAPI = {
 
     const headers: HeadersInit = {
       "Content-Type": "application/json",
+    }
+
+    // Add HTTP Basic Auth if configured
+    if (API_BASIC_AUTH_USERNAME && API_BASIC_AUTH_PASSWORD) {
+      const basicAuth = btoa(`${API_BASIC_AUTH_USERNAME}:${API_BASIC_AUTH_PASSWORD}`)
+      headers.Authorization = `Basic ${basicAuth}`
     }
 
     if (API_BASE_URL.includes("ngrok")) {

@@ -48,16 +48,27 @@ export default function GoogleCallbackPage() {
   const handleGoogleLogin = async (code: string) => {
     try {
       const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || ""
+      const API_BASIC_AUTH_USERNAME = process.env.NEXT_PUBLIC_API_BASIC_AUTH_USERNAME || ""
+      const API_BASIC_AUTH_PASSWORD = process.env.NEXT_PUBLIC_API_BASIC_AUTH_PASSWORD || ""
 
       console.log("[v0] Sending code to backend:", { code, redirectUri: OAUTH_CONFIG.google.redirectUri })
+
+      const headers: HeadersInit = {
+        "Content-Type": "application/json",
+      }
+
+      // Add HTTP Basic Auth if configured
+      if (API_BASIC_AUTH_USERNAME && API_BASIC_AUTH_PASSWORD) {
+        const basicAuth = btoa(`${API_BASIC_AUTH_USERNAME}:${API_BASIC_AUTH_PASSWORD}`)
+        headers.Authorization = `Basic ${basicAuth}`
+        console.log("[v0] Adding Basic Auth to OAuth callback request")
+      }
 
       // 백엔드의 구글 OAuth2 콜백 엔드포인트로 authorization code 전송
       // 백엔드에서 토큰 발급, 사용자 정보 조회, 회원 확인/가입 처리
       const response = await fetch(`${API_BASE_URL}/oauth2/google/callback`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers,
         credentials: "include", // 쿠키 포함 (refresh token 수신용)
         body: JSON.stringify({
           code,
