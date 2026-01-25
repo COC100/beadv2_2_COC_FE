@@ -16,7 +16,7 @@
 
 각 OAuth 제공자의 Client ID를 환경 변수로 설정해야 합니다:
 
-```env
+\`\`\`env
 # 카카오 OAuth
 NEXT_PUBLIC_KAKAO_CLIENT_ID=your_kakao_rest_api_key
 
@@ -28,7 +28,7 @@ NEXT_PUBLIC_NAVER_CLIENT_ID=your_naver_client_id
 
 # API 서버 주소
 NEXT_PUBLIC_API_BASE_URL=https://your-api-server.com
-```
+\`\`\`
 
 **중요**: Client Secret은 절대 클라이언트에 노출하면 안 되며, 백엔드에서만 사용됩니다.
 
@@ -103,7 +103,7 @@ NEXT_PUBLIC_API_BASE_URL=https://your-api-server.com
 ### OAuth 콜백 처리
 프론트엔드에서 authorization code를 받아 처리:
 
-```
+\`\`\`
 POST /oauth2/kakao/callback
 POST /oauth2/google/callback
 POST /oauth2/naver/callback
@@ -123,10 +123,10 @@ Response (신규 회원):
 {
   "signupToken": "temporary_signup_token"
 }
-```
+\`\`\`
 
 ### OAuth 회원가입 완료
-```
+\`\`\`
 POST /api/auth/oauth2/signup
 
 Request Body:
@@ -141,7 +141,7 @@ Request Body:
 Response:
 - Plain text: "access_token_string"
 - HttpOnly 쿠키로 refresh token 발급
-```
+\`\`\`
 
 ## 보안 고려사항
 
@@ -167,7 +167,7 @@ Response:
 ## 프론트엔드 구현 상세
 
 ### 파일 구조
-```
+\`\`\`
 /lib/oauth-config.ts          # OAuth 설정 및 URL 생성
 /app/login/page.tsx            # 로그인 페이지 (소셜 로그인 버튼)
 /app/signup/page.tsx           # 회원가입 페이지 (소셜 회원가입 버튼)
@@ -175,17 +175,17 @@ Response:
 /app/oauth2/callback/google/page.tsx   # 구글 콜백
 /app/oauth2/callback/naver/page.tsx    # 네이버 콜백
 /app/oauth2/signup/page.tsx    # OAuth 회원가입 완료
-```
+\`\`\`
 
 ### OAuth 흐름 처리
 
 1. **로그인/회원가입 버튼 클릭**
-   ```typescript
+   \`\`\`typescript
    import { getKakaoAuthUrl, getGoogleAuthUrl, getNaverAuthUrl } from "@/lib/oauth-config"
    
    // 카카오 로그인
    window.location.href = getKakaoAuthUrl()
-   ```
+   \`\`\`
 
 2. **콜백 페이지에서 처리**
    - Authorization code 추출
