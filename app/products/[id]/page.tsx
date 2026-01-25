@@ -551,14 +551,21 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
                 {rentalDays > 0 && (
                   <div className="border-t pt-4 space-y-2">
                     <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">
-                        {product.pricePerDay.toLocaleString()}원 x {rentalDays}일
+                      <span className="text-muted-foreground">대여료</span>
+                      <span className="font-medium">
+                        {product.pricePerDay.toLocaleString()}원 x {rentalDays}일 = ₩{totalPrice.toLocaleString()}
                       </span>
-                      <span className="font-medium">₩{totalPrice.toLocaleString()}</span>
                     </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">보증금</span>
+                      <span className="font-medium">₩{(product.securityDepositAmount || 0).toLocaleString()}</span>
+                    </div>
+                    <Separator className="my-2" />
                     <div className="flex justify-between font-bold text-lg">
                       <span>총 금액</span>
-                      <span className="text-primary">₩{totalPrice.toLocaleString()}</span>
+                      <span className="text-primary">
+                        ₩{(totalPrice + (product.securityDepositAmount || 0)).toLocaleString()}
+                      </span>
                     </div>
                   </div>
                 )}
