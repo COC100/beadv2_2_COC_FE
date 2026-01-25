@@ -32,13 +32,24 @@ export default function DepositSuccessPage() {
         orderId,
         amount,
         fullURL: typeof window !== "undefined" ? window.location.href : "N/A",
+        allParams: Object.fromEntries(searchParams.entries()),
       })
 
       if (!paymentKey || !orderId || !amount) {
+        console.error("[v0] Missing required payment params:", {
+          hasPaymentKey: !!paymentKey,
+          hasOrderId: !!orderId,
+          hasAmount: !!amount,
+        })
         throw new Error("결제 정보가 올바르지 않습니다.")
       }
 
-      console.log("[v0] Confirming payment with backend...")
+      console.log("[v0] Confirming payment with backend API...")
+      console.log("[v0] API call params:", {
+        paymentKey,
+        orderId,
+        amount: Number(amount),
+      })
 
       const result = await accountAPI.approveDeposit({
         paymentKey,
@@ -47,11 +58,22 @@ export default function DepositSuccessPage() {
       })
 
       console.log("[v0] Payment approved successfully:", result)
+      console.log("[v0] Result data structure:", {
+        hasData: !!result.data,
+        dataKeys: result.data ? Object.keys(result.data) : [],
+        fullResult: result,
+      })
 
       setDepositInfo(result)
       setStatus("success")
     } catch (error: any) {
       console.error("[v0] Payment confirmation failed:", error)
+      console.error("[v0] Error details:", {
+        message: error.message,
+        code: error.code,
+        response: error.response,
+        stack: error.stack,
+      })
       setErrorMessage(error.message || "결제 승인에 실패했습니다.")
       setStatus("error")
     }
@@ -115,27 +137,41 @@ export default function DepositSuccessPage() {
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">충전 금액</span>
                     <span className="font-bold text-lg">
-                      ₩{(depositInfo.data?.amount || depositInfo.amount || 0).toLocaleString()}
+                      ₩
+                      {(() => {
+                        const amount = depositInfo.data?.amount || depositInfo.amount || 0
+                        console.log("[v0] Displaying amount:", amount)
+                        return amount.toLocaleString()
+                      })()}
                     </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">주문번호</span>
+                    <span className="text-sm font-mono">{depositInfo.data?.orderId || depositInfo.orderId || "N/A"}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">승인일시</span>
                     <span className="text-sm">
-                      {depositInfo.data?.approvedAt || depositInfo.approvedAt
-                        ? (() => {
-                            const date = new Date(depositInfo.data?.approvedAt || depositInfo.approvedAt)
-                            const kstDate = new Date(date.getTime() + 9 * 60 * 60 * 1000)
-                            return kstDate.toLocaleString("ko-KR", {
-                              year: "numeric",
-                              month: "2-digit",
-                              day: "2-digit",
-                              hour: "2-digit",
-                              minute: "2-digit",
-                              second: "2-digit",
-                              hour12: false,
-                            })
-                          })()
-                        : "승인 완료"}
+                      {(() => {
+                        const approvedAt = depositInfo.data?.approvedAt || depositInfo.approvedAt
+                        console.log("[v0] Displaying approvedAt:", approvedAt)
+                        if (!approvedAt) return "승인 완료"
+                        try {
+                          const date = new Date(approvedAt)
+                          return date.toLocaleString("ko-KR", {
+                            year: "numeric",
+                            month: "2-digit",
+                            day: "2-digit",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                            second: "2-digit",
+                            hour12: false,
+                          })
+                        } catch (e) {
+                          console.error("[v0] Date parsing error:", e)
+                          return "승인 완료"
+                        }
+                      })()}
                     </span>
                   </div>
                 </div>

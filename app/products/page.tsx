@@ -60,7 +60,7 @@ export default function ProductsPage() {
     if (typeof window !== "undefined") {
       const token = localStorage.getItem("accessToken")
       if (!token) {
-        router.push("/intro")
+        router.push("/")
         return
       }
     }

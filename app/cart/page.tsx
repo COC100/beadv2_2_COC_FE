@@ -47,7 +47,7 @@ export default function CartPage() {
     const loadCart = async () => {
       const token = localStorage.getItem("accessToken")
       if (!token) {
-        router.push("/intro")
+        router.push("/")
         return
       }
 
@@ -111,7 +111,7 @@ export default function CartPage() {
         if (error.message.includes("500")) {
           setError("장바구니를 불러오는 중 서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.")
         } else if (error.message.includes("401") || error.message.includes("인증")) {
-          router.push("/intro")
+          router.push("/")
           return
         } else {
           setError(error.message || "장바구니를 불러올 수 없습니다.")

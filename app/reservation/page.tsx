@@ -62,7 +62,7 @@ export default function ReservationPage() {
     const loadData = async () => {
       const token = localStorage.getItem("accessToken")
       if (!token) {
-        router.push("/intro")
+        router.push("/")
         return
       }
 
@@ -102,7 +102,7 @@ export default function ReservationPage() {
       } catch (error: any) {
         console.error("[v0] Failed to load reservation data:", error)
         if (error.message.includes("401")) {
-          router.push("/intro")
+          router.push("/")
         } else {
           toast({
             title: "데이터 로딩 실패",

@@ -43,7 +43,7 @@ export default function AdminNoticesPage() {
       setNotices(response.data.content || [])
       setTotalPages(response.data.totalPages || 0)
     } catch (error: any) {
-      router.push("/intro")
+      router.push("/")
     } finally {
       setLoading(false)
     }

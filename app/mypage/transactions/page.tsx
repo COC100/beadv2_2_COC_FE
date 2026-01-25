@@ -36,7 +36,7 @@ export default function TransactionsPage() {
     const loadTransactions = async () => {
       const token = localStorage.getItem("accessToken")
       if (!token) {
-        router.push("/intro")
+        router.push("/")
         return
       }
 

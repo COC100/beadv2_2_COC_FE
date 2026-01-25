@@ -14,11 +14,11 @@ export interface ApiResponse<T> {
 const handleAuthError = () => {
   if (typeof window === "undefined") return
 
-  const publicPaths = ["/intro", "/login", "/signup", "/forgot-password"]
+  const publicPaths = ["/", "/login", "/signup", "/forgot-password"]
   const currentPath = window.location.pathname
 
   if (!publicPaths.some((path) => currentPath.startsWith(path))) {
-    window.location.href = "/intro"
+    window.location.href = "/"
   }
 }
 
@@ -44,7 +44,7 @@ async function fetchAPI<T>(
   const hasToken = typeof window !== "undefined" && localStorage.getItem("accessToken")
 
   if (requiresAuth && !hasToken) {
-    console.error("[v0] No auth token found for protected endpoint, redirecting to intro")
+    console.error("[v0] No auth token found for protected endpoint, redirecting to /")
     handleAuthError()
     throw new Error("인증 토큰이 없습니다")
   }
@@ -486,6 +486,34 @@ export const accountAPI = {
       {
         method: "POST",
         body: JSON.stringify({ amount }),
+      },
+      true,
+    ),
+
+  // Deposit APIs
+  requestDeposit: (amount: number) =>
+    fetchAPI<{ id: string; orderId: string; amount: number; status: string }>(
+      "/account-service/api/deposits/pg/request",
+      {
+        method: "POST",
+        body: JSON.stringify({ amount }),
+      },
+      true,
+    ),
+
+  getDepositConfig: () =>
+    fetchAPI<{ clientKey: string; successUrl?: string; failUrl?: string }>(
+      "/account-service/api/deposits/pg/config",
+      {},
+      false,
+    ),
+
+  approveDeposit: (data: { paymentKey: string; orderId: string; amount: number }) =>
+    fetchAPI(
+      "/account-service/api/deposits/pg/approve",
+      {
+        method: "POST",
+        body: JSON.stringify(data),
       },
       true,
     ),

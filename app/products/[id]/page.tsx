@@ -78,7 +78,7 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
       if (typeof window !== "undefined") {
         const token = localStorage.getItem("accessToken")
         if (!token) {
-          router.push("/intro")
+          router.push("/")
           return
         }
       }

@@ -31,8 +31,32 @@ export default function DepositPage() {
   const MAX_DEPOSIT_AMOUNT = 100000000 // 1억원
 
   useEffect(() => {
+    // Load Toss Payments SDK
+    const script = document.createElement("script")
+    script.src = "https://js.tosspayments.com/v1/payment"
+    script.async = true
+    script.onload = () => {
+      console.log("[v0] Toss Payments SDK loaded successfully")
+      initializeTossPayments()
+    }
+    script.onerror = () => {
+      console.error("[v0] Failed to load Toss Payments SDK")
+      toast({
+        title: "결제 모듈 로드 실패",
+        description: "결제 모듈을 불러올 수 없습니다. 페이지를 새로고침해주세요.",
+        variant: "destructive",
+      })
+    }
+    document.head.appendChild(script)
+
     loadBalance()
-    initializeTossPayments()
+
+    return () => {
+      // Cleanup script on unmount
+      if (document.head.contains(script)) {
+        document.head.removeChild(script)
+      }
+    }
   }, [])
 
   const loadBalance = async () => {
@@ -54,12 +78,16 @@ export default function DepositPage() {
 
   const initializeTossPayments = async () => {
     try {
+      console.log("[v0] Initializing Toss Payments...")
+      
       if (typeof window.TossPayments !== "function") {
+        console.error("[v0] TossPayments SDK not loaded")
         throw new Error("Toss Payments SDK를 불러올 수 없습니다.")
       }
 
       const token = localStorage.getItem("accessToken")
       if (!token) {
+        console.error("[v0] No access token found")
         toast({
           title: "로그인 필요",
           description: "로그인 후 이용해주세요.",
@@ -68,16 +96,20 @@ export default function DepositPage() {
         return
       }
 
+      console.log("[v0] Fetching deposit config...")
       const response = await accountAPI.getDepositConfig()
       const config = response.data
-      console.log("[v0] Deposit config:", config)
+      console.log("[v0] Deposit config received:", config)
 
       if (!config || !config.clientKey) {
+        console.error("[v0] Invalid config:", config)
         throw new Error("결제 설정을 불러올 수 없습니다.")
       }
 
+      console.log("[v0] Creating TossPayments instance with clientKey:", config.clientKey)
       const tossPaymentsInstance = window.TossPayments(config.clientKey)
       setTossPayments(tossPaymentsInstance)
+      console.log("[v0] Toss Payments initialized successfully")
     } catch (error: any) {
       console.error("[v0] Toss Payments initialization failed:", error)
       toast({
@@ -122,6 +154,8 @@ export default function DepositPage() {
   }
 
   const handleCharge = async () => {
+    console.log("[v0] handleCharge called with amount:", amount)
+    
     if (!amount || amount <= 0) {
       toast({
         title: "충전 금액 오류",
@@ -141,20 +175,41 @@ export default function DepositPage() {
       return
     }
 
+    // Check if Toss Payments is initialized
+    if (!tossPayments) {
+      console.error("[v0] Toss Payments not initialized")
+      toast({
+        title: "결제 모듈 오류",
+        description: "결제 모듈이 초기화되지 않았습니다. 페이지를 새로고침해주세요.",
+        variant: "destructive",
+      })
+      return
+    }
+
     setLoading(true)
+    console.log("[v0] Starting payment process...")
 
     try {
+      console.log("[v0] Requesting deposit order from API...")
       const response = await accountAPI.requestDeposit(amount)
       const order = response.data
-      console.log("[v0] Deposit order:", order)
+      console.log("[v0] Deposit order received:", order)
 
       if (!order || !order.orderId || !order.amount) {
+        console.error("[v0] Invalid order data:", order)
         throw new Error("결제 정보가 올바르지 않습니다")
       }
 
       const baseUrl = typeof window !== "undefined" ? window.location.origin : ""
       const successUrl = `${baseUrl}/deposit/success`
       const failUrl = `${baseUrl}/deposit/fail`
+
+      console.log("[v0] Initiating Toss Payments with:", {
+        amount: order.amount,
+        orderId: order.orderId,
+        successUrl,
+        failUrl,
+      })
 
       await tossPayments.requestPayment("간편결제", {
         amount: order.amount,
@@ -164,12 +219,25 @@ export default function DepositPage() {
         failUrl: failUrl,
       })
 
+      console.log("[v0] Payment request completed, redirecting to success...")
+      // This line may not execute if Toss redirects first
       router.push(`/deposit/success?orderId=${order.orderId}&amount=${order.amount}`)
     } catch (error: any) {
       console.error("[v0] Payment request failed:", error)
+      console.error("[v0] Error details:", {
+        message: error.message,
+        code: error.code,
+        stack: error.stack,
+      })
 
       const errorMessage = error.message || "결제 요청 중 오류가 발생했습니다."
       const errorCode = error.code || "UNKNOWN_ERROR"
+
+      toast({
+        title: "결제 실패",
+        description: errorMessage,
+        variant: "destructive",
+      })
 
       router.push(`/deposit/fail?message=${encodeURIComponent(errorMessage)}&code=${errorCode}`)
       setLoading(false)

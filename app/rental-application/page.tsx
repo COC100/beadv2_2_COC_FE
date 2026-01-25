@@ -59,7 +59,7 @@ export default function RentalApplicationPage() {
       if (typeof window !== "undefined") {
         const token = localStorage.getItem("accessToken")
         if (!token) {
-          router.push("/intro")
+          router.push("/")
           return
         }
       }

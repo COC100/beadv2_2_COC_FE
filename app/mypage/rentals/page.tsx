@@ -110,7 +110,7 @@ export default function RentalsPage() {
       try {
         const token = localStorage.getItem("accessToken")
         if (!token) {
-          router.push("/intro")
+          router.push("/")
           return
         }
 

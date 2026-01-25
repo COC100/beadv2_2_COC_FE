@@ -39,7 +39,7 @@ export default function SettingsPage() {
     const loadProfile = async () => {
       const token = localStorage.getItem("accessToken")
       if (!token) {
-        router.push("/intro")
+        router.push("/")
         return
       }
 
@@ -54,7 +54,7 @@ export default function SettingsPage() {
       } catch (error: any) {
         console.error("[v0] Failed to load profile:", error)
         if (error.message.includes("401")) {
-          router.push("/intro")
+          router.push("/")
         }
       } finally {
         setProfileLoading(false)
@@ -148,7 +148,7 @@ export default function SettingsPage() {
         title: "회원 탈퇴 완료",
         description: "그동안 이용해주셔서 감사합니다.",
       })
-      router.push("/intro")
+      router.push("/")
     } catch (error: any) {
       console.error("[v0] Failed to delete account:", error)
       toast({

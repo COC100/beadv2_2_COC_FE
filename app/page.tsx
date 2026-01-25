@@ -82,8 +82,8 @@ export default function HomePage() {
       console.log("[v0] Access token check:", token ? "found" : "not found")
 
       if (!token) {
-        console.log("[v0] No access token found, redirecting to /intro")
-        router.push("/intro")
+        console.log("[v0] No access token found, redirecting to /")
+        router.push("/")
         return // Stop execution, don't call fetchProducts
       }
 
@@ -195,7 +195,7 @@ export default function HomePage() {
                           </Button>
                         </Link>
                       ) : (
-                        <Link href="/intro">
+                        <Link href="/">
                           <Button size="lg" className="rounded-lg">
                             시작하기
                           </Button>
@@ -291,7 +291,7 @@ export default function HomePage() {
               <Package className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
               <p className="text-muted-foreground mb-4">상품을 불러올 수 없습니다</p>
               {!isAuthenticated && (
-                <Link href="/intro">
+                <Link href="/">
                   <Button>로그인하여 상품 보기</Button>
                 </Link>
               )}
