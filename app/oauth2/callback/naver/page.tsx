@@ -50,6 +50,8 @@ export default function NaverCallbackPage() {
     try {
       const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || ""
 
+      console.log("[v0] Sending code to backend:", { code, redirectUri: OAUTH_CONFIG.naver.redirectUri })
+
       // 백엔드에 code를 전송하여 처리
       const response = await fetch(`${API_BASE_URL}/member-service/oauth2/naver/callback`, {
         method: "POST",
@@ -62,7 +64,27 @@ export default function NaverCallbackPage() {
         }),
       })
 
-      const data = await response.json()
+      console.log("[v0] Response status:", response.status)
+      console.log("[v0] Response headers:", Object.fromEntries(response.headers.entries()))
+
+      // 응답이 JSON인지 확인
+      const contentType = response.headers.get("content-type")
+      if (!contentType || !contentType.includes("application/json")) {
+        const text = await response.text()
+        console.error("[v0] Non-JSON response:", text)
+        throw new Error("서버에서 올바른 응답을 받지 못했습니다")
+      }
+
+      // 응답 본문이 비어있는지 확인
+      const responseText = await response.text()
+      console.log("[v0] Response text:", responseText)
+
+      if (!responseText) {
+        throw new Error("서버에서 빈 응답을 받았습니다")
+      }
+
+      const data = JSON.parse(responseText)
+      console.log("[v0] Parsed data:", data)
 
       if (!response.ok) {
         throw new Error(data.message || "로그인 처리에 실패했습니다")
