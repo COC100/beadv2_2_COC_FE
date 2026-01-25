@@ -321,25 +321,34 @@ export default function AdminNoticesPage() {
                             </div>
                           </div>
                           <div className="flex gap-2">
-                            {notice.status === "DRAFT" && (
-                              <Button size="sm" variant="outline" onClick={() => handlePublish(notice.id)} className="bg-transparent">
+                            {notice.status === "DELETED" ? (
+                              <Button size="sm" variant="outline" onClick={() => router.push(`/admin/notices/${notice.id}/view`)} className="bg-transparent">
                                 <Eye className="h-4 w-4 mr-2" />
-                                발행
+                                보기
                               </Button>
+                            ) : (
+                              <>
+                                {notice.status === "DRAFT" && (
+                                  <Button size="sm" variant="outline" onClick={() => handlePublish(notice.id)} className="bg-transparent">
+                                    <Eye className="h-4 w-4 mr-2" />
+                                    발행
+                                  </Button>
+                                )}
+                                {notice.status === "PUBLISHED" && (
+                                  <Button size="sm" variant="outline" onClick={() => handleDraft(notice.id)} className="bg-transparent">
+                                    임시저장
+                                  </Button>
+                                )}
+                                <Button size="sm" variant="outline" onClick={() => handleEdit(notice.id)} className="bg-transparent">
+                                  <Edit className="h-4 w-4 mr-2" />
+                                  수정
+                                </Button>
+                                <Button size="sm" variant="destructive" onClick={() => handleDelete(notice.id)}>
+                                  <Trash2 className="h-4 w-4 mr-2" />
+                                  삭제
+                                </Button>
+                              </>
                             )}
-                            {notice.status === "PUBLISHED" && (
-                              <Button size="sm" variant="outline" onClick={() => handleDraft(notice.id)} className="bg-transparent">
-                                임시저장
-                              </Button>
-                            )}
-                            <Button size="sm" variant="outline" onClick={() => handleEdit(notice.id)} className="bg-transparent">
-                              <Edit className="h-4 w-4 mr-2" />
-                              수정
-                            </Button>
-                            <Button size="sm" variant="destructive" onClick={() => handleDelete(notice.id)}>
-                              <Trash2 className="h-4 w-4 mr-2" />
-                              삭제
-                            </Button>
                           </div>
                         </div>
                       </CardContent>

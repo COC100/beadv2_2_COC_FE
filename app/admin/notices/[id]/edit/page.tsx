@@ -21,6 +21,7 @@ export default function AdminNoticeEditPage() {
 
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
+  const [noticeStatus, setNoticeStatus] = useState("")
   const [formData, setFormData] = useState({
     title: "",
     content: "",
@@ -51,6 +52,7 @@ export default function AdminNoticeEditPage() {
         return `${year}-${month}-${day}T${hours}:${minutes}`
       }
 
+      setNoticeStatus(notice.status || "")
       setFormData({
         title: notice.title || "",
         content: notice.content || "",
@@ -151,6 +153,8 @@ export default function AdminNoticeEditPage() {
     )
   }
 
+  const isDeleted = noticeStatus === "DELETED"
+
   return (
     <>
       <Header />
@@ -161,7 +165,7 @@ export default function AdminNoticeEditPage() {
               <ArrowLeft className="h-4 w-4 mr-2" />
               목록으로
             </Button>
-            <h1 className="text-3xl font-bold">공지사항 수정</h1>
+            <h1 className="text-3xl font-bold">{isDeleted ? "공지사항 상세" : "공지사항 수정"}</h1>
           </div>
 
           <Card>
@@ -177,6 +181,8 @@ export default function AdminNoticeEditPage() {
                   value={formData.title}
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                   maxLength={200}
+                  disabled={isDeleted}
+                  className={isDeleted ? "bg-gray-100 dark:bg-gray-800" : ""}
                 />
               </div>
 
@@ -188,6 +194,8 @@ export default function AdminNoticeEditPage() {
                   rows={12}
                   value={formData.content}
                   onChange={(e) => setFormData({ ...formData, content: e.target.value })}
+                  disabled={isDeleted}
+                  className={isDeleted ? "bg-gray-100 dark:bg-gray-800" : ""}
                 />
               </div>
 
@@ -198,6 +206,7 @@ export default function AdminNoticeEditPage() {
                   checked={formData.pinned}
                   onChange={(e) => setFormData({ ...formData, pinned: e.target.checked })}
                   className="h-4 w-4"
+                  disabled={isDeleted}
                 />
                 <Label htmlFor="pinned" className="cursor-pointer font-normal">
                   상단 고정
@@ -212,6 +221,8 @@ export default function AdminNoticeEditPage() {
                     type="datetime-local"
                     value={formData.displayStartAt}
                     onChange={(e) => setFormData({ ...formData, displayStartAt: e.target.value })}
+                    disabled={isDeleted}
+                    className={isDeleted ? "bg-gray-100 dark:bg-gray-800" : ""}
                   />
                 </div>
                 <div>
@@ -221,29 +232,33 @@ export default function AdminNoticeEditPage() {
                     type="datetime-local"
                     value={formData.displayEndAt}
                     onChange={(e) => setFormData({ ...formData, displayEndAt: e.target.value })}
+                    disabled={isDeleted}
+                    className={isDeleted ? "bg-gray-100 dark:bg-gray-800" : ""}
                   />
                 </div>
               </div>
 
-              <div className="flex gap-2 pt-4">
-                <Button onClick={handleSubmit} disabled={submitting}>
-                  <Save className="h-4 w-4 mr-2" />
-                  {submitting ? "저장 중..." : "수정 완료"}
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => router.push("/admin/notices")}
-                  disabled={submitting}
-                  className="bg-transparent"
-                >
-                  취소
-                </Button>
-                <div className="flex-1" />
-                <Button variant="destructive" onClick={handleDelete} disabled={submitting}>
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  삭제
-                </Button>
-              </div>
+              {!isDeleted && (
+                <div className="flex gap-2 pt-4">
+                  <Button onClick={handleSubmit} disabled={submitting}>
+                    <Save className="h-4 w-4 mr-2" />
+                    {submitting ? "저장 중..." : "수정 완료"}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => router.push("/admin/notices")}
+                    disabled={submitting}
+                    className="bg-transparent"
+                  >
+                    취소
+                  </Button>
+                  <div className="flex-1" />
+                  <Button variant="destructive" onClick={handleDelete} disabled={submitting}>
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    삭제
+                  </Button>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
