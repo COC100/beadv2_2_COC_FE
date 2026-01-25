@@ -490,6 +490,34 @@ export const accountAPI = {
       true,
     ),
 
+  // Deposit APIs
+  requestDeposit: (amount: number) =>
+    fetchAPI<{ id: string; orderId: string; amount: number; status: string }>(
+      "/account-service/api/deposits/pg/request",
+      {
+        method: "POST",
+        body: JSON.stringify({ amount }),
+      },
+      true,
+    ),
+
+  getDepositConfig: () =>
+    fetchAPI<{ clientKey: string; successUrl?: string; failUrl?: string }>(
+      "/account-service/api/deposits/pg/config",
+      {},
+      false,
+    ),
+
+  approveDeposit: (data: { paymentKey: string; orderId: string; amount: number }) =>
+    fetchAPI(
+      "/account-service/api/deposits/pg/approve",
+      {
+        method: "POST",
+        body: JSON.stringify(data),
+      },
+      true,
+    ),
+
   cancelDeposit: (orderId: string) =>
     fetchAPI(
       "/account-service/api/deposits/pg/cancel",
