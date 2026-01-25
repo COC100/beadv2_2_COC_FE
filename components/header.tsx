@@ -25,6 +25,11 @@ export function Header() {
     }
   }, [])
 
+  const handleSellerClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    e.preventDefault()
+    router.push("/seller")
+  }
+
   return (
     <header className={`border-b bg-white sticky top-0 z-50`}>
       <div className="container mx-auto px-4 py-3">
@@ -41,7 +46,7 @@ export function Header() {
               <Sparkles className="h-4 w-4" />
               AI 추천
             </Link>
-            <Link href="/seller" className="hover:text-primary transition-colors">
+            <Link href="/seller" onClick={handleSellerClick} className="hover:text-primary transition-colors">
               판매자
             </Link>
             <Link href="/how-it-works" className="hover:text-primary transition-colors">
@@ -94,7 +99,7 @@ export function Header() {
                 <Sparkles className="h-4 w-4" />
                 AI 추천
               </Link>
-              <Link href="/seller" className="hover:text-primary transition-colors py-2">
+              <Link href="/seller" onClick={handleSellerClick} className="hover:text-primary transition-colors py-2">
                 판매자
               </Link>
               <Link href="/how-it-works" className="hover:text-primary transition-colors py-2">
