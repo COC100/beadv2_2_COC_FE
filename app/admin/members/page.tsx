@@ -9,35 +9,43 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/hooks/use-toast"
 import { adminAPI } from "@/lib/api"
-import { Search, UserCheck } from "lucide-react"
+import { Search, UserX, UserCheck } from "lucide-react"
 import { useSearchParams } from "next/navigation"
 
 export default function AdminMembersPage() {
   const router = useRouter()
   const { toast } = useToast()
-  const [blacklists, setBlacklists] = useState<any[]>([])
+  const [members, setMembers] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [searchEmail, setSearchEmail] = useState("")
   const [page, setPage] = useState(0)
   const [totalPages, setTotalPages] = useState(0)
-  const [statusFilter, setStatusFilter] = useState<string>("ACTIVE")
+  const [blacklistStatusFilter, setBlacklistStatusFilter] = useState<string>("ALL")
   const searchParams = useSearchParams()
 
-  useEffect(() => {
-    loadBlacklists()
-  }, [page, statusFilter])
+  // Blacklist dialog state
+  const [showBlacklistDialog, setShowBlacklistDialog] = useState(false)
+  const [selectedMember, setSelectedMember] = useState<any>(null)
+  const [blacklistReason, setBlacklistReason] = useState("")
+  const [blacklistMemo, setBlacklistMemo] = useState("")
 
-  const loadBlacklists = async () => {
+  useEffect(() => {
+    loadMembers()
+  }, [page, blacklistStatusFilter])
+
+  const loadMembers = async () => {
     try {
       setLoading(true)
-      const response = await adminAPI.getBlacklists({ 
-        status: statusFilter,
+      const response = await adminAPI.getMembers({ 
+        blacklistStatus: blacklistStatusFilter === "ALL" ? undefined : blacklistStatusFilter,
         page, 
         size: 20 
       })
-      setBlacklists(response.data.content || [])
+      setMembers(response.data.content || [])
       setTotalPages(response.data.totalPages || 0)
     } catch (error: any) {
       router.push("/intro")
@@ -56,12 +64,51 @@ export default function AdminMembersPage() {
     }
 
     try {
-      const response = await adminAPI.searchBlacklist(searchEmail)
-      setBlacklists([response.data])
+      const response = await adminAPI.searchMember(searchEmail)
+      setMembers([response.data])
       setTotalPages(1)
     } catch (error: any) {
       toast({
         title: "회원 검색 실패",
+        description: error.message,
+        variant: "destructive",
+      })
+    }
+  }
+
+  const handleOpenBlacklistDialog = (member: any) => {
+    setSelectedMember(member)
+    setBlacklistReason("")
+    setBlacklistMemo("")
+    setShowBlacklistDialog(true)
+  }
+
+  const handleAddBlacklist = async () => {
+    if (!blacklistReason.trim()) {
+      toast({
+        title: "사유를 입력하세요",
+        variant: "destructive",
+      })
+      return
+    }
+
+    try {
+      await adminAPI.addBlacklist({
+        memberId: selectedMember.memberId,
+        reason: blacklistReason,
+        memo: blacklistMemo || undefined,
+      })
+
+      toast({
+        title: "블랙리스트 등록 완료",
+        description: "회원이 블랙리스트에 등록되었습니다",
+      })
+
+      setShowBlacklistDialog(false)
+      loadMembers()
+    } catch (error: any) {
+      toast({
+        title: "블랙리스트 등록 실패",
         description: error.message,
         variant: "destructive",
       })
@@ -79,7 +126,7 @@ export default function AdminMembersPage() {
         description: "블랙리스트가 해제되었습니다",
       })
 
-      loadBlacklists()
+      loadMembers()
     } catch (error: any) {
       toast({
         title: "블랙리스트 해제 실패",
@@ -94,8 +141,8 @@ export default function AdminMembersPage() {
       <Header />
       <main className="flex-1 container mx-auto px-4 py-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">회원 관리 (블랙리스트)</h1>
-          <p className="text-muted-foreground">블랙리스트에 등록된 회원을 조회하고 관리할 수 있습니다</p>
+          <h1 className="text-3xl font-bold mb-2">회원 관리</h1>
+          <p className="text-muted-foreground">회원을 조회하고 관리할 수 있습니다</p>
         </div>
 
         <Card className="mb-6">
@@ -120,7 +167,7 @@ export default function AdminMembersPage() {
                 <Search className="h-4 w-4 mr-2" />
                 검색
               </Button>
-              <Button variant="outline" onClick={() => { setSearchEmail(""); loadBlacklists(); }}>
+              <Button variant="outline" onClick={() => { setSearchEmail(""); loadMembers(); }}>
                 초기화
               </Button>
             </div>
@@ -130,27 +177,37 @@ export default function AdminMembersPage() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
-              <span>블랙리스트 목록</span>
+              <span>회원 목록</span>
               <div className="flex gap-2">
                 <Button
-                  variant={statusFilter === "ACTIVE" ? "default" : "outline"}
+                  variant={blacklistStatusFilter === "ALL" ? "default" : "outline"}
                   size="sm"
                   onClick={() => {
-                    setStatusFilter("ACTIVE")
+                    setBlacklistStatusFilter("ALL")
                     setPage(0)
                   }}
                 >
-                  활성
+                  전체
                 </Button>
                 <Button
-                  variant={statusFilter === "RELEASED" ? "default" : "outline"}
+                  variant={blacklistStatusFilter === "ACTIVE" ? "default" : "outline"}
                   size="sm"
                   onClick={() => {
-                    setStatusFilter("RELEASED")
+                    setBlacklistStatusFilter("ACTIVE")
                     setPage(0)
                   }}
                 >
-                  해제됨
+                  정상
+                </Button>
+                <Button
+                  variant={blacklistStatusFilter === "SUSPENDED" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => {
+                    setBlacklistStatusFilter("SUSPENDED")
+                    setPage(0)
+                  }}
+                >
+                  정지
                 </Button>
               </div>
             </CardTitle>
@@ -160,42 +217,48 @@ export default function AdminMembersPage() {
               <div className="text-center py-8">
                 <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent mx-auto" />
               </div>
-            ) : blacklists.length === 0 ? (
-              <p className="text-muted-foreground text-center py-8">블랙리스트 내역이 없습니다</p>
+            ) : members.length === 0 ? (
+              <p className="text-muted-foreground text-center py-8">회원이 없습니다</p>
             ) : (
               <div className="space-y-4">
-                {blacklists.map((blacklist) => (
-                  <div key={blacklist.blacklistId} className="border rounded-lg p-4 space-y-3">
+                {members.map((member) => (
+                  <div key={member.memberId} className="border rounded-lg p-4 space-y-3">
                     <div className="flex justify-between items-start">
                       <div className="space-y-1">
-                        <div className="font-medium">{blacklist.email}</div>
-                        <div className="text-sm text-muted-foreground">회원 ID: {blacklist.memberId}</div>
-                        <div className="text-sm text-muted-foreground">사유: {blacklist.reason}</div>
-                        {blacklist.memo && (
-                          <div className="text-sm text-muted-foreground">메모: {blacklist.memo}</div>
+                        <div className="font-medium">{member.email}</div>
+                        <div className="text-sm text-muted-foreground">회원 ID: {member.memberId}</div>
+                        <div className="text-sm text-muted-foreground">이름: {member.name}</div>
+                        {member.phone && (
+                          <div className="text-sm text-muted-foreground">전화번호: {member.phone}</div>
                         )}
                         <div className="text-sm text-muted-foreground">
-                          등록일: {new Date(blacklist.createdAt).toLocaleDateString()}
+                          가입일: {new Date(member.createdAt).toLocaleDateString()}
                         </div>
-                        {blacklist.releasedAt && (
-                          <div className="text-sm text-muted-foreground">
-                            해제일: {new Date(blacklist.releasedAt).toLocaleDateString()}
-                          </div>
-                        )}
-                        <Badge variant={blacklist.status === "ACTIVE" ? "destructive" : "secondary"}>
-                          {blacklist.status === "ACTIVE" ? "활성" : "해제됨"}
+                        <Badge variant={member.blacklistStatus === "ACTIVE" ? "default" : "destructive"}>
+                          {member.blacklistStatus === "ACTIVE" ? "정상" : "정지"}
                         </Badge>
                       </div>
-                      {blacklist.status === "ACTIVE" && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleReleaseBlacklist(blacklist.memberId, blacklist.email)}
-                        >
-                          <UserCheck className="h-4 w-4 mr-1" />
-                          해제
-                        </Button>
-                      )}
+                      <div className="flex gap-2">
+                        {member.blacklistStatus === "ACTIVE" ? (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleOpenBlacklistDialog(member)}
+                          >
+                            <UserX className="h-4 w-4 mr-1" />
+                            블랙리스트 등록
+                          </Button>
+                        ) : (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleReleaseBlacklist(member.memberId, member.email)}
+                          >
+                            <UserCheck className="h-4 w-4 mr-1" />
+                            블랙리스트 해제
+                          </Button>
+                        )}
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -222,6 +285,47 @@ export default function AdminMembersPage() {
           </CardContent>
         </Card>
       </main>
+
+      <Dialog open={showBlacklistDialog} onOpenChange={setShowBlacklistDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>블랙리스트 등록</DialogTitle>
+            <DialogDescription>
+              {selectedMember?.email} 회원을 블랙리스트에 등록합니다.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="reason">사유 *</Label>
+              <Input
+                id="reason"
+                placeholder="블랙리스트 등록 사유를 입력하세요"
+                value={blacklistReason}
+                onChange={(e) => setBlacklistReason(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="memo">메모</Label>
+              <Textarea
+                id="memo"
+                placeholder="추가 메모 (선택사항)"
+                value={blacklistMemo}
+                onChange={(e) => setBlacklistMemo(e.target.value)}
+                rows={3}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowBlacklistDialog(false)}>
+              취소
+            </Button>
+            <Button onClick={handleAddBlacklist}>
+              등록
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <Footer />
     </>
   )
