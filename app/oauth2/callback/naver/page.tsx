@@ -52,12 +52,14 @@ export default function NaverCallbackPage() {
 
       console.log("[v0] Sending code to backend:", { code, redirectUri: OAUTH_CONFIG.naver.redirectUri })
 
-      // 백엔드에 code를 전송하여 처리
-      const response = await fetch(`${API_BASE_URL}/member-service/oauth2/naver/callback`, {
+      // 백엔드의 네이버 OAuth2 콜백 엔드포인트로 authorization code 전송
+      // 백엔드에서 토큰 발급, 사용자 정보 조회, 회원 확인/가입 처리
+      const response = await fetch(`${API_BASE_URL}/oauth2/naver/callback`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
+        credentials: "include", // 쿠키 포함 (refresh token 수신용)
         body: JSON.stringify({
           code,
           redirectUri: OAUTH_CONFIG.naver.redirectUri,
@@ -65,30 +67,35 @@ export default function NaverCallbackPage() {
       })
 
       console.log("[v0] Response status:", response.status)
-      console.log("[v0] Response headers:", Object.fromEntries(response.headers.entries()))
-
-      // 응답이 JSON인지 확인
-      const contentType = response.headers.get("content-type")
-      if (!contentType || !contentType.includes("application/json")) {
-        const text = await response.text()
-        console.error("[v0] Non-JSON response:", text)
-        throw new Error("서버에서 올바른 응답을 받지 못했습니다")
-      }
-
-      // 응답 본문이 비어있는지 확인
+      
       const responseText = await response.text()
       console.log("[v0] Response text:", responseText)
 
-      if (!responseText) {
-        throw new Error("서버에서 빈 응답을 받았습니다")
-      }
-
-      const data = JSON.parse(responseText)
-      console.log("[v0] Parsed data:", data)
-
       if (!response.ok) {
-        throw new Error(data.message || "로그인 처리에 실패했습니다")
+        // 에러 응답 처리
+        try {
+          const errorData = JSON.parse(responseText)
+          throw new Error(errorData.message || "로그인 처리에 실패했습니다")
+        } catch (e) {
+          throw new Error("로그인 처리에 실패했습니다")
+        }
       }
+
+      // 성공 응답 처리 - JSON 또는 plain text 모두 처리
+      let data: any
+      try {
+        data = JSON.parse(responseText)
+      } catch (e) {
+        // plain text인 경우 (accessToken만 반환)
+        const accessToken = responseText.trim().replace(/^"|"$/g, "")
+        if (accessToken) {
+          data = { accessToken }
+        } else {
+          throw new Error("예상치 못한 응답입니다")
+        }
+      }
+
+      console.log("[v0] Parsed data:", data)
 
       // 기존 회원인 경우 - 토큰 저장 후 메인으로 이동
       if (data.accessToken) {
