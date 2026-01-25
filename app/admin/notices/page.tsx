@@ -98,39 +98,8 @@ export default function AdminNoticesPage() {
     }
   }
 
-  const handleEdit = async (noticeId: number) => {
-    try {
-      const response = await adminAPI.getNoticeDetail(noticeId)
-      setEditingNotice(response.data)
-      
-      // Convert ISO datetime to datetime-local format (YYYY-MM-DDTHH:mm)
-      const formatDateTimeLocal = (dateStr: string) => {
-        if (!dateStr) return ""
-        const date = new Date(dateStr)
-        const year = date.getFullYear()
-        const month = String(date.getMonth() + 1).padStart(2, '0')
-        const day = String(date.getDate()).padStart(2, '0')
-        const hours = String(date.getHours()).padStart(2, '0')
-        const minutes = String(date.getMinutes()).padStart(2, '0')
-        return `${year}-${month}-${day}T${hours}:${minutes}`
-      }
-      
-      setFormData({
-        title: response.data.title || "",
-        content: response.data.content || "",
-        pinned: response.data.pinned || false,
-        status: response.data.status || "DRAFT",
-        displayStartAt: formatDateTimeLocal(response.data.displayStartAt) || "",
-        displayEndAt: formatDateTimeLocal(response.data.displayEndAt) || "",
-      })
-      setShowForm(true)
-    } catch (error: any) {
-      toast({
-        title: "공지사항 로딩 실패",
-        description: error.message,
-        variant: "destructive",
-      })
-    }
+  const handleEdit = (noticeId: number) => {
+    router.push(`/admin/notices/${noticeId}/edit`)
   }
 
   const handleDelete = async (noticeId: number) => {
