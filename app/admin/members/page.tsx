@@ -35,13 +35,14 @@ export default function AdminMembersPage() {
 
   useEffect(() => {
     loadMembers()
-  }, [page, blacklistStatusFilter])
+  }, [page, blacklistStatusFilter, searchEmail])
 
   const loadMembers = async () => {
     try {
       setLoading(true)
       const response = await adminAPI.getMembers({ 
         blacklistStatus: blacklistStatusFilter === "ALL" ? undefined : blacklistStatusFilter,
+        email: searchEmail.trim() || undefined,
         page, 
         size: 20 
       })
@@ -54,26 +55,9 @@ export default function AdminMembersPage() {
     }
   }
 
-  const handleSearch = async () => {
-    if (!searchEmail.trim()) {
-      toast({
-        title: "이메일을 입력하세요",
-        variant: "destructive",
-      })
-      return
-    }
-
-    try {
-      const response = await adminAPI.searchMember(searchEmail)
-      setMembers([response.data])
-      setTotalPages(1)
-    } catch (error: any) {
-      toast({
-        title: "회원 검색 실패",
-        description: error.message,
-        variant: "destructive",
-      })
-    }
+  const handleSearch = () => {
+    setPage(0)
+    loadMembers()
   }
 
   const handleOpenBlacklistDialog = (member: any) => {
@@ -167,7 +151,11 @@ export default function AdminMembersPage() {
                 <Search className="h-4 w-4 mr-2" />
                 검색
               </Button>
-              <Button variant="outline" onClick={() => { setSearchEmail(""); loadMembers(); }}>
+              <Button variant="outline" onClick={() => { 
+                setSearchEmail("")
+                setBlacklistStatusFilter("ALL")
+                setPage(0)
+              }}>
                 초기화
               </Button>
             </div>
