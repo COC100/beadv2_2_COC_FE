@@ -12,21 +12,55 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { useToast } from "@/hooks/use-toast"
 import { productAPI } from "@/lib/api"
-import { useRequireAuth } from "@/hooks/use-auth"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+import { Checkbox } from "@/components/ui/checkbox"
+import { Label } from "@/components/ui/label"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+
+const CATEGORIES = [
+  { value: "LAPTOP", label: "노트북" },
+  { value: "DESKTOP", label: "데스크탑" },
+  { value: "CAMERA", label: "카메라" },
+  { value: "TABLET", label: "태블릿" },
+  { value: "MOBILE", label: "모바일" },
+  { value: "MONITOR", label: "모니터" },
+  { value: "ACCESSORY", label: "악세서리" },
+  { value: "DRONE", label: "드론" },
+  { value: "AUDIO", label: "오디오" },
+  { value: "PROJECTOR", label: "프로젝터" },
+]
 
 export default function RecommendationsPage() {
-  useRequireAuth()
-
   const router = useRouter()
   const { toast } = useToast()
   const [query, setQuery] = useState("")
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [recommendations, setRecommendations] = useState<any[]>([])
   const [message, setMessage] = useState("")
   const [hasSearched, setHasSearched] = useState(false)
+  const [showLoginDialog, setShowLoginDialog] = useState(false)
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault()
+
+    // Check for authentication token
+    if (typeof window !== "undefined") {
+      const token = localStorage.getItem("accessToken")
+      if (!token) {
+        setShowLoginDialog(true)
+        return
+      }
+    }
 
     if (!query.trim()) {
       toast({
@@ -41,10 +75,21 @@ export default function RecommendationsPage() {
     setHasSearched(true)
 
     try {
-      const response = await productAPI.getRecommendations({
+      const requestData: {
+        query: string
+        size: number
+        categories?: string[]
+      } = {
         query: query.trim(),
         size: 12,
-      })
+      }
+
+      // Only add categories if some are selected (not all)
+      if (selectedCategories.length > 0) {
+        requestData.categories = selectedCategories
+      }
+
+      const response = await productAPI.getRecommendations(requestData)
 
       setMessage(response.data.message || "")
       const items = response.data.items || []
@@ -55,6 +100,7 @@ export default function RecommendationsPage() {
         const productsData = bulkResponse.data || []
         
         const activeProducts = productsData.filter((product: any) => product.status === "ACTIVE")
+        
         setRecommendations(activeProducts)
       } else {
         setRecommendations([])
@@ -71,6 +117,10 @@ export default function RecommendationsPage() {
     } finally {
       setIsLoading(false)
     }
+  }
+
+  const handleLoginClick = () => {
+    router.push("/login")
   }
 
   return (
@@ -98,22 +148,75 @@ export default function RecommendationsPage() {
           </div>
 
           <form onSubmit={handleSearch} className="mb-8">
-            <div className="flex gap-2">
-              <div className="relative flex-1">
-                <Input
-                  type="text"
-                  placeholder="예: 여행용 카메라가 필요해요, 프레젠테이션용 노트북 추천해주세요"
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  className="rounded-xl pr-10 h-12"
-                  disabled={isLoading}
-                />
-                <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+            <div className="flex flex-col gap-3">
+              <div className="flex gap-2">
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="w-[180px] h-12 rounded-xl justify-start">
+                      {selectedCategories.length === 0
+                        ? "전체"
+                        : selectedCategories.length === 1
+                        ? CATEGORIES.find((c) => c.value === selectedCategories[0])?.label
+                        : `${selectedCategories.length}개 선택`}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[240px] p-4" align="start">
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between mb-3">
+                        <h4 className="font-medium text-sm">카테고리</h4>
+                        {selectedCategories.length > 0 && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-auto py-1 px-2 text-xs"
+                            onClick={() => setSelectedCategories([])}
+                          >
+                            초기화
+                          </Button>
+                        )}
+                      </div>
+                      {CATEGORIES.map((category) => (
+                        <div key={category.value} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={category.value}
+                            checked={selectedCategories.includes(category.value)}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                setSelectedCategories([...selectedCategories, category.value])
+                              } else {
+                                setSelectedCategories(
+                                  selectedCategories.filter((c) => c !== category.value)
+                                )
+                              }
+                            }}
+                          />
+                          <Label
+                            htmlFor={category.value}
+                            className="text-sm font-normal cursor-pointer flex-1"
+                          >
+                            {category.label}
+                          </Label>
+                        </div>
+                      ))}
+                    </div>
+                  </PopoverContent>
+                </Popover>
+                <div className="relative flex-1">
+                  <Input
+                    type="text"
+                    placeholder="예: 여행용 카메라가 필요해요, 프레젠테이션용 노트북 추천해주세요"
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    className="rounded-xl pr-10 h-12"
+                    disabled={isLoading}
+                  />
+                  <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                </div>
+                <Button type="submit" size="lg" className="rounded-xl gap-2 h-12 px-6" disabled={isLoading}>
+                  <Sparkles className="h-5 w-5" />
+                  {isLoading ? "검색 중..." : "추천 받기"}
+                </Button>
               </div>
-              <Button type="submit" size="lg" className="rounded-xl gap-2 h-12 px-6" disabled={isLoading}>
-                <Sparkles className="h-5 w-5" />
-                {isLoading ? "검색 중..." : "추천 받기"}
-              </Button>
             </div>
           </form>
 
@@ -218,6 +321,23 @@ export default function RecommendationsPage() {
       </div>
 
       <Footer />
+
+      <AlertDialog open={showLoginDialog} onOpenChange={setShowLoginDialog}>
+        <AlertDialogContent className="rounded-2xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>로그인이 필요합니다</AlertDialogTitle>
+            <AlertDialogDescription>로그인 후 이용 가능합니다</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setShowLoginDialog(false)} className="rounded-xl">
+              취소
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={handleLoginClick} className="rounded-xl">
+              로그인
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }
