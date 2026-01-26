@@ -117,21 +117,28 @@ export default function RentalsPage() {
         const rentalsResponse = await rentalAPI.search()
         const rentals = rentalsResponse.data
 
+        // 1. 모든 렌탈 항목에서 productId 수집 (중복 제거)
         const productIds = Array.from(
           new Set(rentals.flatMap((rental: any) => rental.items.map((item: any) => item.productId))),
         )
-        const productDetailsMap = new Map()
+        console.log("[v0] Collected product IDs for bulk fetch:", productIds)
 
-        await Promise.all(
-          productIds.map(async (productId: number) => {
-            try {
-              const productResponse = await productAPI.getDetail(productId)
-              productDetailsMap.set(productId, productResponse.data)
-            } catch (error) {
-              console.error(`[v0] Failed to fetch product ${productId}:`, error)
-            }
-          }),
-        )
+        // 2. Bulk API로 한 번에 상품 정보 조회
+        const productDetailsMap = new Map()
+        if (productIds.length > 0) {
+          try {
+            const bulkResponse = await productAPI.bulkGet(productIds)
+            const products = bulkResponse.data
+            console.log("[v0] Bulk product fetch result:", products)
+            
+            // Map으로 변환하여 빠른 조회 가능하게 함
+            products.forEach((product: any) => {
+              productDetailsMap.set(product.productId, product)
+            })
+          } catch (error) {
+            console.error("[v0] Failed to bulk fetch products:", error)
+          }
+        }
 
         const orderMap = new Map<number, Order>()
 
