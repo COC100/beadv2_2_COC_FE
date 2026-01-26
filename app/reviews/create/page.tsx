@@ -56,13 +56,8 @@ export default function ReviewCreatePage() {
     setLoading(true)
 
     try {
-      // Note: sellerId needs to be fetched from rental item data
-      // For now, using a placeholder. In production, you'd fetch this from rental API
-      const sellerId = productInfo?.sellerId || 0
-
       await reviewAPI.create({
         rentalItemId,
-        sellerId,
         rating,
         content: content.trim(),
       })

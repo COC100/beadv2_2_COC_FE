@@ -1134,17 +1134,17 @@ export const cartAPI = {
     ),
 }
 
-// Review APIs
+  // Review APIs
 export const reviewAPI = {
-  create: (data: { rentalItemId: number; sellerId: number; rating: number; content: string }) =>
-    fetchAPI(
-      "/support-service/api/reviews",
-      {
-        method: "POST",
-        body: JSON.stringify(data),
-      },
-      true,
-    ),
+  create: (data: { rentalItemId: number; rating: number; content: string }) =>
+  fetchAPI(
+  "/support-service/api/reviews",
+  {
+  method: "POST",
+  body: JSON.stringify(data),
+  },
+  true,
+  ),
 
   update: (reviewId: number, data: { rating?: number; content?: string }) =>
     fetchAPI(
