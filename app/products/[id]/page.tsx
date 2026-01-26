@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
-import { ArrowLeft, ShoppingCart, Calendar, Edit, Eye, EyeOff, Trash2, AlertCircle, MessageCircle } from "lucide-react"
+import { ArrowLeft, ShoppingCart, Calendar as CalendarIcon, Edit, Eye, EyeOff, Trash2, AlertCircle, MessageCircle } from "lucide-react"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { Button } from "@/components/ui/button"
@@ -11,6 +11,8 @@ import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
+import { Calendar } from "@/components/ui/calendar"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { useRouter } from "next/navigation"
 import { useToast } from "@/hooks/use-toast"
 import { productAPI, cartAPI, sellerAPI, rentalAPI, chatAPI, memberAPI } from "@/lib/api"
@@ -23,12 +25,14 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { ChatDialog } from "@/components/chat-dialog"
+import { format } from "date-fns"
+import { ko } from "date-fns/locale"
 export default function ProductDetailPage({ params }: { params: { id: string } }) {
 
   const router = useRouter()
   const { toast } = useToast()
-  const [startDate, setStartDate] = useState("")
-  const [endDate, setEndDate] = useState("")
+  const [startDate, setStartDate] = useState<Date | undefined>()
+  const [endDate, setEndDate] = useState<Date | undefined>()
   const [product, setProduct] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [isOwner, setIsOwner] = useState(false)
@@ -42,6 +46,7 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
   })
   const [seller, setSeller] = useState<any>(null)
   const [unavailableDates, setUnavailableDates] = useState<string[]>([])
+  const [currentMonth, setCurrentMonth] = useState<Date>(new Date())
   const [chatDialogOpen, setChatDialogOpen] = useState(false)
   const [chatRoomId, setChatRoomId] = useState<number | null>(null)
 
@@ -184,11 +189,20 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
   }
 
   const handleAddToCart = async () => {
-    if (isOwner) {
-      setErrorDialog({
-        open: true,
-        title: "본인 상품입니다",
-        message: "본인이 등록한 상품은 장바구니에 추가할 수 없습니다.",
+    if (!productId || !startDate || !endDate) {
+      toast({
+        title: "대여 기간을 선택해주세요",
+        description: "시작일과 종료일을 모두 선택해야 합니다.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    try {
+      await cartAPI.addItem({
+        productId,
+        startDate: format(startDate, "yyyy-MM-dd"),
+        endDate: format(endDate, "yyyy-MM-dd"),
       })
       return
     }
