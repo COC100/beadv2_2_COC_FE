@@ -146,10 +146,6 @@ export default function DepositSuccessPage() {
                     </span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">주문번호</span>
-                    <span className="text-sm font-mono">{depositInfo.data?.orderId || depositInfo.orderId || "N/A"}</span>
-                  </div>
-                  <div className="flex justify-between">
                     <span className="text-muted-foreground">승인일시</span>
                     <span className="text-sm">
                       {(() => {

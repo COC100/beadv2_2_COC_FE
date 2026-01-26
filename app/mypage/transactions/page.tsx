@@ -263,11 +263,6 @@ export default function TransactionsPage() {
                         {transaction.description && (
                           <p className="text-sm text-muted-foreground mt-1">{transaction.description}</p>
                         )}
-                        {(transaction.pgTid || transaction.relatedPgDepositId) && (
-                          <p className="text-xs text-muted-foreground mt-1">
-                            주문번호: {transaction.pgTid || transaction.orderId || transaction.relatedPgDepositId}
-                          </p>
-                        )}
                       </div>
                     </div>
                     <div className="flex items-center gap-4">
