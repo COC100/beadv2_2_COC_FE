@@ -49,7 +49,28 @@ export default function NaverCallbackPage() {
           },
         })
 
-        const data = await response.json()
+        console.log("[v0] Naver callback response status:", response.status)
+        
+        // 응답이 비어있는지 확인
+        const contentType = response.headers.get("content-type")
+        console.log("[v0] Content-Type:", contentType)
+        
+        let data: any = {}
+        
+        // 응답 본문이 있는지 확인
+        if (contentType && contentType.includes("application/json")) {
+          const text = await response.text()
+          console.log("[v0] Response text:", text)
+          
+          if (text && text.trim()) {
+            try {
+              data = JSON.parse(text)
+            } catch (parseError) {
+              console.error("[v0] JSON parse error:", parseError)
+              throw new Error("서버 응답을 처리할 수 없습니다")
+            }
+          }
+        }
 
         if (!response.ok) {
           throw new Error(data.message || "로그인 처리 중 오류가 발생했습니다")
