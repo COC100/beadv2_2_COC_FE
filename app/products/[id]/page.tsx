@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
-import { ArrowLeft, ShoppingCart, Calendar, Edit, Eye, EyeOff, Trash2, AlertCircle, MessageCircle } from "lucide-react"
+import { ArrowLeft, ShoppingCart, Calendar as CalendarIcon, Edit, Eye, EyeOff, Trash2, AlertCircle, MessageCircle } from "lucide-react"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { Button } from "@/components/ui/button"
@@ -10,6 +10,9 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Separator } from "@/components/ui/separator"
+import { Calendar } from "@/components/ui/calendar"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { useRouter } from "next/navigation"
 import { useToast } from "@/hooks/use-toast"
 import { productAPI, cartAPI, sellerAPI, rentalAPI, chatAPI, memberAPI } from "@/lib/api"
@@ -21,12 +24,15 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { ChatDialog } from "@/components/chat-dialog"
+import { format } from "date-fns"
+import { ko } from "date-fns/locale"
 export default function ProductDetailPage({ params }: { params: { id: string } }) {
 
   const router = useRouter()
   const { toast } = useToast()
-  const [startDate, setStartDate] = useState("")
-  const [endDate, setEndDate] = useState("")
+  const [startDate, setStartDate] = useState<Date | undefined>()
+  const [endDate, setEndDate] = useState<Date | undefined>()
   const [product, setProduct] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [isOwner, setIsOwner] = useState(false)
@@ -40,6 +46,9 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
   })
   const [seller, setSeller] = useState<any>(null)
   const [unavailableDates, setUnavailableDates] = useState<string[]>([])
+  const [currentMonth, setCurrentMonth] = useState<Date>(new Date())
+  const [chatDialogOpen, setChatDialogOpen] = useState(false)
+  const [chatRoomId, setChatRoomId] = useState<number | null>(null)
 
   useEffect(() => {
     const resolveParams = async () => {
@@ -145,54 +154,45 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
     loadProduct()
   }, [productId, toast, isOwner])
 
+  // Fetch unavailable dates when month changes
   useEffect(() => {
-    if (!productId || !startDate) return
+    if (!productId || !currentMonth) return
 
     const fetchUnavailableDates = async () => {
       try {
-        const ym = startDate.substring(0, 7) // Extract yyyy-MM from startDate
+        const ym = format(currentMonth, "yyyy-MM")
+        console.log("[v0] Fetching unavailable dates for:", ym)
         const response = await rentalAPI.getUnavailableDates(productId, ym)
-        setUnavailableDates(response.data?.dates || [])
+        const dates = response.data?.unavailableDates || []
+        console.log("[v0] Unavailable dates received:", dates)
+        setUnavailableDates(dates)
       } catch (error) {
         console.error("[v0] Failed to fetch unavailable dates:", error)
       }
     }
 
     fetchUnavailableDates()
-  }, [productId, startDate])
+  }, [productId, currentMonth])
 
   const calculateTotal = () => {
     if (!startDate || !endDate || !product) return 0
-    const start = new Date(startDate)
-    const end = new Date(endDate)
-    const days = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1 // +1 to include end date
+    const days = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1
     return days > 0 ? days * product.pricePerDay : 0
   }
 
   const totalPrice = calculateTotal()
-  const rentalDays =
-    startDate && endDate
-      ? Math.ceil((new Date(endDate).getTime() - new Date(startDate).getTime()) / (1000 * 60 * 60 * 24)) + 1
-      : 0
+  const rentalDays = startDate && endDate ? Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1 : 0
 
-  const isDateUnavailable = (dateString: string) => {
+  const isDateUnavailable = (date: Date) => {
+    const dateString = format(date, "yyyy-MM-dd")
     return unavailableDates.includes(dateString)
   }
 
   const handleAddToCart = async () => {
-    if (isOwner) {
-      setErrorDialog({
-        open: true,
-        title: "본인 상품입니다",
-        message: "본인이 등록한 상품은 장바구니에 추가할 수 없습니다.",
-      })
-      return
-    }
-
     if (!productId || !startDate || !endDate) {
       toast({
-        title: "날짜를 선택해주세요",
-        description: "대여 시작일과 종료일을 선택해주세요",
+        title: "대여 기간을 선택해주세요",
+        description: "시작일과 종료일을 모두 선택해야 합니다.",
         variant: "destructive",
       })
       return
@@ -200,8 +200,8 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
 
     const requestData = {
       productId: productId,
-      startDate,
-      endDate,
+      startDate: format(startDate, "yyyy-MM-dd"),
+      endDate: format(endDate, "yyyy-MM-dd"),
     }
 
     console.log("[v0] Adding to cart with data:", JSON.stringify(requestData, null, 2))
@@ -254,7 +254,9 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
       return
     }
 
-    router.push(`/rental-application?productId=${productId}&startDate=${startDate}&endDate=${endDate}`)
+    const startDateStr = format(startDate, "yyyy-MM-dd")
+    const endDateStr = format(endDate, "yyyy-MM-dd")
+    router.push(`/rental-application?productId=${productId}&startDate=${startDateStr}&endDate=${endDateStr}`)
   }
 
   const handleStatusChange = async (status: "ACTIVE" | "INACTIVE") => {
@@ -331,8 +333,8 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
       })
 
       const roomId = roomResponse.data.roomId
-
-      router.push(`/chat/${roomId}`)
+      setChatRoomId(roomId)
+      setChatDialogOpen(true)
     } catch (error: any) {
       console.error("[v0] Failed to create chat room:", error)
       toast({
@@ -475,57 +477,87 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
             <Card className="border-2">
               <CardContent className="p-5 space-y-4">
                 <h3 className="font-semibold flex items-center gap-2">
-                  <Calendar className="h-5 w-5 text-primary" />
+                  <CalendarIcon className="h-5 w-5 text-primary" />
                   대여 기간 선택
                 </h3>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <Label htmlFor="startDate" className="text-sm mb-2">
-                      시작일
-                    </Label>
-                    <Input
-                      id="startDate"
-                      type="date"
-                      value={startDate}
-                      onChange={(e) => {
-                        const selectedDate = e.target.value
-                        if (isDateUnavailable(selectedDate)) {
-                          toast({
-                            title: "예약 불가 날짜",
-                            description: "선택하신 날짜는 이미 예약되어 있습니다. 다른 날짜를 선택해주세요.",
-                            variant: "destructive",
-                          })
-                          return
-                        }
-                        setStartDate(selectedDate)
-                      }}
-                      min={new Date().toISOString().split("T")[0]}
-                      className="rounded-lg"
-                    />
+                <div className="grid gap-4">
+                  <div className="space-y-2">
+                    <Label className="text-sm">시작일</Label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className="w-full justify-start text-left font-normal rounded-lg h-11"
+                        >
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {startDate ? format(startDate, "PPP", { locale: ko }) : "날짜를 선택하세요"}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={startDate}
+                          onSelect={(date) => {
+                            if (date && isDateUnavailable(date)) {
+                              toast({
+                                title: "예약 불가 날짜",
+                                description: "선택하신 날짜는 이미 예약되어 있습니다. 다른 날짜를 선택해주세요.",
+                                variant: "destructive",
+                              })
+                              return
+                            }
+                            setStartDate(date)
+                            setEndDate(undefined) // Reset end date when start date changes
+                          }}
+                          onMonthChange={(month) => {
+                            console.log("[v0] Month changed to:", format(month, "yyyy-MM"))
+                            setCurrentMonth(month)
+                          }}
+                          disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0)) || isDateUnavailable(date)}
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
                   </div>
-                  <div>
-                    <Label htmlFor="endDate" className="text-sm mb-2">
-                      종료일
-                    </Label>
-                    <Input
-                      id="endDate"
-                      type="date"
-                      value={endDate}
-                      onChange={(e) => {
-                        const selectedDate = e.target.value
-                        if (isDateUnavailable(selectedDate)) {
-                          toast({
-                            title: "예약 불가 날짜",
-                            description: "선택하신 날짜는 이미 예약되어 있습니다. 다른 날짜를 선택해주세요.",
-                            variant: "destructive",
-                          })
-                          return
-                        }
-                        setEndDate(selectedDate)
-                      }}
-                      min={startDate || new Date().toISOString().split("T")[0]}
-                      className="rounded-lg"
-                    />
+                  <div className="space-y-2">
+                    <Label className="text-sm">종료일</Label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className="w-full justify-start text-left font-normal rounded-lg h-11"
+                          disabled={!startDate}
+                        >
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {endDate ? format(endDate, "PPP", { locale: ko }) : "날짜를 선택하세요"}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={endDate}
+                          onSelect={(date) => {
+                            if (date && isDateUnavailable(date)) {
+                              toast({
+                                title: "예약 불가 날짜",
+                                description: "선택하신 날짜는 이미 예약되어 있습니다. 다른 날짜를 선택해주세요.",
+                                variant: "destructive",
+                              })
+                              return
+                            }
+                            setEndDate(date)
+                          }}
+                          onMonthChange={(month) => {
+                            console.log("[v0] Month changed to:", format(month, "yyyy-MM"))
+                            setCurrentMonth(month)
+                          }}
+                          disabled={(date) =>
+                            date < (startDate || new Date(new Date().setHours(0, 0, 0, 0))) || isDateUnavailable(date)
+                          }
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
                   </div>
                 </div>
 
@@ -675,6 +707,14 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ChatDialog
+        open={chatDialogOpen}
+        onOpenChange={setChatDialogOpen}
+        roomId={chatRoomId}
+        sellerId={seller?.sellerId || 0}
+        sellerName={seller?.storeName || "판매자"}
+      />
 
       <Footer />
     </div>

@@ -134,7 +134,10 @@ function ManageProductRentalsContent({ productId }: { productId: string }) {
         size: 100,
       })
       console.log("[v0] Requested rentals response:", requestedResponse)
+      console.log("[v0] Requested rentals data type:", typeof requestedResponse.data, Array.isArray(requestedResponse.data))
+      console.log("[v0] Requested rentals data:", requestedResponse.data)
       const requestedData = requestedResponse.data || []
+      console.log("[v0] Setting requested rentals:", requestedData)
       setRequestedRentals(Array.isArray(requestedData) ? requestedData : [])
 
       const acceptedResponse = await sellerAPI.getRentals({

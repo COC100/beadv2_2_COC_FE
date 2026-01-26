@@ -22,6 +22,18 @@ const PUBLIC_PATHS = [
   "/terms",
 ]
 
+// Chat routes require authentication
+const PROTECTED_PATHS = [
+  "/chat",
+  "/mypage",
+  "/seller",
+  "/admin",
+  "/cart",
+  "/reservation",
+  "/rental-application",
+  "/deposit",
+]
+
 export function useRequireAuth() {
   const router = useRouter()
   const pathname = usePathname()
@@ -32,12 +44,16 @@ export function useRequireAuth() {
       return
     }
 
-    // Check if token exists
-    if (typeof window !== "undefined") {
-      const token = localStorage.getItem("accessToken")
-      if (!token) {
-        console.log("[v0] No access token found, redirecting to /login")
-        router.push("/login")
+    // Require auth for protected paths
+    const requiresAuth = PROTECTED_PATHS.some((path) => pathname.startsWith(path))
+    
+    if (requiresAuth) {
+      if (typeof window !== "undefined") {
+        const token = localStorage.getItem("accessToken")
+        if (!token) {
+          console.log("[v0] No access token found for protected route, redirecting to /login")
+          router.push("/login")
+        }
       }
     }
   }, [router, pathname])
