@@ -10,6 +10,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Separator } from "@/components/ui/separator"
 import { useRouter } from "next/navigation"
 import { useToast } from "@/hooks/use-toast"
 import { productAPI, cartAPI, sellerAPI, rentalAPI, chatAPI, memberAPI } from "@/lib/api"
@@ -21,6 +22,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { ChatDialog } from "@/components/chat-dialog"
 export default function ProductDetailPage({ params }: { params: { id: string } }) {
 
   const router = useRouter()
@@ -40,6 +42,8 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
   })
   const [seller, setSeller] = useState<any>(null)
   const [unavailableDates, setUnavailableDates] = useState<string[]>([])
+  const [chatDialogOpen, setChatDialogOpen] = useState(false)
+  const [chatRoomId, setChatRoomId] = useState<number | null>(null)
 
   useEffect(() => {
     const resolveParams = async () => {
@@ -331,8 +335,8 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
       })
 
       const roomId = roomResponse.data.roomId
-
-      router.push(`/chat/${roomId}`)
+      setChatRoomId(roomId)
+      setChatDialogOpen(true)
     } catch (error: any) {
       console.error("[v0] Failed to create chat room:", error)
       toast({
@@ -675,6 +679,14 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ChatDialog
+        open={chatDialogOpen}
+        onOpenChange={setChatDialogOpen}
+        roomId={chatRoomId}
+        sellerId={seller?.sellerId || 0}
+        sellerName={seller?.storeName || "판매자"}
+      />
 
       <Footer />
     </div>
