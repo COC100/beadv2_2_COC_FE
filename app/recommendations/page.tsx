@@ -12,21 +12,56 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { useToast } from "@/hooks/use-toast"
 import { productAPI } from "@/lib/api"
-import { useRequireAuth } from "@/hooks/use-auth"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+
+const CATEGORIES = [
+  { value: "ALL", label: "전체" },
+  { value: "CAMERA", label: "카메라" },
+  { value: "LAPTOP", label: "노트북" },
+  { value: "TABLET", label: "태블릿" },
+  { value: "DRONE", label: "드론" },
+  { value: "AUDIO", label: "오디오" },
+  { value: "OTHER", label: "기타" },
+]
 
 export default function RecommendationsPage() {
-  useRequireAuth()
-
   const router = useRouter()
   const { toast } = useToast()
   const [query, setQuery] = useState("")
+  const [category, setCategory] = useState("ALL")
   const [isLoading, setIsLoading] = useState(false)
   const [recommendations, setRecommendations] = useState<any[]>([])
   const [message, setMessage] = useState("")
   const [hasSearched, setHasSearched] = useState(false)
+  const [showLoginDialog, setShowLoginDialog] = useState(false)
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault()
+
+    // Check for authentication token
+    if (typeof window !== "undefined") {
+      const token = localStorage.getItem("accessToken")
+      if (!token) {
+        setShowLoginDialog(true)
+        return
+      }
+    }
 
     if (!query.trim()) {
       toast({
@@ -54,7 +89,13 @@ export default function RecommendationsPage() {
         const bulkResponse = await productAPI.bulkGet(productIds)
         const productsData = bulkResponse.data || []
         
-        const activeProducts = productsData.filter((product: any) => product.status === "ACTIVE")
+        let activeProducts = productsData.filter((product: any) => product.status === "ACTIVE")
+        
+        // Filter by category if not ALL
+        if (category !== "ALL") {
+          activeProducts = activeProducts.filter((product: any) => product.category === category)
+        }
+        
         setRecommendations(activeProducts)
       } else {
         setRecommendations([])
@@ -71,6 +112,10 @@ export default function RecommendationsPage() {
     } finally {
       setIsLoading(false)
     }
+  }
+
+  const handleLoginClick = () => {
+    router.push("/login")
   }
 
   return (
@@ -98,22 +143,36 @@ export default function RecommendationsPage() {
           </div>
 
           <form onSubmit={handleSearch} className="mb-8">
-            <div className="flex gap-2">
-              <div className="relative flex-1">
-                <Input
-                  type="text"
-                  placeholder="예: 여행용 카메라가 필요해요, 프레젠테이션용 노트북 추천해주세요"
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  className="rounded-xl pr-10 h-12"
-                  disabled={isLoading}
-                />
-                <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+            <div className="flex flex-col gap-3">
+              <div className="flex gap-2">
+                <Select value={category} onValueChange={setCategory}>
+                  <SelectTrigger className="w-[180px] h-12 rounded-xl">
+                    <SelectValue placeholder="카테고리" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {CATEGORIES.map((cat) => (
+                      <SelectItem key={cat.value} value={cat.value}>
+                        {cat.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <div className="relative flex-1">
+                  <Input
+                    type="text"
+                    placeholder="예: 여행용 카메라가 필요해요, 프레젠테이션용 노트북 추천해주세요"
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    className="rounded-xl pr-10 h-12"
+                    disabled={isLoading}
+                  />
+                  <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                </div>
+                <Button type="submit" size="lg" className="rounded-xl gap-2 h-12 px-6" disabled={isLoading}>
+                  <Sparkles className="h-5 w-5" />
+                  {isLoading ? "검색 중..." : "추천 받기"}
+                </Button>
               </div>
-              <Button type="submit" size="lg" className="rounded-xl gap-2 h-12 px-6" disabled={isLoading}>
-                <Sparkles className="h-5 w-5" />
-                {isLoading ? "검색 중..." : "추천 받기"}
-              </Button>
             </div>
           </form>
 
@@ -218,6 +277,23 @@ export default function RecommendationsPage() {
       </div>
 
       <Footer />
+
+      <AlertDialog open={showLoginDialog} onOpenChange={setShowLoginDialog}>
+        <AlertDialogContent className="rounded-2xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>로그인이 필요합니다</AlertDialogTitle>
+            <AlertDialogDescription>로그인 후 이용 가능합니다</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setShowLoginDialog(false)} className="rounded-xl">
+              취소
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={handleLoginClick} className="rounded-xl">
+              로그인
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }
