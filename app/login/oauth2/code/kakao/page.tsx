@@ -59,10 +59,14 @@ export default function KakaoCallbackPage() {
           headers["ngrok-skip-browser-warning"] = "true"
         }
 
-        const response = await fetch(`${API_BASE_URL}/api/auth/oauth2/kakao/callback?code=${code}&state=${state}`, {
-          method: "GET",
+        const response = await fetch(`${API_BASE_URL}/oauth2/kakao/callback`, {
+          method: "POST",
           headers,
           credentials: "include",
+          body: JSON.stringify({
+            code: code,
+            redirectUri: window.location.origin + "/login/oauth2/code/kakao"
+          }),
         })
 
         console.log("[v0] Kakao callback response status:", response.status)

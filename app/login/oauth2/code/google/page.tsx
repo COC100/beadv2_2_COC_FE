@@ -59,10 +59,14 @@ export default function GoogleCallbackPage() {
           headers["ngrok-skip-browser-warning"] = "true"
         }
 
-        const response = await fetch(`${API_BASE_URL}/api/auth/oauth2/google/callback?code=${code}&state=${state}`, {
-          method: "GET",
+        const response = await fetch(`${API_BASE_URL}/oauth2/google/callback`, {
+          method: "POST",
           headers,
           credentials: "include",
+          body: JSON.stringify({
+            code: code,
+            redirectUri: window.location.origin + "/login/oauth2/code/google"
+          }),
         })
 
         console.log("[v0] Google callback response status:", response.status)

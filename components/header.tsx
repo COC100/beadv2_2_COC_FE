@@ -59,11 +59,13 @@ export function Header() {
               </Button>
             </Link>
 
-            <Link href="/mypage" className="hidden sm:block">
-              <Button variant="ghost" size="icon" className="rounded-lg">
-                <User className="h-5 w-5" />
-              </Button>
-            </Link>
+            {isLoggedIn && (
+              <Link href="/mypage" className="hidden sm:block">
+                <Button variant="ghost" size="icon" className="rounded-lg">
+                  <User className="h-5 w-5" />
+                </Button>
+              </Link>
+            )}
 
             {!isLoggedIn && (
               <Link href="/login" className="hidden sm:block">
@@ -103,9 +105,16 @@ export function Header() {
               <Link href="/notices" className="hover:text-primary transition-colors py-2">
                 공지사항
               </Link>
-              <Link href="/mypage" className="hover:text-primary transition-colors py-2">
-                마이페이지
-              </Link>
+              {isLoggedIn && (
+                <Link href="/mypage" className="hover:text-primary transition-colors py-2">
+                  마이페이지
+                </Link>
+              )}
+              {!isLoggedIn && (
+                <Link href="/login" className="hover:text-primary transition-colors py-2">
+                  로그인
+                </Link>
+              )}
             </nav>
           </div>
         )}
