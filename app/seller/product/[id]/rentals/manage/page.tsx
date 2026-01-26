@@ -176,7 +176,14 @@ function ManageProductRentalsContent({ productId }: { productId: string }) {
       const rentingData = rentingResponse.data || []
       setRentingRentals(Array.isArray(rentingData) ? rentingData : [])
     } catch (error: any) {
-      console.error("[v0] Failed to load rentals:", error)
+      console.log(`[v0] Failed to load rentals for status ${status}:`, error)
+      
+      // If no seller permission or unauthorized, redirect to seller application page
+      if (error.status === 403 || error.status === 404 || error.status === 401) {
+        router.push("/become-seller")
+        return
+      }
+      
       toast({
         title: "오류",
         description: error.message || "데이터를 불러오는데 실패했습니다",

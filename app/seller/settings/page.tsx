@@ -42,14 +42,18 @@ export default function SellerSettingsPage() {
         setCurrentStatus(seller.status || "ACTIVE")
       } catch (error: any) {
         console.error("[v0] Failed to load seller info:", error)
+        
+        // If no seller permission or unauthorized, redirect to seller application page
+        if (error.status === 403 || error.status === 404 || error.status === 401) {
+          router.push("/become-seller")
+          return
+        }
+        
         toast({
           title: "로딩 실패",
           description: "판매자 정보를 불러오는데 실패했습니다",
           variant: "destructive",
         })
-        if (error.message.includes("404")) {
-          router.push("/become-seller")
-        }
       } finally {
         setIsLoading(false)
       }

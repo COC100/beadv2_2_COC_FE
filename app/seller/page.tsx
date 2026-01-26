@@ -67,10 +67,9 @@ export default function SellerPage() {
         setIsLoading(false)
       } catch (error: any) {
         console.error("Failed to load seller data:", error)
-        const status = error.message.match(/\d{3}/)?.[0]
         
         // If no seller permission or unauthorized, redirect to seller application page
-        if (status === "403" || status === "404" || status === "401") {
+        if (error.status === 403 || error.status === 404 || error.status === 401) {
           router.replace("/become-seller")
           return
         } else {

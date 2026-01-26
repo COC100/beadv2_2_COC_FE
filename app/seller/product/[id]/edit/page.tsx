@@ -133,6 +133,13 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
         }
       } catch (error: any) {
         console.error("[v0] Failed to load product:", error)
+        
+        // If no seller permission or unauthorized, redirect to seller application page
+        if (error.status === 403 || error.status === 404 || error.status === 401) {
+          router.push("/become-seller")
+          return
+        }
+        
         toast({
           title: "상품 로딩 실패",
           description: error.message || "상품 정보를 불러올 수 없습니다",
