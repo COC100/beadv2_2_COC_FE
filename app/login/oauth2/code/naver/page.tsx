@@ -59,10 +59,14 @@ export default function NaverCallbackPage() {
           headers["ngrok-skip-browser-warning"] = "true"
         }
 
-        const response = await fetch(`${API_BASE_URL}/api/auth/oauth2/naver/callback?code=${code}&state=${state}`, {
-          method: "GET",
+        const response = await fetch(`${API_BASE_URL}/oauth2/naver/callback`, {
+          method: "POST",
           headers,
           credentials: "include",
+          body: JSON.stringify({
+            code: code,
+            redirectUri: window.location.origin + "/login/oauth2/code/naver"
+          }),
         })
 
         console.log("[v0] Naver callback response status:", response.status)
