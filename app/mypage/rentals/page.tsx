@@ -23,6 +23,7 @@ interface RentalDetail {
   pricePerDay: number
   totalDays: number
   totalAmount: number
+  securityDepositAmount: number
   status: "PENDING" | "APPROVED" | "RENTING" | "RETURNED" | "REJECTED" | "REQUESTED" | "ACCEPTED" | "PAID"
   createdAt: string
 }
@@ -163,7 +164,9 @@ export default function RentalsPage() {
               Math.ceil(
                 (new Date(item.endDate).getTime() - new Date(item.startDate).getTime()) / (1000 * 60 * 60 * 24),
               ) + 1
-            const totalAmount = item.unitPrice * days
+            const rentalAmount = item.unitPrice * days
+            const securityDeposit = item.securityDepositAmount || 0
+            const totalAmount = rentalAmount + securityDeposit
 
             const product = productDetailsMap.get(item.productId)
 
@@ -177,6 +180,7 @@ export default function RentalsPage() {
               pricePerDay: item.unitPrice,
               totalDays: days,
               totalAmount,
+              securityDepositAmount: securityDeposit,
               status: item.status,
               createdAt: createdAt,
             })
@@ -447,11 +451,26 @@ export default function RentalsPage() {
                                     {getStatusText(detail.status).text}
                                   </Badge>
                                 </div>
-                                <div className="flex items-center justify-between mt-3">
-                                  <p className="text-sm text-muted-foreground">
-                                    {detail.pricePerDay.toLocaleString()}원 x {detail.totalDays}일
-                                  </p>
-                                  <p className="font-bold text-primary">₩{detail.totalAmount.toLocaleString()}</p>
+                                <div className="space-y-1 mt-3">
+                                  <div className="flex items-center justify-between text-sm">
+                                    <p className="text-muted-foreground">
+                                      렌탈 금액: {detail.pricePerDay.toLocaleString()}원 x {detail.totalDays}일
+                                    </p>
+                                    <p className="text-muted-foreground">
+                                      ₩{(detail.pricePerDay * detail.totalDays).toLocaleString()}
+                                    </p>
+                                  </div>
+                                  <div className="flex items-center justify-between text-sm">
+                                    <p className="text-muted-foreground">보증금</p>
+                                    <p className="text-muted-foreground">
+                                      ₩{detail.securityDepositAmount.toLocaleString()}
+                                    </p>
+                                  </div>
+                                  <Separator className="my-2" />
+                                  <div className="flex items-center justify-between">
+                                    <p className="font-semibold">합계</p>
+                                    <p className="font-bold text-primary">₩{detail.totalAmount.toLocaleString()}</p>
+                                  </div>
                                 </div>
                                 <div className="flex gap-2 mt-3">
                                   {detail.status === "ACCEPTED" && (
