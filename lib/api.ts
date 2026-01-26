@@ -918,7 +918,7 @@ export const productAPI = {
         distance: number
       }>
     }>(
-      "/support-service/api/ai/recommendations",
+      "/ai-service/api/ai/recommendations",
       {
         method: "POST",
         body: JSON.stringify(data),
@@ -935,7 +935,7 @@ export const productAPI = {
       specs: Record<string, string>
       status: string
       distance: number
-    }>>(`/support-service/api/ai/recommendations/recent${queryParams}`, {}, true)
+    }>>(`/ai-service/api/ai/recommendations/recent${queryParams}`, {}, true)
   },
 
   uploadImage: async (file: File, dir?: string) => {
