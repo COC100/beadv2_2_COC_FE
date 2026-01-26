@@ -69,20 +69,13 @@ export default function SellerPage() {
         console.error("Failed to load seller data:", error)
         const status = error.message.match(/\d{3}/)?.[0]
         
-        // If no seller permission (403/404), redirect to seller application page without showing popup
-        if (status === "403" || status === "404") {
+        // If no seller permission or unauthorized, redirect to seller application page
+        if (status === "403" || status === "404" || status === "401") {
           router.replace("/become-seller")
           return
-        } else if (status === "401") {
-          router.push("/")
         } else {
-          setAlert({
-            open: true,
-            title: "오류",
-            description: "판매자 정보를 불러오는데 실패했습니다.",
-            variant: "destructive",
-          })
-          setIsLoading(false)
+          // For all other errors, redirect to home
+          router.push("/")
         }
       }
     }
