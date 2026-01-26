@@ -4,6 +4,8 @@ import { useEffect, useState } from "react"
 import { useSearchParams } from "next/navigation"
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || ""
+const API_BASIC_AUTH_USERNAME = process.env.NEXT_PUBLIC_API_BASIC_AUTH_USERNAME || ""
+const API_BASIC_AUTH_PASSWORD = process.env.NEXT_PUBLIC_API_BASIC_AUTH_PASSWORD || ""
 
 export default function NaverCallbackPage() {
   const searchParams = useSearchParams()
@@ -42,11 +44,25 @@ export default function NaverCallbackPage() {
 
       try {
         // 백엔드 API로 코드 전송
+        const headers: HeadersInit = {
+          "Content-Type": "application/json",
+        }
+
+        // Add HTTP Basic Auth if configured
+        if (API_BASIC_AUTH_USERNAME && API_BASIC_AUTH_PASSWORD) {
+          const basicAuth = btoa(`${API_BASIC_AUTH_USERNAME}:${API_BASIC_AUTH_PASSWORD}`)
+          headers.Authorization = `Basic ${basicAuth}`
+          console.log("[v0] Adding Basic Auth to Naver OAuth callback")
+        }
+
+        if (API_BASE_URL.includes("ngrok")) {
+          headers["ngrok-skip-browser-warning"] = "true"
+        }
+
         const response = await fetch(`${API_BASE_URL}/api/auth/oauth2/naver/callback?code=${code}&state=${state}`, {
           method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-          },
+          headers,
+          credentials: "include",
         })
 
         console.log("[v0] Naver callback response status:", response.status)
