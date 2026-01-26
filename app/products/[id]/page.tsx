@@ -49,6 +49,8 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
   const [currentMonth, setCurrentMonth] = useState<Date>(new Date())
   const [chatDialogOpen, setChatDialogOpen] = useState(false)
   const [chatRoomId, setChatRoomId] = useState<number | null>(null)
+  const [relatedProducts, setRelatedProducts] = useState<any[]>([])
+  const [loadingRelated, setLoadingRelated] = useState(false)
 
   useEffect(() => {
     const resolveParams = async () => {
@@ -153,6 +155,37 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
 
     loadProduct()
   }, [productId, toast, isOwner])
+
+  // Fetch related products using AI recommendations
+  useEffect(() => {
+    if (!productId) return
+
+    const fetchRelatedProducts = async () => {
+      setLoadingRelated(true)
+      try {
+        const response = await productAPI.getRecommendations({
+          productId: productId,
+          size: 4,
+        })
+
+        const items = response.data.items || []
+        if (items.length > 0) {
+          const productIds = items.map((item: any) => item.productId)
+          const bulkResponse = await productAPI.bulkGet(productIds)
+          const productsData = bulkResponse.data || []
+          
+          const activeProducts = productsData.filter((p: any) => p.status === "ACTIVE" && p.productId !== productId)
+          setRelatedProducts(activeProducts.slice(0, 4))
+        }
+      } catch (error) {
+        console.error("[v0] Failed to fetch related products:", error)
+      } finally {
+        setLoadingRelated(false)
+      }
+    }
+
+    fetchRelatedProducts()
+  }, [productId])
 
   // Fetch unavailable dates when month changes
   useEffect(() => {
@@ -671,6 +704,42 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
                       <span>{seller.bizRegNo}</span>
                     </div>
                   )}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {relatedProducts.length > 0 && (
+            <Card>
+              <CardContent className="p-6">
+                <h2 className="text-xl font-bold mb-4">연관 상품</h2>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  {relatedProducts.map((relatedProduct) => (
+                    <Link
+                      key={relatedProduct.productId}
+                      href={`/products/${relatedProduct.productId}`}
+                      className="group"
+                    >
+                      <div className="space-y-2">
+                        <div className="aspect-square bg-gray-50 rounded-lg overflow-hidden">
+                          <img
+                            src={relatedProduct.thumbnailUrl || "/images/image.png"}
+                            alt={relatedProduct.name}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <h3 className="text-sm font-medium line-clamp-2 group-hover:text-primary transition-colors">
+                            {relatedProduct.name}
+                          </h3>
+                          <p className="text-sm font-bold text-primary">
+                            ₩{relatedProduct.pricePerDay.toLocaleString()}
+                            <span className="text-xs text-muted-foreground">/일</span>
+                          </p>
+                        </div>
+                      </div>
+                    </Link>
+                  ))}
                 </div>
               </CardContent>
             </Card>
