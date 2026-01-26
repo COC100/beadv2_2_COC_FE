@@ -1,13 +1,15 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
-import { X, Send, Loader2 } from "lucide-react"
+import { X, Send, Loader2, Wifi, WifiOff } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { Badge } from "@/components/ui/badge"
 import { chatAPI } from "@/lib/api"
 import { useToast } from "@/hooks/use-toast"
+import { getWebSocketClient, ChatMessage as WSChatMessage } from "@/lib/websocket"
 
 interface ChatMessage {
   messageId: number
@@ -34,8 +36,81 @@ export function ChatDialog({ open, onOpenChange, roomId: initialRoomId, sellerId
   const [sending, setSending] = useState(false)
   const [hasMore, setHasMore] = useState(false)
   const [nextCursor, setNextCursor] = useState<number | null>(null)
+  const [wsConnected, setWsConnected] = useState(false)
+  const [wsConnecting, setWsConnecting] = useState(false)
   const scrollAreaRef = useRef<HTMLDivElement>(null)
+  const unsubscribeRef = useRef<(() => void) | null>(null)
   const { toast } = useToast()
+
+  // Connect to WebSocket and subscribe to room
+  useEffect(() => {
+    if (!roomId || !open) return
+
+    console.log("[v0] ChatDialog - Initializing WebSocket connection for room:", roomId)
+    setWsConnecting(true)
+
+    const wsClient = getWebSocketClient()
+
+    const connectAndSubscribe = async () => {
+      try {
+        await wsClient.connect(
+          () => {
+            console.log("[v0] ChatDialog - WebSocket connected successfully")
+            setWsConnected(true)
+            setWsConnecting(false)
+
+            // Subscribe to room messages
+            const unsubscribe = wsClient.subscribeToRoom(roomId, (message: WSChatMessage) => {
+              console.log("[v0] ChatDialog - Received message:", message)
+              setMessages((prev) => {
+                // Check if message already exists
+                const exists = prev.some((m) => m.messageId === message.messageId)
+                if (exists) return prev
+                return [...prev, message]
+              })
+
+              // Scroll to bottom
+              setTimeout(() => {
+                if (scrollAreaRef.current) {
+                  const scrollContainer = scrollAreaRef.current.querySelector("[data-radix-scroll-area-viewport]")
+                  if (scrollContainer) {
+                    scrollContainer.scrollTop = scrollContainer.scrollHeight
+                  }
+                }
+              }, 100)
+            })
+
+            unsubscribeRef.current = unsubscribe
+          },
+          (error) => {
+            console.error("[v0] ChatDialog - WebSocket connection error:", error)
+            setWsConnected(false)
+            setWsConnecting(false)
+            toast({
+              title: "연결 실패",
+              description: "실시간 채팅 연결에 실패했습니다. 페이지를 새로고침해주세요.",
+              variant: "destructive",
+            })
+          }
+        )
+      } catch (error) {
+        console.error("[v0] ChatDialog - Failed to connect:", error)
+        setWsConnected(false)
+        setWsConnecting(false)
+      }
+    }
+
+    connectAndSubscribe()
+
+    // Cleanup on unmount
+    return () => {
+      console.log("[v0] ChatDialog - Cleaning up WebSocket connection")
+      if (unsubscribeRef.current) {
+        unsubscribeRef.current()
+        unsubscribeRef.current = null
+      }
+    }
+  }, [roomId, open])
 
   // Load messages when roomId is available
   useEffect(() => {
@@ -85,43 +160,26 @@ export function ChatDialog({ open, onOpenChange, roomId: initialRoomId, sellerId
     setSending(true)
 
     try {
-      // TODO: Implement WebSocket or polling for real-time messaging
-      // For now, we'll just add the message to the local state
-      // In a real implementation, this would be sent via WebSocket
-      
-      // Simulated message sending
-      const newMessage: ChatMessage = {
-        messageId: Date.now(),
-        roomId: roomId,
-        senderId: 0, // Will be set by server
-        senderRole: "MEMBER",
-        content: messageContent,
-        sentAt: new Date().toISOString(),
+      if (!wsConnected) {
+        throw new Error("WebSocket이 연결되어 있지 않습니다.")
       }
 
-      setMessages((prev) => [...prev, newMessage])
+      const wsClient = getWebSocketClient()
+      await wsClient.sendMessage(roomId, messageContent)
 
-      // Scroll to bottom
-      setTimeout(() => {
-        if (scrollAreaRef.current) {
-          const scrollContainer = scrollAreaRef.current.querySelector("[data-radix-scroll-area-viewport]")
-          if (scrollContainer) {
-            scrollContainer.scrollTop = scrollContainer.scrollHeight
-          }
-        }
-      }, 0)
+      console.log("[v0] ChatDialog - Message sent successfully")
 
-      toast({
-        title: "메시지 전송",
-        description: "메시지가 전송되었습니다. (데모 모드)",
-      })
+      // Message will be received via WebSocket subscription
+      // No need to manually add to state
     } catch (error: any) {
-      console.error("[v0] Failed to send message:", error)
+      console.error("[v0] ChatDialog - Failed to send message:", error)
       toast({
         title: "메시지 전송 실패",
         description: error.message || "메시지를 전송할 수 없습니다.",
         variant: "destructive",
       })
+      // Restore message input on error
+      setMessageInput(messageContent)
     } finally {
       setSending(false)
     }
@@ -138,7 +196,25 @@ export function ChatDialog({ open, onOpenChange, roomId: initialRoomId, sellerId
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[500px] h-[600px] flex flex-col p-0">
         <DialogHeader className="px-6 py-4 border-b">
-          <DialogTitle className="text-lg font-semibold">{sellerName}님과의 대화</DialogTitle>
+          <div className="flex items-center justify-between">
+            <DialogTitle className="text-lg font-semibold">{sellerName}님과의 대화</DialogTitle>
+            {wsConnecting ? (
+              <Badge variant="outline" className="gap-1.5">
+                <Loader2 className="h-3 w-3 animate-spin" />
+                연결 중
+              </Badge>
+            ) : wsConnected ? (
+              <Badge variant="outline" className="gap-1.5 text-green-600 border-green-600">
+                <Wifi className="h-3 w-3" />
+                연결됨
+              </Badge>
+            ) : (
+              <Badge variant="outline" className="gap-1.5 text-red-600 border-red-600">
+                <WifiOff className="h-3 w-3" />
+                연결 안됨
+              </Badge>
+            )}
+          </div>
         </DialogHeader>
 
         <ScrollArea ref={scrollAreaRef} className="flex-1 px-6 py-4">
@@ -189,15 +265,20 @@ export function ChatDialog({ open, onOpenChange, roomId: initialRoomId, sellerId
               onChange={(e) => setMessageInput(e.target.value)}
               placeholder="메시지를 입력하세요..."
               className="flex-1 rounded-full"
-              disabled={sending || !roomId}
+              disabled={sending || !roomId || !wsConnected}
             />
-            <Button type="submit" size="icon" className="rounded-full" disabled={!messageInput.trim() || sending || !roomId}>
+            <Button
+              type="submit"
+              size="icon"
+              className="rounded-full"
+              disabled={!messageInput.trim() || sending || !roomId || !wsConnected}
+            >
               {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
             </Button>
           </div>
-          <p className="text-xs text-muted-foreground mt-2 text-center">
-            실시간 채팅은 WebSocket 연동이 필요합니다. 현재는 데모 모드입니다.
-          </p>
+          {!wsConnected && !wsConnecting && (
+            <p className="text-xs text-destructive mt-2 text-center">실시간 연결이 끊어졌습니다. 페이지를 새로고침해주세요.</p>
+          )}
         </form>
       </DialogContent>
     </Dialog>

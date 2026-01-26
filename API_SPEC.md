@@ -195,7 +195,7 @@
   - Query: `status?:SellerRegistrationStatus`, `pageable`
   - Res: `SellerRegistrationPageResponse { content:SellerRegistrationResponse[], page, size, totalElements, totalPages, last }`
 
-### 채팅
+### 채팅 REST API
 - **POST /api/chat/rooms** — 채팅방 생성 (Auth)
   - Req: `sellerId:long`, `memberId:long`
   - Res: `ChatRoomResponse { roomId, roomKey, sellerId, memberId, createdAt, updatedAt }`
@@ -210,10 +210,17 @@
 - **POST /api/chat/rooms/{roomId}/leave** — 채팅방 나가기 (Auth)
   - Res: `Void`
 
-### 채팅(WebSocket/STOMP)
-- **SEND /app/chat/rooms/{roomId}/send** — 메시지 전송
-  - Payload: `ChatMessageSendRequest { content }`
-  - Res: `Void`
+### 채팅 WebSocket API (STOMP over SockJS)
+- **Connection Endpoint**: `/seller-service/ws` (SockJS endpoint)
+- **@MessageMapping("/chat/rooms/{roomId}/send")** — 실시간 메시지 전송 (Auth)
+  - Destination: `/app/chat/rooms/{roomId}/send`
+  - Headers: `Authorization: Bearer <accessToken>` (WebSocket connect 시 전달)
+  - Payload: `ChatMessageSendRequest { content:string }`
+  - Note: Principal로 sender 정보(CustomMember) 자동 추출
+- **@SubscribeMapping("/topic/chat/rooms/{roomId}")** — 채팅방 메시지 구독
+  - Subscribe to: `/topic/chat/rooms/{roomId}`
+  - Broadcast: `ChatMessageResponse { messageId, roomId, senderId, senderRole:string("MEMBER"|"SELLER"), content, sentAt:datetime }`
+  - Note: 채팅방에 메시지가 전송되면 구독 중인 모든 클라이언트에게 브로드캐스트
 
 ### 판매자 정산(셀프)
 - **GET /api/settlements/sellers/self** — 내 정산 목록 (Auth)
