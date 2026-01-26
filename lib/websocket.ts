@@ -1,5 +1,5 @@
+import { Client, IMessage, StompConfig } from "@stomp/stompjs"
 import SockJS from "sockjs-client"
-import { Client, Frame, Message, Stomp } from "stompjs"
 
 const WS_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || ""
 
@@ -43,57 +43,54 @@ class WebSocketClient {
       console.log("[v0] WebSocket - Connecting to:", WS_BASE_URL)
 
       try {
-        // Create WebSocket URL - adjust endpoint as needed
         const wsUrl = `${WS_BASE_URL}/seller-service/ws`
         console.log("[v0] WebSocket - Full URL:", wsUrl)
 
-        const socket = new SockJS(wsUrl)
-        this.client = Stomp.over(socket)
-
-        // Disable debug messages in production
-        if (process.env.NODE_ENV === "production") {
-          this.client.debug = () => {}
-        } else {
-          this.client.debug = (str) => {
-            console.log("[v0] STOMP Debug:", str)
-          }
-        }
-
         const token = localStorage.getItem("accessToken")
-        const headers: any = {}
+        const connectHeaders: any = {}
 
         if (token) {
-          headers["Authorization"] = `Bearer ${token}`
+          connectHeaders["Authorization"] = `Bearer ${token}`
         }
 
-        this.client.connect(
-          headers,
-          (frame: Frame) => {
+        // Create client with modern @stomp/stompjs API
+        this.client = new Client({
+          webSocketFactory: () => new SockJS(wsUrl) as any,
+          connectHeaders: connectHeaders,
+          debug: (str: string) => {
+            if (process.env.NODE_ENV !== "production") {
+              console.log("[v0] STOMP Debug:", str)
+            }
+          },
+          reconnectDelay: this.reconnectDelay,
+          heartbeatIncoming: 10000,
+          heartbeatOutgoing: 10000,
+          onConnect: (frame) => {
             console.log("[v0] WebSocket - Connected:", frame)
             this.connected = true
             this.reconnectAttempts = 0
             if (onConnected) onConnected()
             resolve()
           },
-          (error: string | Frame) => {
-            console.error("[v0] WebSocket - Connection error:", error)
+          onStompError: (frame) => {
+            console.error("[v0] WebSocket - STOMP error:", frame)
             this.connected = false
+            if (onError) onError(frame)
+            reject(frame)
+          },
+          onWebSocketError: (event) => {
+            console.error("[v0] WebSocket - WebSocket error:", event)
+            this.connected = false
+            if (onError) onError(event)
+            reject(event)
+          },
+          onDisconnect: () => {
+            console.log("[v0] WebSocket - Disconnected")
+            this.connected = false
+          },
+        })
 
-            if (this.reconnectAttempts < this.maxReconnectAttempts) {
-              this.reconnectAttempts++
-              console.log(
-                `[v0] WebSocket - Reconnecting... (attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts})`
-              )
-              setTimeout(() => {
-                this.connect(onConnected, onError)
-              }, this.reconnectDelay)
-            } else {
-              console.error("[v0] WebSocket - Max reconnect attempts reached")
-              if (onError) onError(error)
-              reject(error)
-            }
-          }
-        )
+        this.client.activate()
       } catch (error) {
         console.error("[v0] WebSocket - Failed to create connection:", error)
         if (onError) onError(error)
@@ -110,9 +107,7 @@ class WebSocketClient {
         subscription.unsubscribe()
       })
       this.subscriptions.clear()
-      this.client.disconnect(() => {
-        console.log("[v0] WebSocket - Disconnected")
-      })
+      this.client.deactivate()
       this.connected = false
     }
   }
@@ -126,7 +121,7 @@ class WebSocketClient {
     const destination = `/topic/chat/rooms/${roomId}`
     console.log("[v0] WebSocket - Subscribing to:", destination)
 
-    const subscription = this.client.subscribe(destination, (message: Message) => {
+    const subscription = this.client.subscribe(destination, (message: IMessage) => {
       try {
         console.log("[v0] WebSocket - Message received:", message.body)
         const chatMessage: ChatMessage = JSON.parse(message.body)
@@ -160,7 +155,10 @@ class WebSocketClient {
       console.log("[v0] WebSocket - Sending message to:", destination, payload)
 
       try {
-        this.client.send(destination, {}, JSON.stringify(payload))
+        this.client.publish({
+          destination: destination,
+          body: JSON.stringify(payload),
+        })
         console.log("[v0] WebSocket - Message sent successfully")
         resolve()
       } catch (error) {
