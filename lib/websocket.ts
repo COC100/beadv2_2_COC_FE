@@ -1,7 +1,11 @@
-import { Client, IMessage, StompConfig } from "@stomp/stompjs"
-import SockJS from "sockjs-client"
+import { Client, IMessage } from "@stomp/stompjs"
 
 const WS_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || ""
+
+// Polyfill for SockJS
+if (typeof window !== "undefined") {
+  ;(window as any).global = window
+}
 
 export interface ChatMessage {
   messageId: number
@@ -43,10 +47,15 @@ class WebSocketClient {
       console.log("[v0] WebSocket - Connecting to:", WS_BASE_URL)
 
       try {
+        // Import SockJS dynamically to avoid SSR issues
+        const SockJS = (await import("sockjs-client")).default
+
         const wsUrl = `${WS_BASE_URL}/seller-service/ws`
         console.log("[v0] WebSocket - Full URL:", wsUrl)
 
         const token = localStorage.getItem("accessToken")
+        console.log("[v0] WebSocket - Token exists:", !!token)
+        
         const connectHeaders: any = {}
 
         if (token) {
@@ -55,25 +64,26 @@ class WebSocketClient {
 
         // Create client with modern @stomp/stompjs API
         this.client = new Client({
-          webSocketFactory: () => new SockJS(wsUrl) as any,
+          webSocketFactory: () => {
+            console.log("[v0] WebSocket - Creating SockJS connection to:", wsUrl)
+            return new SockJS(wsUrl) as any
+          },
           connectHeaders: connectHeaders,
           debug: (str: string) => {
-            if (process.env.NODE_ENV !== "production") {
-              console.log("[v0] STOMP Debug:", str)
-            }
+            console.log("[v0] STOMP Debug:", str)
           },
           reconnectDelay: this.reconnectDelay,
           heartbeatIncoming: 10000,
           heartbeatOutgoing: 10000,
           onConnect: (frame) => {
-            console.log("[v0] WebSocket - Connected:", frame)
+            console.log("[v0] WebSocket - Connected successfully:", frame)
             this.connected = true
             this.reconnectAttempts = 0
             if (onConnected) onConnected()
             resolve()
           },
           onStompError: (frame) => {
-            console.error("[v0] WebSocket - STOMP error:", frame)
+            console.error("[v0] WebSocket - STOMP error:", frame.headers, frame.body)
             this.connected = false
             if (onError) onError(frame)
             reject(frame)
@@ -84,12 +94,17 @@ class WebSocketClient {
             if (onError) onError(event)
             reject(event)
           },
+          onWebSocketClose: (event) => {
+            console.log("[v0] WebSocket - WebSocket closed:", event)
+            this.connected = false
+          },
           onDisconnect: () => {
             console.log("[v0] WebSocket - Disconnected")
             this.connected = false
           },
         })
 
+        console.log("[v0] WebSocket - Activating client...")
         this.client.activate()
       } catch (error) {
         console.error("[v0] WebSocket - Failed to create connection:", error)

@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react"
 import { X, Send, Loader2, Wifi, WifiOff } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Badge } from "@/components/ui/badge"
 import { chatAPI } from "@/lib/api"
@@ -215,6 +215,7 @@ export function ChatDialog({ open, onOpenChange, roomId: initialRoomId, sellerId
               </Badge>
             )}
           </div>
+          <DialogDescription className="sr-only">판매자와 실시간으로 채팅할 수 있는 대화창입니다.</DialogDescription>
         </DialogHeader>
 
         <ScrollArea ref={scrollAreaRef} className="flex-1 px-6 py-4">
