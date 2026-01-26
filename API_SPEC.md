@@ -422,8 +422,8 @@
 - BlacklistStatus: `ACTIVE`, `SUSPENDED`
 
 ### 리뷰
-- **POST /api/reviews** — 판매자 리뷰 작성 (Auth)
-  - Req: `rentalItemId:long`, `sellerId:long`, `rating:short(1~5)`, `content:string`
+> - **POST /api/reviews** — 판매자 리뷰 작성 (Auth)
+  - Req: `rentalItemId:long`, `rating:short(1~5)`, `content:string`
   - Res: `ReviewResponse { reviewId, rentalItemId, sellerId, memberId, rating, content, createdAt, updatedAt }` (201)
 - **PATCH /api/reviews/{reviewId}** — 리뷰 수정 (Auth)
   - Req: `rating?:short(1~5)`, `content?:string`
