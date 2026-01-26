@@ -160,6 +160,12 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
   useEffect(() => {
     if (!productId) return
 
+    // Check if user is logged in
+    const token = typeof window !== "undefined" ? localStorage.getItem("accessToken") : null
+    if (!token) {
+      return
+    }
+
     const fetchRelatedProducts = async () => {
       setLoadingRelated(true)
       try {
@@ -179,6 +185,8 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
         }
       } catch (error) {
         console.error("[v0] Failed to fetch related products:", error)
+        // On error, keep relatedProducts empty so section won't render
+        setRelatedProducts([])
       } finally {
         setLoadingRelated(false)
       }
