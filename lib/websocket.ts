@@ -35,33 +35,32 @@ class WebSocketClient {
     }
   }
 
-  connect(onConnected?: () => void, onError?: (error: any) => void): Promise<void> {
-    return new Promise((resolve, reject) => {
-      if (this.connected) {
-        console.log("[v0] WebSocket - Already connected")
-        if (onConnected) onConnected()
-        resolve()
-        return
+  async connect(onConnected?: () => void, onError?: (error: any) => void): Promise<void> {
+    if (this.connected) {
+      console.log("[v0] WebSocket - Already connected")
+      if (onConnected) onConnected()
+      return
+    }
+
+    console.log("[v0] WebSocket - Connecting to:", WS_BASE_URL)
+
+    try {
+      // Import SockJS dynamically to avoid SSR issues
+      const SockJS = (await import("sockjs-client")).default
+
+      const wsUrl = `${WS_BASE_URL}/seller-service/ws`
+      console.log("[v0] WebSocket - Full URL:", wsUrl)
+
+      const token = localStorage.getItem("accessToken")
+      console.log("[v0] WebSocket - Token exists:", !!token)
+      
+      const connectHeaders: any = {}
+
+      if (token) {
+        connectHeaders["Authorization"] = `Bearer ${token}`
       }
 
-      console.log("[v0] WebSocket - Connecting to:", WS_BASE_URL)
-
-      try {
-        // Import SockJS dynamically to avoid SSR issues
-        const SockJS = (await import("sockjs-client")).default
-
-        const wsUrl = `${WS_BASE_URL}/seller-service/ws`
-        console.log("[v0] WebSocket - Full URL:", wsUrl)
-
-        const token = localStorage.getItem("accessToken")
-        console.log("[v0] WebSocket - Token exists:", !!token)
-        
-        const connectHeaders: any = {}
-
-        if (token) {
-          connectHeaders["Authorization"] = `Bearer ${token}`
-        }
-
+      return new Promise((resolve, reject) => {
         // Create client with modern @stomp/stompjs API
         this.client = new Client({
           webSocketFactory: () => {
@@ -106,12 +105,12 @@ class WebSocketClient {
 
         console.log("[v0] WebSocket - Activating client...")
         this.client.activate()
-      } catch (error) {
-        console.error("[v0] WebSocket - Failed to create connection:", error)
-        if (onError) onError(error)
-        reject(error)
-      }
-    })
+      })
+    } catch (error) {
+      console.error("[v0] WebSocket - Failed to create connection:", error)
+      if (onError) onError(error)
+      throw error
+    }
   }
 
   disconnect() {
