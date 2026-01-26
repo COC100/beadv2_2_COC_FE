@@ -84,6 +84,88 @@ export default function LoginPage() {
     }
   }
 
+  const handleOAuthLogin = (provider: "google" | "kakao" | "naver") => {
+    // OAuth URL 가져오기
+    let authUrl: string
+    if (provider === "google") {
+      authUrl = getGoogleAuthUrl()
+    } else if (provider === "kakao") {
+      authUrl = getKakaoAuthUrl()
+    } else {
+      authUrl = getNaverAuthUrl()
+    }
+
+    // 팝업 창 열기
+    const width = 500
+    const height = 600
+    const left = window.screen.width / 2 - width / 2
+    const top = window.screen.height / 2 - height / 2
+
+    const popup = window.open(
+      authUrl,
+      `${provider}_oauth`,
+      `width=${width},height=${height},left=${left},top=${top},scrollbars=yes`
+    )
+
+    // 메시지 리스너 등록
+    const handleMessage = (event: MessageEvent) => {
+      // 보안: origin 검증
+      if (event.origin !== window.location.origin) return
+
+      // OAuth 콜백 메시지인지 확인
+      if (event.data?.type === "oauth_callback" && event.data?.provider === provider) {
+        // 리스너 제거
+        window.removeEventListener("message", handleMessage)
+
+        const { status, accessToken, signupToken, error, errorDescription } = event.data
+
+        // 에러 처리
+        if (error) {
+          setErrorDialog({
+            open: true,
+            title: "로그인 실패",
+            message: errorDescription || `${provider} 로그인이 취소되었습니다`,
+          })
+          return
+        }
+
+        // 신규 사용자 - 회원가입 페이지로 이동
+        if (status === "signup_required" && signupToken) {
+          router.push(`/oauth2/signup?provider=${provider}&token=${signupToken}`)
+          return
+        }
+
+        // 기존 사용자 - 토큰 저장 후 메인으로 이동
+        if (status === "success" && accessToken) {
+          localStorage.setItem("accessToken", accessToken)
+          toast({
+            title: "로그인 성공",
+            description: "환영합니다!",
+          })
+          router.push("/")
+          return
+        }
+
+        // 예상하지 못한 응답
+        setErrorDialog({
+          open: true,
+          title: "로그인 실패",
+          message: "로그인 처리 중 오류가 발생했습니다",
+        })
+      }
+    }
+
+    window.addEventListener("message", handleMessage)
+
+    // 팝업이 닫혔는지 체크 (사용자가 수동으로 닫은 경우)
+    const checkPopupClosed = setInterval(() => {
+      if (popup?.closed) {
+        clearInterval(checkPopupClosed)
+        window.removeEventListener("message", handleMessage)
+      }
+    }, 500)
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
@@ -145,9 +227,8 @@ export default function LoginPage() {
                   type="button"
                   variant="outline"
                   className="w-full"
-                  onClick={() => {
-                    window.location.href = getGoogleAuthUrl()
-                  }}
+                  onClick={() => handleOAuthLogin("google")}
+                  disabled={isLoading}
                 >
                   <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
                     <path
@@ -173,9 +254,8 @@ export default function LoginPage() {
                   type="button"
                   variant="outline"
                   className="w-full bg-[#FEE500] hover:bg-[#FEE500]/90 border-[#FEE500]"
-                  onClick={() => {
-                    window.location.href = getKakaoAuthUrl()
-                  }}
+                  onClick={() => handleOAuthLogin("kakao")}
+                  disabled={isLoading}
                 >
                   <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
                     <path
@@ -189,9 +269,8 @@ export default function LoginPage() {
                   type="button"
                   variant="outline"
                   className="w-full bg-[#03C75A] hover:bg-[#03C75A]/90 border-[#03C75A] text-white"
-                  onClick={() => {
-                    window.location.href = getNaverAuthUrl()
-                  }}
+                  onClick={() => handleOAuthLogin("naver")}
+                  disabled={isLoading}
                 >
                   <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
                     <path fill="white" d="M16.273 12.845 7.376 0H0v24h7.726V11.156L16.624 24H24V0h-7.727v12.845z" />
