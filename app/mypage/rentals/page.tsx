@@ -171,7 +171,7 @@ export default function RentalsPage() {
               id: item.rentalItemId,
               productId: item.productId,
               productName: product?.name || `상품 ${item.productId}`,
-              productImage: product?.images?.[0]?.url || "/abstract-geometric-shapes.png",
+              productImage: product?.thumbnailUrl || product?.images?.[0]?.url || "/placeholder.svg",
               startDate: item.startDate,
               endDate: item.endDate,
               pricePerDay: item.unitPrice,
