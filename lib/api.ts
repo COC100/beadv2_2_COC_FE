@@ -137,7 +137,16 @@ async function fetchAPI<T>(
 
     if (response.status === 403) {
       console.error("[v0] 403 Forbidden - insufficient permissions")
-      throw new Error("접근 권한이 없습니다. 관리자 권한이 필요합니다.")
+      const error = new Error("접근 권한이 없습니다. 관리자 권한이 필요합니다.")
+      ;(error as any).status = 403
+      throw error
+    }
+
+    if (response.status === 404) {
+      console.error("[v0] 404 Not Found")
+      const error = new Error("요청한 리소스를 찾을 수 없습니다.")
+      ;(error as any).status = 404
+      throw error
     }
 
     if (!response.ok) {

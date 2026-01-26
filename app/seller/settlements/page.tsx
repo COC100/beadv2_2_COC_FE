@@ -76,6 +76,12 @@ export default function SettlementsPage() {
         setSummaryData(null)
       }
     } catch (error: any) {
+      // If no seller permission or unauthorized, redirect to seller application page
+      if (error.status === 403 || error.status === 404 || error.status === 401) {
+        router.push("/become-seller")
+        return
+      }
+      
       toast({
         title: "정산 목록 조회 실패",
         description: error.message || "정산 목록을 불러오는데 실패했습니다",
@@ -96,6 +102,12 @@ export default function SettlementsPage() {
       setSettlementLines(linesResponse.data || [])
       setShowDetailDialog(true)
     } catch (error: any) {
+      // If no seller permission or unauthorized, redirect to seller application page
+      if (error.status === 403 || error.status === 404 || error.status === 401) {
+        router.push("/become-seller")
+        return
+      }
+      
       toast({
         title: "정산 상세 조회 실패",
         description: error.message || "정산 상세 정보를 불러오는데 실패했습니다",
