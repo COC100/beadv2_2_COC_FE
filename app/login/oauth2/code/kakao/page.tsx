@@ -6,7 +6,6 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Loader2, Check, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/hooks/use-toast"
-import { authAPI } from "@/lib/api"
 
 export default function KakaoCallbackPage() {
   const router = useRouter()
@@ -17,16 +16,23 @@ export default function KakaoCallbackPage() {
 
   useEffect(() => {
     handleCallback()
-  }, [searchParams])
+  }, [])
 
   const handleCallback = async () => {
     try {
+      // Backend handles the OAuth callback and redirects here with status
       const callbackStatus = searchParams.get("status")
-      const token = searchParams.get("token")
+      const accessToken = searchParams.get("token")
       const error = searchParams.get("error")
       const errorDescription = searchParams.get("error_description")
+      const signupToken = searchParams.get("signupToken")
 
-      console.log("[v0] Kakao OAuth callback:", { callbackStatus, token, error, errorDescription })
+      console.log("[v0] Kakao OAuth callback from backend:", {
+        callbackStatus,
+        hasAccessToken: !!accessToken,
+        hasSignupToken: !!signupToken,
+        error,
+      })
 
       // 에러가 있는 경우
       if (error) {
@@ -35,28 +41,31 @@ export default function KakaoCallbackPage() {
         return
       }
 
-      // 신규 사용자 또는 소셜 미연결 사용자인 경우
-      if (callbackStatus === "signup_required" && token) {
+      // 신규 사용자인 경우 - 회원가입 페이지로 이동
+      if (callbackStatus === "signup_required" && signupToken) {
         console.log("[v0] Signup required, redirecting to signup page")
-        router.push(`/oauth2/signup?provider=kakao&token=${token}`)
+        router.push(`/oauth2/signup?provider=kakao&token=${signupToken}`)
         return
       }
 
-      // 기존 소셜 연결 사용자인 경우 - refresh token은 이미 쿠키로 설정됨
-      // access token을 발급받아야 함
-      console.log("[v0] Existing user, issuing access token")
-      const accessToken = await authAPI.reissueToken()
-      
-      localStorage.setItem("accessToken", accessToken)
-      setStatus("success")
-      toast({
-        title: "로그인 성공",
-        description: "환영합니다!",
-      })
-      
-      setTimeout(() => {
-        window.location.href = "/"
-      }, 1000)
+      // 기존 사용자인 경우 - 액세스 토큰 저장
+      if (callbackStatus === "success" && accessToken) {
+        console.log("[v0] Login success, storing access token")
+        localStorage.setItem("accessToken", accessToken)
+        setStatus("success")
+        toast({
+          title: "로그인 성공",
+          description: "환영합니다!",
+        })
+
+        setTimeout(() => {
+          window.location.href = "/"
+        }, 1000)
+        return
+      }
+
+      // 예상하지 못한 응답
+      throw new Error("잘못된 응답 형식입니다")
     } catch (error: any) {
       console.error("[v0] Kakao OAuth callback error:", error)
       setStatus("error")

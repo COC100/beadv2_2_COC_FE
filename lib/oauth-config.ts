@@ -1,24 +1,34 @@
 // OAuth 제공자별 설정 (클라이언트 측)
 // 주의: Client Secret은 절대 클라이언트에 노출하면 안 되며, 백엔드에서만 사용됩니다
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || ""
+const FRONTEND_URL = typeof window !== "undefined" ? window.location.origin : "http://localhost:3000"
 
 export const OAUTH_CONFIG = {
   kakao: {
     authUrl: "https://kauth.kakao.com/oauth/authorize",
     clientId: process.env.NEXT_PUBLIC_KAKAO_CLIENT_ID || "",
-    redirectUri: `${API_BASE_URL}/oauth2/kakao/callback`,
+    // Backend API endpoint that handles the OAuth callback
+    redirectUri: `${API_BASE_URL}/api/auth/oauth2/kakao/callback`,
+    // Frontend callback page for handling post-login UI
+    frontendCallbackUri: `${FRONTEND_URL}/login/oauth2/code/kakao`,
     scope: "profile_nickname profile_image account_email", // 카카오 공식 스코프
   },
   google: {
     authUrl: "https://accounts.google.com/o/oauth2/v2/auth",
     clientId: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "",
-    redirectUri: `${API_BASE_URL}/oauth2/google/callback`,
+    // Backend API endpoint that handles the OAuth callback
+    redirectUri: `${API_BASE_URL}/api/auth/oauth2/google/callback`,
+    // Frontend callback page for handling post-login UI
+    frontendCallbackUri: `${FRONTEND_URL}/login/oauth2/code/google`,
     scope: "openid profile email", // Google OAuth 2.0 표준 스코프
   },
   naver: {
     authUrl: "https://nid.naver.com/oauth2.0/authorize",
     clientId: process.env.NEXT_PUBLIC_NAVER_CLIENT_ID || "",
-    redirectUri: `${API_BASE_URL}/oauth2/naver/callback`,
+    // Backend API endpoint that handles the OAuth callback
+    redirectUri: `${API_BASE_URL}/api/auth/oauth2/naver/callback`,
+    // Frontend callback page for handling post-login UI
+    frontendCallbackUri: `${FRONTEND_URL}/login/oauth2/code/naver`,
     scope: "name email profile_image", // 네이버 공식 스코프
   },
 }
