@@ -22,29 +22,28 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
+import { Checkbox } from "@/components/ui/checkbox"
+import { Label } from "@/components/ui/label"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 
 const CATEGORIES = [
-  { value: "ALL", label: "전체" },
-  { value: "CAMERA", label: "카메라" },
   { value: "LAPTOP", label: "노트북" },
+  { value: "DESKTOP", label: "데스크탑" },
+  { value: "CAMERA", label: "카메라" },
   { value: "TABLET", label: "태블릿" },
+  { value: "MOBILE", label: "모바일" },
+  { value: "MONITOR", label: "모니터" },
+  { value: "ACCESSORY", label: "악세서리" },
   { value: "DRONE", label: "드론" },
   { value: "AUDIO", label: "오디오" },
-  { value: "OTHER", label: "기타" },
+  { value: "PROJECTOR", label: "프로젝터" },
 ]
 
 export default function RecommendationsPage() {
   const router = useRouter()
   const { toast } = useToast()
   const [query, setQuery] = useState("")
-  const [category, setCategory] = useState("ALL")
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [recommendations, setRecommendations] = useState<any[]>([])
   const [message, setMessage] = useState("")
@@ -76,10 +75,21 @@ export default function RecommendationsPage() {
     setHasSearched(true)
 
     try {
-      const response = await productAPI.getRecommendations({
+      const requestData: {
+        query: string
+        size: number
+        categories?: string[]
+      } = {
         query: query.trim(),
         size: 12,
-      })
+      }
+
+      // Only add categories if some are selected (not all)
+      if (selectedCategories.length > 0) {
+        requestData.categories = selectedCategories
+      }
+
+      const response = await productAPI.getRecommendations(requestData)
 
       setMessage(response.data.message || "")
       const items = response.data.items || []
@@ -89,12 +99,7 @@ export default function RecommendationsPage() {
         const bulkResponse = await productAPI.bulkGet(productIds)
         const productsData = bulkResponse.data || []
         
-        let activeProducts = productsData.filter((product: any) => product.status === "ACTIVE")
-        
-        // Filter by category if not ALL
-        if (category !== "ALL") {
-          activeProducts = activeProducts.filter((product: any) => product.category === category)
-        }
+        const activeProducts = productsData.filter((product: any) => product.status === "ACTIVE")
         
         setRecommendations(activeProducts)
       } else {
@@ -145,18 +150,57 @@ export default function RecommendationsPage() {
           <form onSubmit={handleSearch} className="mb-8">
             <div className="flex flex-col gap-3">
               <div className="flex gap-2">
-                <Select value={category} onValueChange={setCategory}>
-                  <SelectTrigger className="w-[180px] h-12 rounded-xl">
-                    <SelectValue placeholder="카테고리" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {CATEGORIES.map((cat) => (
-                      <SelectItem key={cat.value} value={cat.value}>
-                        {cat.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="w-[180px] h-12 rounded-xl justify-start">
+                      {selectedCategories.length === 0
+                        ? "전체"
+                        : selectedCategories.length === 1
+                        ? CATEGORIES.find((c) => c.value === selectedCategories[0])?.label
+                        : `${selectedCategories.length}개 선택`}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[240px] p-4" align="start">
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between mb-3">
+                        <h4 className="font-medium text-sm">카테고리</h4>
+                        {selectedCategories.length > 0 && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-auto py-1 px-2 text-xs"
+                            onClick={() => setSelectedCategories([])}
+                          >
+                            초기화
+                          </Button>
+                        )}
+                      </div>
+                      {CATEGORIES.map((category) => (
+                        <div key={category.value} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={category.value}
+                            checked={selectedCategories.includes(category.value)}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                setSelectedCategories([...selectedCategories, category.value])
+                              } else {
+                                setSelectedCategories(
+                                  selectedCategories.filter((c) => c !== category.value)
+                                )
+                              }
+                            }}
+                          />
+                          <Label
+                            htmlFor={category.value}
+                            className="text-sm font-normal cursor-pointer flex-1"
+                          >
+                            {category.label}
+                          </Label>
+                        </div>
+                      ))}
+                    </div>
+                  </PopoverContent>
+                </Popover>
                 <div className="relative flex-1">
                   <Input
                     type="text"
