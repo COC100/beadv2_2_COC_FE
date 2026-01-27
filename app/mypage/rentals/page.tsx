@@ -341,16 +341,8 @@ export default function RentalsPage() {
     } catch (error: any) {
       console.error("[v0] Payment error:", error)
       
-      // Check if error is due to insufficient deposit
-      if (error.message?.includes("예치금") || error.message?.includes("부족") || error.message?.includes("잔액")) {
-        setShowInsufficientDepositDialog(true)
-      } else {
-        toast({
-          title: "결제 실패",
-          description: error.message,
-          variant: "destructive",
-        })
-      }
+      // Show insufficient deposit dialog on payment failure
+      setShowInsufficientDepositDialog(true)
     }
   }
 
