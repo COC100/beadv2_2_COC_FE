@@ -34,7 +34,9 @@ export default function MyReviewsPage() {
   useEffect(() => {
     const loadReviews = async () => {
       try {
-        const response = await reviewAPI.myReviews()
+        console.log("[v0] Loading my reviews from API...")
+        const response = await reviewAPI.getMyReviews()
+        console.log("[v0] My reviews loaded:", response.data)
         setReviews(response.data || [])
       } catch (error: any) {
         console.error("[v0] Failed to load reviews:", error)
