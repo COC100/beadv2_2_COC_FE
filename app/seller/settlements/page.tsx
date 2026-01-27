@@ -297,13 +297,6 @@ export default function SettlementsPage() {
       </section>
 
       <div className="container mx-auto px-4 py-12">
-        <div className="mb-6 flex justify-end">
-          <Button onClick={() => setShowBatchDialog(true)} className="rounded-lg">
-            <Calendar className="h-4 w-4 mr-2" />
-            정산 실행
-          </Button>
-        </div>
-
         {summaryData && (
           <Card className="mb-6 bg-gradient-to-br from-blue-50 to-indigo-50">
             <CardHeader>
