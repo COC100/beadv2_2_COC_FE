@@ -11,6 +11,16 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { rentalAPI, productAPI, deliveryAPI, reviewAPI } from "@/lib/api"
 
 interface RentalDetail {
@@ -45,6 +55,7 @@ export default function RentalsPage() {
   const { toast } = useToast()
   const [deliveryInfo, setDeliveryInfo] = useState<Record<number, any>>({})
   const [reviewedRentalIds, setReviewedRentalIds] = useState<Set<number>>(new Set())
+  const [showInsufficientDepositDialog, setShowInsufficientDepositDialog] = useState(false)
 
   const formatDateTime = (dateStr: string) => {
     if (!dateStr) return ""
@@ -329,11 +340,17 @@ export default function RentalsPage() {
       window.location.reload()
     } catch (error: any) {
       console.error("[v0] Payment error:", error)
-      toast({
-        title: "결제 실패",
-        description: error.message,
-        variant: "destructive",
-      })
+      
+      // Check if error is due to insufficient deposit
+      if (error.message?.includes("예치금") || error.message?.includes("부족") || error.message?.includes("잔액")) {
+        setShowInsufficientDepositDialog(true)
+      } else {
+        toast({
+          title: "결제 실패",
+          description: error.message,
+          variant: "destructive",
+        })
+      }
     }
   }
 
@@ -617,6 +634,21 @@ export default function RentalsPage() {
       </div>
 
       <Footer />
+
+      <AlertDialog open={showInsufficientDepositDialog} onOpenChange={setShowInsufficientDepositDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>예치금 부족</AlertDialogTitle>
+            <AlertDialogDescription>
+              결제에 필요한 예치금이 부족합니다. 예치금을 충전하신 후 다시 시도해주세요.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>닫기</AlertDialogCancel>
+            <AlertDialogAction onClick={() => router.push("/deposit")}>충전하기</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }
