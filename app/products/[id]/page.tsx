@@ -27,6 +27,8 @@ import {
 import { ChatDialog } from "@/components/chat-dialog"
 import { format } from "date-fns"
 import { ko } from "date-fns/locale"
+import { AlertPopup } from "@/components/alert-popup"
+
 export default function ProductDetailPage({ params }: { params: { id: string } }) {
 
   const router = useRouter()
@@ -51,6 +53,9 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
   const [chatRoomId, setChatRoomId] = useState<number | null>(null)
   const [relatedProducts, setRelatedProducts] = useState<any[]>([])
   const [loadingRelated, setLoadingRelated] = useState(false)
+  const [showLoginAlert, setShowLoginAlert] = useState(false)
+  const [startDatePopoverOpen, setStartDatePopoverOpen] = useState(false)
+  const [endDatePopoverOpen, setEndDatePopoverOpen] = useState(false)
 
   useEffect(() => {
     const resolveParams = async () => {
@@ -195,25 +200,33 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
     fetchRelatedProducts()
   }, [productId])
 
-  // Fetch unavailable dates when month changes
-  useEffect(() => {
-    if (!productId || !currentMonth) return
+  // Fetch unavailable dates when calendar popover is opened
+  const fetchUnavailableDates = async (month: Date) => {
+    if (!productId) return
 
-    const fetchUnavailableDates = async () => {
-      try {
-        const ym = format(currentMonth, "yyyy-MM")
-        console.log("[v0] Fetching unavailable dates for:", ym)
-        const response = await rentalAPI.getUnavailableDates(productId, ym)
-        const dates = response.data?.unavailableDates || []
-        console.log("[v0] Unavailable dates received:", dates)
-        setUnavailableDates(dates)
-      } catch (error) {
-        console.error("[v0] Failed to fetch unavailable dates:", error)
-      }
+    try {
+      const ym = format(month, "yyyy-MM")
+      console.log("[v0] Fetching unavailable dates for:", ym)
+      const response = await rentalAPI.getUnavailableDates(productId, ym)
+      const dates = response.data?.unavailableDates || []
+      console.log("[v0] Unavailable dates received:", dates)
+      setUnavailableDates(dates)
+    } catch (error) {
+      console.error("[v0] Failed to fetch unavailable dates:", error)
     }
+  }
 
-    fetchUnavailableDates()
-  }, [productId, currentMonth])
+  // Check if user is authenticated
+  const isAuthenticated = () => {
+    if (typeof window === "undefined") return false
+    const token = localStorage.getItem("accessToken")
+    return !!token
+  }
+
+  const handleAuthRequired = () => {
+    setShowLoginAlert(true)
+    return false
+  }
 
   const calculateTotal = () => {
     if (!startDate || !endDate || !product) return 0
@@ -230,6 +243,11 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
   }
 
   const handleAddToCart = async () => {
+    if (!isAuthenticated()) {
+      handleAuthRequired()
+      return
+    }
+
     if (!productId || !startDate || !endDate) {
       toast({
         title: "대여 기간을 선택해주세요",
@@ -277,6 +295,11 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
   }
 
   const handleRentalApplication = () => {
+    if (!isAuthenticated()) {
+      handleAuthRequired()
+      return
+    }
+
     if (isOwner) {
       setErrorDialog({
         open: true,
@@ -346,6 +369,11 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
   }
 
   const handleChatWithSeller = async () => {
+    if (!isAuthenticated()) {
+      handleAuthRequired()
+      return
+    }
+
     if (isOwner) {
       toast({
         title: "본인 상품입니다",
@@ -524,7 +552,16 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
                 <div className="grid gap-4">
                   <div className="space-y-2">
                     <Label className="text-sm">시작일</Label>
-                    <Popover>
+                    <Popover open={startDatePopoverOpen} onOpenChange={(open) => {
+                      if (!isAuthenticated() && open) {
+                        handleAuthRequired()
+                        return
+                      }
+                      setStartDatePopoverOpen(open)
+                      if (open && productId) {
+                        fetchUnavailableDates(currentMonth)
+                      }
+                    }}>
                       <PopoverTrigger asChild>
                         <Button
                           variant="outline"
@@ -548,11 +585,12 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
                               return
                             }
                             setStartDate(date)
-                            setEndDate(undefined) // Reset end date when start date changes
+                            setEndDate(undefined)
                           }}
                           onMonthChange={(month) => {
                             console.log("[v0] Month changed to:", format(month, "yyyy-MM"))
                             setCurrentMonth(month)
+                            fetchUnavailableDates(month)
                           }}
                           disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0)) || isDateUnavailable(date)}
                           initialFocus
@@ -562,7 +600,16 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
                   </div>
                   <div className="space-y-2">
                     <Label className="text-sm">종료일</Label>
-                    <Popover>
+                    <Popover open={endDatePopoverOpen} onOpenChange={(open) => {
+                      if (!isAuthenticated() && open) {
+                        handleAuthRequired()
+                        return
+                      }
+                      setEndDatePopoverOpen(open)
+                      if (open && productId) {
+                        fetchUnavailableDates(currentMonth)
+                      }
+                    }}>
                       <PopoverTrigger asChild>
                         <Button
                           variant="outline"
@@ -591,6 +638,7 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
                           onMonthChange={(month) => {
                             console.log("[v0] Month changed to:", format(month, "yyyy-MM"))
                             setCurrentMonth(month)
+                            fetchUnavailableDates(month)
                           }}
                           disabled={(date) =>
                             date < (startDate || new Date(new Date().setHours(0, 0, 0, 0))) || isDateUnavailable(date)
@@ -791,6 +839,13 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
         roomId={chatRoomId}
         sellerId={seller?.sellerId || 0}
         sellerName={seller?.storeName || "판매자"}
+      />
+
+      <AlertPopup
+        open={showLoginAlert}
+        onOpenChange={setShowLoginAlert}
+        title="로그인이 필요합니다"
+        description="로그인 후 이용 가능합니다."
       />
 
       <Footer />
