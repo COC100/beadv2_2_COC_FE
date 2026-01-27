@@ -30,11 +30,14 @@ export default function MyReviewsPage() {
   const [editDialog, setEditDialog] = useState<{ open: boolean; review: any }>({ open: false, review: null })
   const [editRating, setEditRating] = useState(5)
   const [editContent, setEditContent] = useState("")
+  const [selectedRating, setSelectedRating] = useState<number | undefined>(undefined)
 
   useEffect(() => {
     const loadReviews = async () => {
       try {
-        const response = await reviewAPI.myReviews()
+        console.log("[v0] Loading my reviews from API with rating filter:", selectedRating)
+        const response = await reviewAPI.getMyReviews({ rating: selectedRating })
+        console.log("[v0] My reviews loaded:", response.data)
         setReviews(response.data || [])
       } catch (error: any) {
         console.error("[v0] Failed to load reviews:", error)
@@ -49,7 +52,7 @@ export default function MyReviewsPage() {
     }
 
     loadReviews()
-  }, [toast])
+  }, [selectedRating, toast])
 
   const toggleReview = (reviewId: number) => {
     const newExpanded = new Set(expandedReviews)
@@ -143,6 +146,30 @@ export default function MyReviewsPage() {
         <div className="mb-8">
           <h1 className="text-3xl font-bold mb-2">내 리뷰 관리</h1>
           <p className="text-muted-foreground">작성한 리뷰를 확인하고 수정하세요</p>
+        </div>
+
+        <div className="flex items-center gap-2 mb-6">
+          <span className="text-sm font-medium text-muted-foreground">필터:</span>
+          <Button
+            variant={selectedRating === undefined ? "default" : "outline"}
+            size="sm"
+            onClick={() => setSelectedRating(undefined)}
+            className="rounded-lg"
+          >
+            전체
+          </Button>
+          {[5, 4, 3, 2, 1].map((rating) => (
+            <Button
+              key={rating}
+              variant={selectedRating === rating ? "default" : "outline"}
+              size="sm"
+              onClick={() => setSelectedRating(rating)}
+              className="rounded-lg"
+            >
+              <Star className="h-4 w-4 mr-1 fill-current" />
+              {rating}
+            </Button>
+          ))}
         </div>
 
         <div className="space-y-4">

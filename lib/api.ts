@@ -1165,7 +1165,7 @@ export const reviewAPI = {
       true,
     ),
 
-  list: (params?: { sellerId?: number; rating?: number; page?: number; size?: number }) => {
+  list: (params?: { sellerId?: number; rating?: number; page?: number; size?: number; sort?: string }) => {
     const queryParams = new URLSearchParams()
     if (params) {
       Object.entries(params).forEach(([key, value]) => {
@@ -1177,17 +1177,26 @@ export const reviewAPI = {
     return fetchAPI<any[]>(`/support-service/api/reviews${queryParams.toString() ? `?${queryParams.toString()}` : ""}`, {}, false)
   },
 
-  getMyReviews: (params?: { rating?: number; page?: number; size?: number }) => {
+  getMyReviews: (params?: { rating?: number; page?: number; size?: number; sort?: string }) => {
     const queryParams = new URLSearchParams()
     if (params?.rating) queryParams.append("rating", params.rating.toString())
     if (params?.page !== undefined) queryParams.append("page", params.page.toString())
     if (params?.size !== undefined) queryParams.append("size", params.size.toString())
+    if (params?.sort) queryParams.append("sort", params.sort)
     
     return fetchAPI<any[]>(`/support-service/api/reviews/me${queryParams.toString() ? `?${queryParams.toString()}` : ""}`, {}, true)
   },
 
   getSummary: (sellerId: number) =>
-    fetchAPI<{ sellerId: number; summary: string; reviewCount: number; summarizedAt: string } | null>(
+    fetchAPI<{ 
+      sellerId: number; 
+      summary: string; 
+      reviewCount: number; 
+      totalReviewCount: number;
+      ratingSum: number;
+      averageRating: number;
+      summarizedAt: string 
+    } | null>(
       `/support-service/api/reviews/summary?sellerId=${sellerId}`,
       {},
       false,
