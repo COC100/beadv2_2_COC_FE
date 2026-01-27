@@ -58,7 +58,7 @@ export default function AdminSellersPage() {
         description: "판매자로 승인되었습니다",
       })
 
-      loadRegistrations()
+      await loadRegistrations()
     } catch (error: any) {
       setAlert({
         open: true,
@@ -81,7 +81,7 @@ export default function AdminSellersPage() {
         description: "판매자 신청이 반려되었습니다",
       })
 
-      loadRegistrations()
+      await loadRegistrations()
     } catch (error: any) {
       setAlert({
         open: true,
