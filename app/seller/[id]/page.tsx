@@ -8,6 +8,7 @@ import { Footer } from "@/components/footer"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useRouter } from "next/navigation"
 import { useToast } from "@/hooks/use-toast"
 import { sellerAPI, productAPI, reviewAPI } from "@/lib/api"
@@ -23,6 +24,7 @@ export default function SellerProfilePage({ params }: { params: { id: string } }
   const [sellerId, setSellerId] = useState<number | null>(null)
   const [expandedReviews, setExpandedReviews] = useState<Set<number>>(new Set())
   const [selectedRating, setSelectedRating] = useState<number | undefined>(undefined)
+  const [sortBy, setSortBy] = useState<string>("createdAt,desc")
 
   useEffect(() => {
     const resolveParams = async () => {
@@ -82,16 +84,17 @@ export default function SellerProfilePage({ params }: { params: { id: string } }
     loadSellerProfile()
   }, [sellerId, toast])
 
-  // Load reviews separately with rating filter
+  // Load reviews separately with rating filter and sorting
   useEffect(() => {
     if (sellerId === null) return
 
     const loadReviews = async () => {
       try {
-        console.log("[v0] Loading reviews with rating filter:", selectedRating)
+        console.log("[v0] Loading reviews with rating filter:", selectedRating, "and sort:", sortBy)
         const reviewsResponse = await reviewAPI.list({ 
           sellerId, 
-          rating: selectedRating 
+          rating: selectedRating,
+          sort: sortBy
         })
         setReviews(reviewsResponse.data || [])
       } catch (error: any) {
@@ -105,7 +108,7 @@ export default function SellerProfilePage({ params }: { params: { id: string } }
     }
 
     loadReviews()
-  }, [sellerId, selectedRating, toast])
+  }, [sellerId, selectedRating, sortBy, toast])
 
   const toggleReview = (reviewId: number) => {
     const newExpanded = new Set(expandedReviews)
@@ -226,11 +229,39 @@ export default function SellerProfilePage({ params }: { params: { id: string } }
         </div>
 
         <div>
+          <div className="flex items-center gap-2 mb-6">
+            <Star className="h-5 w-5 text-primary" />
+            <h2 className="text-2xl font-bold">고객 리뷰</h2>
+          </div>
+
+          {reviewSummary && reviewSummary.summary && (
+            <Card className="mb-6 bg-gradient-to-r from-primary/5 to-primary/10 border-primary/20">
+              <CardContent className="p-6">
+                <div className="flex items-start gap-4">
+                  <div className="flex flex-col items-center gap-2 min-w-[100px]">
+                    <div className="flex items-center gap-2">
+                      <Star className="h-8 w-8 fill-yellow-400 text-yellow-400" />
+                      <span className="text-4xl font-bold">{reviewSummary.averageRating?.toFixed(1) || "0.0"}</span>
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      {reviewSummary.totalReviewCount || 0}개의 리뷰
+                    </p>
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-lg mb-2">AI 리뷰 요약</h3>
+                    <p className="text-muted-foreground leading-relaxed">{reviewSummary.summary}</p>
+                    {reviewSummary.summarizedAt && (
+                      <p className="text-xs text-muted-foreground mt-2">
+                        업데이트: {new Date(reviewSummary.summarizedAt).toLocaleDateString("ko-KR")}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <Star className="h-5 w-5 text-primary" />
-              <h2 className="text-2xl font-bold">고객 리뷰</h2>
-            </div>
             <div className="flex items-center gap-2">
               <Button
                 variant={selectedRating === undefined ? "default" : "outline"}
@@ -252,6 +283,20 @@ export default function SellerProfilePage({ params }: { params: { id: string } }
                   {rating}
                 </Button>
               ))}
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">정렬:</span>
+              <Select value={sortBy} onValueChange={setSortBy}>
+                <SelectTrigger className="w-[180px] rounded-lg">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="createdAt,desc">최신순</SelectItem>
+                  <SelectItem value="createdAt,asc">오래된순</SelectItem>
+                  <SelectItem value="rating,desc">별점 높은순</SelectItem>
+                  <SelectItem value="rating,asc">별점 낮은순</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
           {reviews.length === 0 ? (
