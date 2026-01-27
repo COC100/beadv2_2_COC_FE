@@ -22,6 +22,7 @@ export default function SellerProfilePage({ params }: { params: { id: string } }
   const [loading, setLoading] = useState(true)
   const [sellerId, setSellerId] = useState<number | null>(null)
   const [expandedReviews, setExpandedReviews] = useState<Set<number>>(new Set())
+  const [selectedRating, setSelectedRating] = useState<number | undefined>(undefined)
 
   useEffect(() => {
     const resolveParams = async () => {
@@ -59,10 +60,6 @@ export default function SellerProfilePage({ params }: { params: { id: string } }
         const productsResponse = await productAPI.search({ sellerId, size: 20 })
         setProducts(productsResponse.data.products || [])
 
-        // Load seller reviews
-        const reviewsResponse = await reviewAPI.list(sellerId)
-        setReviews(reviewsResponse.data || [])
-
         // Load review summary
         try {
           const summaryResponse = await reviewAPI.getSummary(sellerId)
@@ -84,6 +81,31 @@ export default function SellerProfilePage({ params }: { params: { id: string } }
 
     loadSellerProfile()
   }, [sellerId, toast])
+
+  // Load reviews separately with rating filter
+  useEffect(() => {
+    if (sellerId === null) return
+
+    const loadReviews = async () => {
+      try {
+        console.log("[v0] Loading reviews with rating filter:", selectedRating)
+        const reviewsResponse = await reviewAPI.list({ 
+          sellerId, 
+          rating: selectedRating 
+        })
+        setReviews(reviewsResponse.data || [])
+      } catch (error: any) {
+        console.error("[v0] Failed to load reviews:", error)
+        toast({
+          title: "리뷰 로딩 실패",
+          description: error.message || "리뷰를 불러올 수 없습니다",
+          variant: "destructive",
+        })
+      }
+    }
+
+    loadReviews()
+  }, [sellerId, selectedRating, toast])
 
   const toggleReview = (reviewId: number) => {
     const newExpanded = new Set(expandedReviews)
@@ -204,9 +226,33 @@ export default function SellerProfilePage({ params }: { params: { id: string } }
         </div>
 
         <div>
-          <div className="flex items-center gap-2 mb-4">
-            <Star className="h-5 w-5 text-primary" />
-            <h2 className="text-2xl font-bold">고객 리뷰</h2>
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <Star className="h-5 w-5 text-primary" />
+              <h2 className="text-2xl font-bold">고객 리뷰</h2>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant={selectedRating === undefined ? "default" : "outline"}
+                size="sm"
+                onClick={() => setSelectedRating(undefined)}
+                className="rounded-lg"
+              >
+                전체
+              </Button>
+              {[5, 4, 3, 2, 1].map((rating) => (
+                <Button
+                  key={rating}
+                  variant={selectedRating === rating ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setSelectedRating(rating)}
+                  className="rounded-lg"
+                >
+                  <Star className="h-4 w-4 mr-1 fill-current" />
+                  {rating}
+                </Button>
+              ))}
+            </div>
           </div>
           {reviews.length === 0 ? (
             <Card>
