@@ -312,8 +312,10 @@ function ManageProductRentalsContent({ productId }: { productId: string }) {
         description: "운송장번호가 등록되었습니다",
       })
       setShowDeliveryDialog(false)
+      const rentalItemId = deliveryForm.rentalItemId
       setDeliveryForm({ rentalItemId: 0, carrierCode: "", trackingNumber: "" })
-      await loadDeliveryInfo(deliveryForm.rentalItemId)
+      await loadDeliveryInfo(rentalItemId)
+      await loadRentals()
     } catch (error: any) {
       toast({
         title: "운송장 등록 실패",

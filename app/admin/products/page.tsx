@@ -95,7 +95,7 @@ export default function AdminProductsPage() {
         title: "검수 요청 생성",
         description: "상품 검수 요청이 생성되었습니다.",
       })
-      fetchProducts()
+      await fetchProducts()
     } catch (error: any) {
       toast({
         title: "요청 실패",
@@ -112,7 +112,7 @@ export default function AdminProductsPage() {
         title: "승인 완료",
         description: "상품이 승인되었습니다.",
       })
-      fetchProducts()
+      await fetchProducts()
     } catch (error: any) {
       toast({
         title: "승인 실패",
