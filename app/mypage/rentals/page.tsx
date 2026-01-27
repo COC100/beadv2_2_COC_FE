@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
-import { rentalAPI, productAPI, deliveryAPI } from "@/lib/api"
+import { rentalAPI, productAPI, deliveryAPI, reviewAPI } from "@/lib/api"
 
 interface RentalDetail {
   id: number
@@ -44,6 +44,7 @@ export default function RentalsPage() {
   const router = useRouter()
   const { toast } = useToast()
   const [deliveryInfo, setDeliveryInfo] = useState<Record<number, any>>({})
+  const [reviewedRentalIds, setReviewedRentalIds] = useState<Set<number>>(new Set())
 
   const formatDateTime = (dateStr: string) => {
     if (!dateStr) return ""
@@ -106,6 +107,25 @@ export default function RentalsPage() {
     }
   }
 
+  const loadMyReviews = async () => {
+    try {
+      const response = await reviewAPI.getMyReviews()
+      const reviews = response.data
+      console.log("[v0] My reviews:", reviews)
+      
+      // Extract rentalItemIds from reviews
+      const reviewedIds = new Set(
+        reviews
+          .filter((review: any) => review.rentalItemId)
+          .map((review: any) => review.rentalItemId)
+      )
+      console.log("[v0] Reviewed rental item IDs:", Array.from(reviewedIds))
+      setReviewedRentalIds(reviewedIds)
+    } catch (error: any) {
+      console.error("[v0] Failed to fetch my reviews:", error)
+    }
+  }
+
   useEffect(() => {
     const fetchRentals = async () => {
       try {
@@ -114,6 +134,9 @@ export default function RentalsPage() {
           router.push("/")
           return
         }
+
+        // Load my reviews to check which rental items already have reviews
+        await loadMyReviews()
 
         const rentalsResponse = await rentalAPI.search()
         const rentals = rentalsResponse.data
@@ -212,6 +235,22 @@ export default function RentalsPage() {
 
     fetchRentals()
   }, [router, toast])
+
+  // Reload reviews when page becomes visible (e.g., after returning from review creation)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        console.log("[v0] Page became visible, reloading reviews")
+        loadMyReviews()
+      }
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+    }
+  }, [])
 
   const toggleOrder = (orderId: string) => {
     const newExpanded = new Set(expandedOrders)
@@ -482,7 +521,7 @@ export default function RentalsPage() {
                                       결제하기
                                     </Button>
                                   )}
-                                  {detail.status === "RETURNED" && (
+                                  {detail.status === "RETURNED" && !reviewedRentalIds.has(detail.id) && (
                                     <Button
                                       size="sm"
                                       className="rounded-lg"
